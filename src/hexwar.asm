@@ -33,6 +33,7 @@ SCREEN_COLOR  = $d800
 
 * = $2001
 
+function main {
     ;; Auto-detect C64/C65 mode and either way jump into the assembly
     ; 2020 IFPEEK(44)=8THENSYS2081:ELSEBANK0:SYS8225
     !byte 0x1f,0x20,0xe4,0x07,0x8b,0xc2,0x28,0x34,0x34,0x29,0xb2
@@ -58,6 +59,13 @@ SCREEN_COLOR  = $d800
     trb VIC3_VICDIS
     lda #0
     sta VIC_BACKGROUND_COLOR
+    lda #1
+    if zero {
+        inc $d021
+    } else {
+        inc $d021
+        inc $d021
+    }
     ldx #0
 -   lda TEXT_SCREEN_DATA,x
     sta SCREEN_CHAR,x
@@ -80,6 +88,7 @@ SCREEN_COLOR  = $d800
     bne -
     ;endless loop
     jmp *
+}
 
 TEXT_SCREEN_DATA
     ;contains 40x25 character bytes, followed by 40x25 color bytes

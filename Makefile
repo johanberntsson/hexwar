@@ -1,22 +1,22 @@
-TARGETS := hexwar
+SRC_FILES := $(wildcard src/*.asm)
+ACME_FILES := $(patsubst %.asm, %.a, $(SRC_FILES))
+ASM_FILES := $(patsubst src/%, asm/%, $(ACME_FILES))
 C1541 := c1541
-X64 := x64
-X128 := x128
 XMEGA := xemu-xmega65 -autoload -8
 
-.PRECIOUS: %.d81
+all: hexwar.prg test
 
-all: $(TARGETS)
+hexwar.prg: $(ASM_FILES)
+	mkdir -p temp
+	acme --setpc 0x2000 --cpu m65 --format cbm -l temp/labels --outfile $@ $<
 
-%.prg: asm/%.asm
-	mkdir temp
-	acme --setpc 0x2000 --cpu m65 --format cbm -l temp/labels --outfile temp/$@ $<
+asm/%.a: src/%.asm
+	mkdir -p asm
+	acme-preprocessor.rb $< $@
 
-%.d81: %.prg
-	$(C1541) -format foo,id d81 $@ -write temp/$<
-
-%: %.d81
-	$(XMEGA) $<
+test:
+	$(C1541) -format foo,id d81 hexwar.d81 -write hexwar.prg
+	$(XMEGA) hexwar.d81
 
 clean:
-	rm -f $(TARGETS) *.prg *.d81 temp/*
+	rm -f *.prg *.d81 temp/*

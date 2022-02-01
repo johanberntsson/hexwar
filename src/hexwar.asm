@@ -1,121 +1,127 @@
 ;set the proper CPU
 !cpu m65
+!src <m65/std.a>
 
-VIC_BORDER_COLOR = $d020
-VIC_BACKGROUND_COLOR = $d021
-VIC_IRQ_MASK = $d01a
-CIA1_IRQ_CONTROL = $dc0d
-CIA2_NMI_CONTROL = $dd0d
-VIC3_KEY = $d02f
-VIC3_VICDIS = $d031
+* = $0801
+;code for a BASIC line containing SYS2061
+!byte $0B,$08,$e3,$07,$9e,$32,$30,$36,$31,$00,$00,$00
+    jmp prg_start
 
-!macro EnableVIC4Registers {
-    ; See manual 10-4
-    ; Clear C65 memory map
+VIC2CTRL = $d016
+VIC3CTRL = $d031
+VIC4CTRL = $d054
+VIC3KEY  = $d02f
+HOTREG   = $d05d
+COLPTR   = $d064
+
+SCREEN_ADDRESS = $12000
+COLOUR_ADDRESS = $ff81000
+
+!macro enable40Mhz {
+    lda #$41
+    sta $0
+}
+!macro enableIO {
+    lda #$47     
+    sta VIC3KEY
+    lda #$53
+    sta VIC3KEY
     lda #$00
+}
+
+!macro enableVIC4Registers {
+    +enableIO
     tax
     tay
     taz
-    map ; mapping memory using a/x/y/z
-    eom ; end map sequence, allowing IRQ again
-    ;Enable VIC IV
-    lda #$47
-    sta VIC3_KEY
-    lda #$53
-    sta VIC3_KEY
+    map
+    eom
 }
 
-SCREEN_CHAR   = $0800
+!macro VIC4_SetCharLocation @addr {
+    lda #<@addr
+    sta $d068
+    lda #>@addr
+    sta $d069
+    lda #^@addr
+    sta $d06a
+}
 
-;for 40x25 the lower 1000 bytes of the color RAM are mapped here
-SCREEN_COLOR  = $d800
+!macro VIC4_SetScreenLocation @addr {
+    lda #<@addr
+    sta $d060
+    lda #>@addr
+    sta $d061
+    lda #^@addr
+    sta $d062
+    lda #$f0      ; can't set the screen to attic ram
+    sta $d063
+}
 
+!src "asm/dma.a"
 
-* = $2001
+gScreenRows !byte 0
+gScreenColumns !byte 0
 
-function main {
-    ;; Auto-detect C64/C65 mode and either way jump into the assembly
-    ; 2020 IFPEEK(44)=8THENSYS2081:ELSEBANK0:SYS8225
-    !byte 0x1f,0x20,0xe4,0x07,0x8b,0xc2,0x28,0x34,0x34,0x29,0xb2
-    !byte 0x38,0xa7,0x9e
-    !pet "2081"
-    !byte 0x3a,0xd5,0xfe,0x02,0x30,0x3a,0x9e
-    !pet "8225"
-    !byte 0x00,0x00,0x00
-;    sei
-    ;this must follow after !cpu m65, because it adds a BANK to the BASIC
-    ; upstart, and we need to restore the memory config to access the VIC4
-    +EnableVIC4Registers
-    ;Turn off CIA interrupts
-;    lda #$7f
-;    sta CIA1_IRQ_CONTROL
-;    sta CIA2_NMI_CONTROL
-    ;Turn off raster interrupts, used by C65 rom
-;    lda #$00
-;    sta VIC_IRQ_MASK
-;    cli
-    ;set 40x25 mode
-    lda #$80
-    trb VIC3_VICDIS
+    
+fc_640_400
+    +enableIO
+    lda #50
+    sta gScreenRows
+    lda HOTREG
+    ora #$80 ; enable HOTREG if previously disabled
+    sta HOTREG
+    lda VIC4CTRL
+    ora #$04 ; enable full colour for characters with high ubyte set
+    ora #$01 ; enable 16 bit characters
+    sta VIC4CTRL
+    lda VIC3CTRL
+    ora #$80 ; enable H640
+    ora #$08 ; enable V400
+    sta VIC3CTRL
+    lda VIC2CTRL
+    ora #$01 ; shift one pixel to the right (VIC-III bug)
+    sta VIC2CTRL
+    lda #80
+    sta gScreenColumns
+
+    +lfill_skip SCREEN_ADDRESS, 32, 4000, 2
+    +lfill COLOUR_ADDRESS, 0, 8000
+
     lda #0
-    sta VIC_BACKGROUND_COLOR
-    lda #1
-    if zero {
-        inc $d021
-    } else {
-        inc $d021
-        inc $d021
-    }
-    ldx #0
--   lda TEXT_SCREEN_DATA,x
-    sta SCREEN_CHAR,x
-    lda TEXT_SCREEN_DATA + 1 * 250,x
-    sta SCREEN_CHAR + 1 * 250,x
-    lda TEXT_SCREEN_DATA + 2 * 250,x
-    sta SCREEN_CHAR + 2 * 250,x
-    lda TEXT_SCREEN_DATA + 3 * 250,x
-    sta SCREEN_CHAR + 3 * 250,x
-    lda TEXT_SCREEN_DATA + 1000,x
-    sta SCREEN_COLOR,x
-    lda TEXT_SCREEN_DATA + 1000 + 1 * 250,x
-    sta SCREEN_COLOR + 1 * 250,x
-    lda TEXT_SCREEN_DATA + 1000 + 2 * 250,x
-    sta SCREEN_COLOR + 2 * 250,x
-    lda TEXT_SCREEN_DATA + 1000 + 3 * 250,x
-    sta SCREEN_COLOR + 3 * 250,x
-    inx
-    cpx #250
-    bne -
-    ;endless loop
-    jmp *
-}
+    sta $d020
+    sta $d021
 
-TEXT_SCREEN_DATA
-    ;contains 40x25 character bytes, followed by 40x25 color bytes
-    ; !media "charscreen",CHARCOLOR
-    !pet "1234567890123456789012345678901234567890"
-    !pet "2                                      1"
-    !pet "3                                      1"
-    !pet "4                                      1"
-    !pet "5                                      1"
-    !pet "6                                      1"
-    !pet "7                                      1"
-    !pet "8                                      1"
-    !pet "9                                      1"
-    !pet "10                                     1"
-    !pet "11                                     1"
-    !pet "12                                     1"
-    !pet "13                                     1"
-    !pet "14                                     1"
-    !pet "15                                     1"
-    !pet "16                                     1"
-    !pet "17                                     1"
-    !pet "18                                     1"
-    !pet "19                                     1"
-    !pet "20                                     1"
-    !pet "21                                     1"
-    !pet "22                                     1"
-    !pet "23                                     1"
-    !pet "24                                     1"
-    !pet "25----                                 1"
-    !fill 1000,1
+    ; move colour RAM because of stupid CBDOS himem usage
+    lda #$00
+    sta COLPTR
+    lda #$10
+    sta COLPTR + 1
+
+    +VIC4_SetScreenLocation SCREEN_ADDRESS
+    rts
+
+fc_plotpetchar
+    ; input:
+    ; a = char
+    ; x = x
+    ; y = y
+    ; z = color|attributes
+    +lpoke $12000, $30
+    +lpoke $12001, $00
+    +lpoke $0ff81000, $02
+    +lpoke $0ff81001, $02
+    rts
+
+prg_start
+    +enable40Mhz
+    +enableVIC4Registers
+    jsr fc_640_400
+
+
+    +movq $02000030 ; red "0" at 0,0
+    jsr fc_plotpetchar
+    rts
+
+
+

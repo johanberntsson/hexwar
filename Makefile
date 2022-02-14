@@ -1,27 +1,46 @@
-TARGET := bin/hexwar.prg
-SRC_FILES := $(wildcard src/*.asm)
-ACME_FILES := $(patsubst %.asm, %.a, $(SRC_FILES))
-ASM_FILES := $(patsubst src/%, asm/%, $(ACME_FILES))
+# define the paths to suppprting programs
 C1541 := c1541
-XMEGA := xemu-xmega65
+XEMU := xemu-xmega65
+DASM := ../../dasm/bin/dasm
+XCBASIC3 := ../bin/Linux/xcbasic3
 
-all: $(TARGET) test
+# basic library source files
+LIBSOURCE :=  $(wildcard **/*.bas)
+# png files to convert and add to the floppy
+PNGS := $(wildcard assets-img/*.png)
+FCIS := $(subst assets-img, res, $(PNGS:%.png=%.fci))
 
-$(TARGET): $(ASM_FILES)
-	mkdir -p temp
-	acme --setpc 0x2000 --cpu m65 --format cbm -l temp/labels --report temp/repot --outfile $@ $<
+# phony target is simply a target that is always out-of-date
+.PHONY: all, clean
 
-asm/%.a: src/%.asm
-	mkdir -p asm
-	acme-preprocessor.rb $< $@
+# make so that no intermediate files are ever removed
+.SECONDARY:
 
-test:
-	$(XMEGA) -prg bin/hexwar.prg
+all: hexgame
 
-d81:
-	cat bin/c65toc64wrapper.prg $(TARGET) > bin/autoboot.c65
-	$(C1541) -format foo,id d81 bin/hexwar.d81 -write bin/autoboot.c65
-	$(XMEGA) -8 bin/hexwar.d81
+hexgame: hexgame.d81
+	$(XEMU) -8 hexgame.d81
+
+# convert png to fci (MEGA65 full color mode graphics)
+res/%.fci: assets-img/%.png
+	python3 tools/png2fci.py -v0r $< $@
+
+bin/%.prg: %.bas $(LIBSOURCE)
+	mkdir -p bin res
+	$(XCBASIC3) $< $@ -d $(DASM)
+
+%.d81: bin/%.prg $(FCIS)
+	rm -f $@
+	cat c65bin/c65toc64wrapper.prg bin/$*.prg > bin/autoboot.c65
+	$(C1541) -format xc-megademo,sk d81 $@
+	$(C1541) $@ -write bin/autoboot.c65
+	for filename in res/*; do \
+	    $(C1541) $@ -write $$filename; \
+	done
+	#for filename in assets-other/*; do \
+	#    $(C1541) $@ -write $$filename; \
+	#done
 
 clean:
-	rm -f temp/* bin/*
+	rm -rf bin/* res/* *.d81
+

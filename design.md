@@ -1,3 +1,5 @@
+https://www.redblobgames.com/grids/hexagons/
+https://forums.civfanatics.com/threads/civ1-map-generation-explained.498630/#mapgenA
 
 = Civ 1
 

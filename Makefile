@@ -16,10 +16,10 @@ FCIS := $(subst assets-img, res, $(PNGS:%.png=%.fci))
 # make so that no intermediate files are ever removed
 .SECONDARY:
 
-all: hexgame
+all: civ
 
-hexgame: hexgame.d81
-	$(XEMU) -8 hexgame.d81
+civ: civ.d81
+	$(XEMU) -8 civ.d81
 
 # convert png to fci (MEGA65 full color mode graphics)
 res/%.fci: assets-img/%.png

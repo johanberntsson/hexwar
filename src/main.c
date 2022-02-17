@@ -1,28 +1,25 @@
+#include <c64.h>
+#include <cbm.h>
+#include <stdarg.h>
+#include <stddef.h>
 #include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <time.h>
+#include <stdbool.h>
 
 #include <memory.h>
 
+typedef unsigned int word;
+typedef unsigned char byte;
+typedef unsigned long dword;
+
 // temp variables (much faster to keep them global)
-unsigned short i, j;
-unsigned char a, b;
-
-#define SCREENBASE 0xe000
-
-#define VIC2CTRL (*(unsigned char *)(0xd016))
-#define BORDERCOL (*(unsigned char *)(0xd020))
-#define SCREENCOL (*(unsigned char *)(0xd021))
-#define VIC4CTRL (*(unsigned char *)(0xd054))
-#define VIC3CTRL (*(unsigned char *)(0xd031))
-#define CHARSTEP_LO (*(unsigned char *)(0xd058))
-#define CHARSTEP_HI (*(unsigned char *)(0xd059))
-#define CHRCOUNT (*(unsigned char *)(0xd05e))
-#define HOTREG (*(unsigned char *)(0xd05d))
-#define SCNPTR_0 (*(unsigned char *)(0xd060))
-#define SCNPTR_1 (*(unsigned char *)(0xd061))
-#define SCNPTR_2 (*(unsigned char *)(0xd062))
-#define SCNPTR_3 (*(unsigned char *)(0xd063))
+word i, j;
+byte a, b;
 
 /*  Memory layout:
+         334 -      3fb : tmp buffer for loadFCI etc. (200 bytes)
          801 -     cfff : main program
         e000 -     ff40 : screen
        12000 -    18fff
@@ -43,6 +40,46 @@ unsigned char a, b;
     way, so that the loading can go faster, and use short DMA jobs 
     where it makese sense.
 */
+
+#define SCREENBASE 0xe000
+#define TMPBUFFER 0x3fb
+#define TMPBUFFER_SIZE 200
+
+#define VIC2CTRL (*(byte *)(0xd016))
+#define BORDERCOL (*(byte *)(0xd020))
+#define SCREENCOL (*(byte *)(0xd021))
+#define VIC4CTRL (*(byte *)(0xd054))
+#define VIC3CTRL (*(byte *)(0xd031))
+#define CHARSTEP_LO (*(byte *)(0xd058))
+#define CHARSTEP_HI (*(byte *)(0xd059))
+#define CHRCOUNT (*(byte *)(0xd05e))
+#define HOTREG (*(byte *)(0xd05d))
+#define SCNPTR_0 (*(byte *)(0xd060))
+#define SCNPTR_1 (*(byte *)(0xd061))
+#define SCNPTR_2 (*(byte *)(0xd062))
+#define SCNPTR_3 (*(byte *)(0xd063))
+
+typedef struct _FCIInfo {
+    word size;
+    dword bitmap_address;
+    dword palette_address;
+    byte palette_size;
+    bool reserved_sys_palette;
+    byte columns;
+    byte rows;
+} FCIInfo;
+
+
+void go8bit();
+void fatal(const char *format, ...);
+void start_benchmark();
+void stop_benchmark();
+void loadFCI(char *filename, dword address, dword palette_address, FCIInfo *info);
+void setup_main_screen();
+void init_graphics_mode(void);
+void clear_map_tiles(void);
+void main(void) ;
+
 
 void go8bit()
 {
@@ -76,7 +113,7 @@ void fatal(const char *format, ...)
     vsprintf((char *) 0x800, format, args);
     va_end(args);
     puts("fatal error: ");
-    puts(0x800);
+    puts((char *) 0x800);
     while (1) ;
 }
 
@@ -157,7 +194,7 @@ void clear_map_tiles(void)
     lfill(0x58000, 0x00, 0x8000);
 }
 
-unsigned char assembler[] = {
+byte assembler[] = {
     // since cc65 doesn't allow 4510 opcodes I have
     // written the assembler in acme, made a hexdump and
     // stored it here
@@ -180,8 +217,41 @@ unsigned char assembler[] = {
     0x60              // rts
 };
 
+void loadFCI(char *filename, dword address, dword palette_address, FCIInfo *info)
+{
+    // updates info and returns the size of the bitmap
+    dword adrTo;
+    word size, num_read;
+    byte options, last_color_index, reserved_sys_palette;
+
+    cbm_open(1,8,0,filename);
+    cbm_read(1, (char *) TMPBUFFER, 9);
+    if(((char *)TMPBUFFER)[0] != 0x66) fatal("fci not found: %s", filename);
+    info->rows = ((char *) TMPBUFFER)[5];
+    info->columns = ((char *) TMPBUFFER)[6];
+    options = ((char *) TMPBUFFER)[7];
+    last_color_index = ((char *) TMPBUFFER)[8];
+    reserved_sys_palette = options & 2;
+
+    size = (last_color_index + 1) * 3;
+    info->palette_size = size;
+    info->palette_address = palette_address;
+    adrTo = palette_address;
+    while(size > TMPBUFFER_SIZE) {
+        num_read = cbm_read(1, (char *) TMPBUFFER, TMPBUFFER_SIZE);
+        if(num_read == 0) return;
+        if(adrTo) {
+            lcopy(TMPBUFFER, adrTo, num_read);
+            adrTo += num_read;
+        }
+        size -= num_read;
+    }
+
+    cbm_close(1);
+}
 void main(void) 
 {
+    FCIInfo tiles;
     //puts("\n");       // cancel leftover quote mode from wrapper or whatever
     //cbm_k_bsout(14);  // lowercase
     //cbm_k_bsout(147); // clr
@@ -199,6 +269,9 @@ void main(void)
 
     clear_map_tiles();
 	init_graphics_mode();
+    HOTREG &= 0x7f;   // disable hotreg
+
+	loadFCI("tiles.fci", 0x8400000, 0x8400000, &tiles);
 	//lpoke(0x19000, 1);
 	//lpoke(0x30000, 1);
 

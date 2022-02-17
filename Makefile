@@ -23,7 +23,10 @@ FCIS := $(subst assets-img, d81data, $(PNGS:%.png=%.fci))
 all: civ
 
 civ: prepare_dirs civ.d81
-	$(XEMU) -8 civ.d81
+	$(XEMU) -8 civ.d81 > /dev/null
+
+c64: prepare_dirs civ.d64
+	x64 civ.d64 > /dev/null
 
 prepare_dirs:
 	mkdir -p d81data
@@ -48,9 +51,14 @@ d81data/%.fci: assets-img/%.png
 	for filename in d81data/*; do \
 	    $(C1541) $@ -write $$filename; \
 	done
-	#for filename in assets-other/*; do \
-	#    $(C1541) $@ -write $$filename; \
-	#done
+
+%.d64: bin/%.prg $(FCIS)
+	rm -f $@
+	$(C1541) -format xc-megademo,sk d64 $@
+	$(C1541) $@ -write bin/$*.prg
+	for filename in d81data/*; do \
+	    $(C1541) $@ -write $$filename; \
+	done
 
 clean:
 	rm -rf bin d81data *.d81

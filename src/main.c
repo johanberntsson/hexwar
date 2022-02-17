@@ -60,13 +60,13 @@ byte a, b;
 #define SCNPTR_3 (*(byte *)(0xd063))
 
 typedef struct _FCIInfo {
-    word size;
+    byte rows;
+    byte columns;
+    word bitmap_size;
+    byte palette_size;
     dword bitmap_address;
     dword palette_address;
-    byte palette_size;
     bool reserved_sys_palette;
-    byte columns;
-    byte rows;
 } FCIInfo;
 
 
@@ -74,7 +74,7 @@ void go8bit();
 void fatal(const char *format, ...);
 void start_benchmark();
 void stop_benchmark();
-void loadFCI(char *filename, dword address, dword palette_address, FCIInfo *info);
+byte loadFCI(char *filename, dword address, dword palette_address, FCIInfo *info);
 void setup_main_screen();
 void init_graphics_mode(void);
 void clear_map_tiles(void);
@@ -106,9 +106,7 @@ void fatal(const char *format, ...)
 {
     va_list args;
 
-    mega65_io_enable();
     go8bit();
-
     va_start(args, format);
     vsprintf((char *) 0x800, format, args);
     va_end(args);
@@ -217,11 +215,27 @@ byte assembler[] = {
     0x60              // rts
 };
 
-void loadFCI(char *filename, dword address, dword palette_address, FCIInfo *info)
+byte loadFromFile(word size, dword address)
 {
-    // updates info and returns the size of the bitmap
-    dword adrTo;
-    word size, num_read;
+    byte num_read;
+    while(size > 0) {
+        num_read = cbm_read(1, (char *) TMPBUFFER, size < TMPBUFFER_SIZE ? size : TMPBUFFER_SIZE);
+        if(num_read == 0) {
+            cbm_close(1);
+            return 1;
+        }
+        if(address) {
+            lcopy(TMPBUFFER, address, num_read);
+            address += num_read;
+        }
+        size -= num_read;
+    }
+    return 0;
+}
+
+byte loadFCI(char *filename, dword address, dword palette_address, FCIInfo *info)
+{
+    // updates info and return 0 if ok, 1 if error
     byte options, last_color_index, reserved_sys_palette;
 
     cbm_open(1,8,0,filename);
@@ -233,22 +247,22 @@ void loadFCI(char *filename, dword address, dword palette_address, FCIInfo *info
     last_color_index = ((char *) TMPBUFFER)[8];
     reserved_sys_palette = options & 2;
 
-    size = (last_color_index + 1) * 3;
-    info->palette_size = size;
+    // read palette
+    info->palette_size = (last_color_index + 1) * 3;
     info->palette_address = palette_address;
-    adrTo = palette_address;
-    while(size > TMPBUFFER_SIZE) {
-        num_read = cbm_read(1, (char *) TMPBUFFER, TMPBUFFER_SIZE);
-        if(num_read == 0) return;
-        if(adrTo) {
-            lcopy(TMPBUFFER, adrTo, num_read);
-            adrTo += num_read;
-        }
-        size -= num_read;
-    }
+    if(loadFromFile(info->palette_size, palette_address)) return 1;
 
+    // read "IMG"
+    cbm_read(1, (char *) TMPBUFFER, 3);
+
+    // read bitmap
+    info->bitmap_size = info->rows * info->columns * 64;
+    info->bitmap_address = address;
+    if(loadFromFile(info->bitmap_size, address)) return 1;
     cbm_close(1);
+    return 0;
 }
+
 void main(void) 
 {
     FCIInfo tiles;
@@ -271,7 +285,7 @@ void main(void)
 	init_graphics_mode();
     HOTREG &= 0x7f;   // disable hotreg
 
-	loadFCI("tiles.fci", 0x8400000, 0x8400000, &tiles);
+	if(loadFCI("tiles.fci", 0x8400000, 0x8400000, &tiles)) fatal("failed to read");
 	//lpoke(0x19000, 1);
 	//lpoke(0x30000, 1);
 

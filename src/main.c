@@ -43,6 +43,7 @@ unsigned char a, b;
     way, so that the loading can go faster, and use short DMA jobs 
     where it makese sense.
 */
+
 void go8bit()
 {
     mega65_io_enable();
@@ -58,7 +59,7 @@ void go8bit()
     HOTREG |= 0x80;   // enable hotreg
     VIC3CTRL &= 0x7f; // disable H640
     VIC3CTRL &= 0xf7; // disable V400
-    POKE(53272,23);   // lowercase charset
+    POKE(0xd018,23);   // lowercase charset
     //fc_setPalette(0, 0, 0, 0);
     //fc_setPalette(1, 255, 255, 255);
     //fc_setPalette(2, 255, 0, 0);
@@ -71,12 +72,26 @@ void fatal(const char *format, ...)
     mega65_io_enable();
     go8bit();
 
-    puts("## fatal error ##");
-
     va_start(args, format);
-    vsprintf((char *) 1064, format, args);
+    vsprintf((char *) 0x800, format, args);
     va_end(args);
+    puts("fatal error: ");
+    puts(0x800);
     while (1) ;
+}
+
+void start_benchmark()
+{
+    POKE(0xa2, 0);
+    POKE(0xa1, 0);
+    POKE(0xa0, 0);
+}
+
+void stop_benchmark()
+{
+    long jiffies;
+    jiffies = PEEK(0xa2)+256*PEEK(0xa1)+256*256*PEEK(0xa0);
+    fatal("benchmark %ld jiffies", jiffies);
 }
 
 void setup_main_screen()
@@ -170,6 +185,7 @@ void main(void)
     //puts("\n");       // cancel leftover quote mode from wrapper or whatever
     //cbm_k_bsout(14);  // lowercase
     //cbm_k_bsout(147); // clr
+    start_benchmark();
 
     // Fast CPU, M65 IO
     mega65_io_enable();
@@ -186,6 +202,7 @@ void main(void)
 	//lpoke(0x19000, 1);
 	//lpoke(0x30000, 1);
 
+    //stop_benchmark();
 	for(;;) {
     }
 }

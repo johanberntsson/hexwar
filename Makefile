@@ -1,5 +1,5 @@
 # compiler flags
-CC      = $(CC65_HOME)/bin/cl65 -I mega65-libc/cc65/include
+CC      = $(CC65_HOME)/bin/cl65 -I include
 CFLAGS  = -t c64 -O
 LDFLAGS = -t c64 -m $(PROGRAM).map
 
@@ -8,35 +8,39 @@ C1541 := c1541
 XEMU := xemu-xmega65
 
 # source and library files
-SOURCES :=  $(wildcard src/*.c) mega65-libc/cc65/src/memory.c mega65-libc/cc65/src/fileio.s
+SOURCES :=  $(wildcard src/*.c) 
+OBJS := $(subst src, obj, $(SOURCES:%.c=%.o))
 
 # png files to convert and add to the floppy
 PNGS := $(wildcard assets-img/*.png)
 FCIS := $(subst assets-img, d81data, $(PNGS:%.png=%.fci))
 
 # phony target is simply a target that is always out-of-date
-.PHONY: civ, all, clean
+.PHONY: debug, release, all, clean
 
 # make so that no intermediate files are ever removed
 .SECONDARY:
 
-all: civ
+all: debug
 
-civ: prepare_dirs civ.d81
-	$(XEMU) -8 civ.d81 > /dev/null
+debug: CC += -DDEBUG
+debug: release
 
-c64: prepare_dirs civ.d64
-	x64 civ.d64 > /dev/null
+release: prepare_dirs hexwar.d81
+	$(XEMU) -8 hexwar.d81 > /dev/null
+
+
+c64: prepare_dirs hexwar.d64
+	x64 hexwar.d64 > /dev/null
 
 prepare_dirs:
-	mkdir -p d81data
-	mkdir -p bin
+	mkdir -p bin d81data obj
 
-bin/%.o: src/%.c
+obj/%.o: src/%.c
 	$(CC) -c $(CFLAGS) -o $@ $<
-	@$(MAKEDEPEND)
+	#@$(MAKEDEPEND)
 
-bin/%.prg: $(SOURCES:.c=.o)
+bin/%.prg: $(OBJS)
 	$(CC) $(LDFLAGS) -o $@ $^
 
 # convert png to fci (MEGA65 full color mode graphics)
@@ -61,5 +65,12 @@ d81data/%.fci: assets-img/%.png
 	done
 
 clean:
-	rm -rf bin d81data *.d81
+	rm -rf bin obj d81data *.d81 *.d64
+
+# TODO: make this automatic
+DEPS    :=  $(wildcard include/*.h) 
+
+obj/dma.o: $(DEPS)
+obj/graphics.o: $(DEPS)
+obj/hexwar.o: $(DEPS)
 

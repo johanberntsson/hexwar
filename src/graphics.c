@@ -198,35 +198,6 @@ void set_palette(BitmapInfo *bitmap)
     }
 }
 
-void draw_expanded_tile(byte x0, byte y0, TileInfo *tile)
-{
-    // byte x, y;
-    // word i, j;
-    static word screen;         // screen RAM points to...
-    static dword screen_bitmap; // the screen bitmap, which has data from...
-    static dword tile_bitmap;   // the tile with data loaded from the FCI file
-    static byte screen_skip;
-
-    screen = SCREENBASE + 2 * 80 * y0 + 2 * x0;
-    screen_skip = 2 * (80 - tile->width);
-    tile_bitmap = tile->base_address;
-    asm("sei");
-    POKE(1,0x35);
-    for(y = 0; y < tile->height; ++y) {
-        for(x = 0; x < tile->width; ++x) {
-            screen_bitmap = (PEEK(screen) + 256 * PEEK(screen + 1));
-            screen_bitmap *= 64;
-            dma_copy(tile_bitmap, screen_bitmap, 64);
-            screen += 2;
-            tile_bitmap += 64;
-        }
-        tile_bitmap += tile->row_skip_length_in_bytes;
-        screen += screen_skip;
-    }
-    POKE(1,0x36);
-    asm("cli");
-}
-
 void draw_tile(byte x0, byte y0, TileInfo *tile)
 {
     // byte x, y;
@@ -267,4 +238,32 @@ void draw_tile(byte x0, byte y0, TileInfo *tile)
 #endif
 }
 
+void draw_expanded_tile(byte x0, byte y0, TileInfo *tile)
+{
+    // byte x, y;
+    // word i, j;
+    static word screen;         // screen RAM points to...
+    static dword screen_bitmap; // the screen bitmap, which has data from...
+    static dword tile_bitmap;   // the tile with data loaded from the FCI file
+    static byte screen_skip;
+
+    screen = SCREENBASE + 2 * 80 * y0 + 2 * x0;
+    screen_skip = 2 * (80 - tile->width);
+    tile_bitmap = tile->base_address;
+    asm("sei");
+    POKE(1,0x35);
+    for(y = 0; y < 1; ++y) {
+        for(x = 0; x < 2; ++x) {
+            screen_bitmap = (PEEK(screen) + 256 * PEEK(screen + 1));
+            screen_bitmap *= 64;
+            dma_copy_skip(tile_bitmap, screen_bitmap, 32, 0x0200, 0x0100);
+            screen += 4;
+            //tile_bitmap += 32;
+        }
+        tile_bitmap += tile->row_skip_length_in_bytes;
+        screen += screen_skip;
+    }
+    POKE(1,0x36);
+    asm("cli");
+}
 

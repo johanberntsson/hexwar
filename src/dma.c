@@ -35,64 +35,111 @@ void mega65_io_enable(void)
 struct {
     EXTENDED_COMMANDS
     F018B_COMMANDS
-} dma_peeklist;
+} dma_peek_list;
 
 struct {
     EXTENDED_COMMANDS
     F018B_COMMANDS
-} dma_pokelist;
+} dma_poke_list;
 
 struct {
     EXTENDED_COMMANDS
     F018B_COMMANDS
-} dma_copylist;
+} dma_copy_list;
 
 struct {
     EXTENDED_COMMANDS
+    unsigned char option_82;
+    unsigned char source_skip_bit;
+    unsigned char option_83;
+    unsigned char source_skip_byte;
+    unsigned char option_84;
+    unsigned char dest_skip_bit;
     unsigned char option_85;
-    unsigned char dest_skip;
+    unsigned char dest_skip_byte;
     F018B_COMMANDS
-} dma_filllist;
+} dma_copy_skip_list;
+
+struct {
+    EXTENDED_COMMANDS
+    F018B_COMMANDS
+} dma_fill_list;
+
+struct {
+    EXTENDED_COMMANDS
+    unsigned char option_82;
+    unsigned char source_skip_bit;
+    unsigned char option_83;
+    unsigned char source_skip_byte;
+    unsigned char option_84;
+    unsigned char dest_skip_bit;
+    unsigned char option_85;
+    unsigned char dest_skip_byte;
+    F018B_COMMANDS
+} dma_fill_skip_list;
 
 void dma_init() {
-    dma_peeklist.option_0b = 0x0b;
-    dma_peeklist.option_80 = 0x80;
-    dma_peeklist.option_81 = 0x81;
-    dma_peeklist.dest_mb = 0x00; // dma_byte lives in 1st MB
-    dma_peeklist.end_of_options = 0x00;
-    dma_peeklist.command = 0x00; // copy
-    dma_peeklist.sub_cmd = 0x00;
-    dma_peeklist.count = 1;
-    dma_peeklist.dest_addr = (unsigned int)&dma_byte;
-    dma_peeklist.dest_bank = 0;
+    dma_peek_list.option_0b = 0x0b;
+    dma_peek_list.option_80 = 0x80;
+    dma_peek_list.option_81 = 0x81;
+    dma_peek_list.dest_mb = 0x00; // dma_byte lives in 1st MB
+    dma_peek_list.end_of_options = 0x00;
+    dma_peek_list.command = 0x00; // copy
+    dma_peek_list.sub_cmd = 0x00;
+    dma_peek_list.count = 1;
+    dma_peek_list.dest_addr = (unsigned int)&dma_byte;
+    dma_peek_list.dest_bank = 0;
 
-    dma_pokelist.option_0b = 0x0b;
-    dma_pokelist.option_80 = 0x80;
-    dma_pokelist.source_mb = 0x00; // dma_byte lives in 1st MB
-    dma_pokelist.option_81 = 0x81;
-    dma_pokelist.end_of_options = 0x00;
-    dma_pokelist.command = 0x00; // copy
-    dma_pokelist.sub_cmd = 0x00;
-    dma_pokelist.count = 1;
-    dma_pokelist.source_addr = (unsigned int)&dma_byte;
-    dma_pokelist.source_bank = 0;
+    dma_poke_list.option_0b = 0x0b;
+    dma_poke_list.option_80 = 0x80;
+    dma_poke_list.source_mb = 0x00; // dma_byte lives in 1st MB
+    dma_poke_list.option_81 = 0x81;
+    dma_poke_list.end_of_options = 0x00;
+    dma_poke_list.command = 0x00; // copy
+    dma_poke_list.sub_cmd = 0x00;
+    dma_poke_list.count = 1;
+    dma_poke_list.source_addr = (unsigned int)&dma_byte;
+    dma_poke_list.source_bank = 0;
 
-    dma_copylist.option_0b = 0x0b;
-    dma_copylist.option_80 = 0x80;
-    dma_copylist.option_81 = 0x81;
-    dma_copylist.end_of_options = 0x00;
-    dma_copylist.sub_cmd = 0x00;
-    dma_copylist.command = 0x00; // copy
-    dma_copylist.sub_cmd = 0;
+    dma_copy_list.option_0b = 0x0b;
+    dma_copy_list.option_80 = 0x80;
+    dma_copy_list.option_81 = 0x81;
+    dma_copy_list.end_of_options = 0x00;
+    dma_copy_list.sub_cmd = 0x00;
+    dma_copy_list.command = 0x00; // copy
+    dma_copy_list.sub_cmd = 0;
 
-    dma_filllist.option_0b = 0x0b;
-    dma_filllist.option_80 = 0x80;
-    dma_filllist.source_mb = 0x00;
-    dma_filllist.option_81 = 0x81;
-    dma_filllist.option_85 = 0x85;
-    dma_filllist.end_of_options = 0x00;
-    dma_filllist.command = 0x03; // fill
-    dma_filllist.sub_cmd = 0;
+    dma_copy_skip_list.option_0b = 0x0b;
+    dma_copy_skip_list.option_80 = 0x80;
+    dma_copy_skip_list.option_81 = 0x81;
+    dma_copy_skip_list.option_82 = 0x82;
+    dma_copy_skip_list.option_83 = 0x83;
+    dma_copy_skip_list.option_84 = 0x84;
+    dma_copy_skip_list.option_85 = 0x85;
+    dma_copy_skip_list.end_of_options = 0x00;
+    dma_copy_skip_list.sub_cmd = 0x00;
+    dma_copy_skip_list.command = 0x00; // copy
+    dma_copy_skip_list.sub_cmd = 0;
+
+    dma_fill_list.option_0b = 0x0b;
+    dma_fill_list.option_80 = 0x80;
+    dma_fill_list.source_mb = 0x00;
+    dma_fill_list.option_81 = 0x81;
+    dma_fill_list.end_of_options = 0x00;
+    dma_fill_list.command = 0x03; // fill
+    dma_fill_list.sub_cmd = 0;
+
+    dma_fill_skip_list.option_0b = 0x0b;
+    dma_fill_skip_list.option_80 = 0x80;
+    dma_fill_skip_list.source_mb = 0x00;
+    dma_fill_skip_list.option_81 = 0x81;
+    dma_fill_skip_list.option_82 = 0x82;
+    dma_fill_skip_list.option_83 = 0x83;
+    dma_fill_skip_list.option_84 = 0x84;
+    dma_fill_skip_list.option_85 = 0x85;
+    dma_fill_skip_list.end_of_options = 0x00;
+    dma_fill_skip_list.command = 0x03; // fill_skip
+    dma_fill_skip_list.sub_cmd = 0;
 }
 
 void do_dma(unsigned int dmalist)
@@ -106,55 +153,73 @@ void do_dma(unsigned int dmalist)
 
 unsigned char dma_peek(dword address)
 {
-    dma_peeklist.source_mb = (address >> 20);
-    dma_peeklist.source_addr = address & 0xffff;
-    dma_peeklist.source_bank = (address >> 16) & 0x0f;
-    do_dma((unsigned int) &dma_peeklist);
+    dma_peek_list.source_mb = (address >> 20);
+    dma_peek_list.source_addr = address & 0xffff;
+    dma_peek_list.source_bank = (address >> 16) & 0x0f;
+    do_dma((unsigned int) &dma_peek_list);
     return dma_byte;
 }
 
 void dma_poke(dword address, byte value)
 {
     dma_byte = value;
-    dma_pokelist.dest_mb = (address >> 20);
-    dma_pokelist.dest_addr = address & 0xffff;
-    dma_pokelist.dest_bank = (address >> 16) & 0x0f;
-    do_dma((unsigned int) &dma_pokelist);
+    dma_poke_list.dest_mb = (address >> 20);
+    dma_poke_list.dest_addr = address & 0xffff;
+    dma_poke_list.dest_bank = (address >> 16) & 0x0f;
+    do_dma((unsigned int) &dma_poke_list);
 }
 
 void dma_copy(dword source_address, dword destination_address, word count)
 {
-    dma_copylist.source_mb = source_address >> 20;
-    dma_copylist.dest_mb = (destination_address >> 20);
-    dma_copylist.count = count;
-    dma_copylist.source_addr = source_address & 0xffff;
-    dma_copylist.source_bank = (source_address >> 16) & 0x0f;
-    dma_copylist.dest_addr = destination_address & 0xffff;
-    dma_copylist.dest_bank = (destination_address >> 16) & 0x0f;
-    do_dma((unsigned int) &dma_copylist);
+    dma_copy_list.source_mb = source_address >> 20;
+    dma_copy_list.dest_mb = (destination_address >> 20);
+    dma_copy_list.count = count;
+    dma_copy_list.source_addr = source_address & 0xffff;
+    dma_copy_list.source_bank = (source_address >> 16) & 0x0f;
+    dma_copy_list.dest_addr = destination_address & 0xffff;
+    dma_copy_list.dest_bank = (destination_address >> 16) & 0x0f;
+    do_dma((unsigned int) &dma_copy_list);
+}
+
+void dma_copy_skip(dword source_address, dword destination_address, 
+    word count, word source_skip, word dest_skip)
+{
+    dma_copy_skip_list.source_skip_bit = source_skip & 0xff;
+    dma_copy_skip_list.source_skip_byte = source_skip >> 8;
+    dma_copy_skip_list.dest_skip_bit = dest_skip & 0xff;
+    dma_copy_skip_list.dest_skip_byte = dest_skip >> 8;
+    dma_copy_skip_list.source_mb = source_address >> 20;
+    dma_copy_skip_list.dest_mb = (destination_address >> 20);
+    dma_copy_skip_list.count = count;
+    dma_copy_skip_list.source_addr = source_address & 0xffff;
+    dma_copy_skip_list.source_bank = (source_address >> 16) & 0x0f;
+    dma_copy_skip_list.dest_addr = destination_address & 0xffff;
+    dma_copy_skip_list.dest_bank = (destination_address >> 16) & 0x0f;
+    do_dma((unsigned int) &dma_copy_skip_list);
 }
 
 void dma_fill(dword destination_address, byte value, word count)
 {
-    dma_filllist.dest_mb = destination_address >> 20;
-    dma_filllist.count = count;
-    dma_filllist.source_addr = value;
-    dma_filllist.dest_skip = 1;
-    dma_filllist.dest_addr = destination_address & 0xffff;
-    dma_filllist.dest_bank = (destination_address >> 16) & 0x0f;
-    do_dma((unsigned int) &dma_filllist);
-    return;
+    dma_fill_list.dest_mb = destination_address >> 20;
+    dma_fill_list.count = count;
+    dma_fill_list.source_addr = value;
+    dma_fill_list.dest_addr = destination_address & 0xffff;
+    dma_fill_list.dest_bank = (destination_address >> 16) & 0x0f;
+    do_dma((unsigned int) &dma_fill_list);
 }
 
-void dma_fill_skip(dword destination_address, byte value, word count, byte skip)
+void dma_fill_skip(dword destination_address, byte value, word count,
+    word source_skip, word dest_skip)
 {
-    dma_filllist.dest_mb = destination_address >> 20;
-    dma_filllist.count = count;
-    dma_filllist.source_addr = value;
-    dma_filllist.dest_skip = skip;
-    dma_filllist.dest_addr = destination_address & 0xffff;
-    dma_filllist.dest_bank = (destination_address >> 16) & 0x0f;
-    do_dma((unsigned int) &dma_filllist);
-    return;
+    dma_fill_skip_list.source_skip_bit = source_skip & 0xff;
+    dma_fill_skip_list.source_skip_byte = source_skip >> 8;
+    dma_fill_skip_list.dest_skip_bit = dest_skip & 0xff;
+    dma_fill_skip_list.dest_skip_byte = dest_skip >> 8;
+    dma_fill_skip_list.dest_mb = destination_address >> 20;
+    dma_fill_skip_list.count = count;
+    dma_fill_skip_list.source_addr = value;
+    dma_fill_skip_list.dest_addr = destination_address & 0xffff;
+    dma_fill_skip_list.dest_bank = (destination_address >> 16) & 0x0f;
+    do_dma((unsigned int) &dma_fill_skip_list);
 }
 

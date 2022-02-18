@@ -106,12 +106,8 @@ void debug_TileInfo(TileInfo *tile)
 void main(void) 
 {
     dword next_address;
-
-    //puts("\n");       // cancel leftover quote mode from wrapper or whatever
-    //cbm_k_bsout(14);  // lowercase
-    //cbm_k_bsout(147); // clr
     start_benchmark();
-
+    dma_init();
 	init_graphics_mode();
     clear_map_tiles();
     HOTREG &= 0x7f;   // disable hotreg
@@ -125,6 +121,7 @@ void main(void)
 	//debug_TileInfo(&tiles);
 #endif
 	draw_tile(0, 0, &desert_tile);
+	draw_expanded_tile(10, 10, &desert_tile);
 
 
 	//lpoke(0x19000, 1);

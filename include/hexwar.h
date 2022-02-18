@@ -7,8 +7,11 @@ typedef unsigned int word;
 typedef unsigned char byte;
 typedef unsigned long dword;
 
-#define SCREENBASE 0xe000
-#define TMPBUFFER 0x3fb
+#define SCREENBASE 0xe000u
+#define SCREENBASE_UNDER_RAM
+#define SCREENBASE_FIRST_64K
+
+#define TMPBUFFER 0x03fbu
 #define TMPBUFFER_SIZE 200
 
 // temp variables (much faster to keep them global)

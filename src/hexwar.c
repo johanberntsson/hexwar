@@ -117,12 +117,14 @@ void main(void)
     HOTREG &= 0x7f;   // disable hotreg
 
 	next_address = load_FCI("tiles.fci", 0x8400000, &tiles);
+	if(next_address == 0) fatal("tiles.fci failed to load");
+	set_palette(&tiles);
 	prepare_tile(&desert_tile, &tiles, 0, 0, 4, 4);
 #ifdef DEBUG
 	//debug_BitmapInfo(&tiles);
 	//debug_TileInfo(&tiles);
 #endif
-	draw_tile(0, 0, &desert_tile);
+	draw_tile(1, 1, &desert_tile);
 
 
 	//lpoke(0x19000, 1);

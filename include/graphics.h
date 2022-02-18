@@ -27,6 +27,8 @@ typedef struct _TileInfo {
 typedef struct _BitmapInfo {
     byte rows;
     byte columns;
+    byte options;
+    byte num_colors;
     word bitmap_size;
     word palette_size;
     dword bitmap_address;
@@ -39,6 +41,7 @@ void init_graphics_mode(void);
 void clear_map_tiles(void);
 byte loadFromFile(word size, dword address);
 dword load_FCI(char *filename, dword address, BitmapInfo *info);
+void set_palette(BitmapInfo *bitmap);
 void prepare_tile(TileInfo *tile, BitmapInfo *bitmap, byte x, byte y, byte w, byte h);
 void draw_tile(byte x0, byte y0, TileInfo *tile);
 

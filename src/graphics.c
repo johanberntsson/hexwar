@@ -1,8 +1,10 @@
-#include <cbm.h>
 #include <stdio.h>
 
 #include "graphics.h"
 #include "dma.h"
+
+void load_from_file(FILE *f, word size, dword address);
+unsigned char swap_nibbles(unsigned char in);
 
 void setup_main_screen()
 {
@@ -15,6 +17,7 @@ void setup_main_screen()
     for (y = 0; y < 50; ++y) {
         for (x = 0; x < 80; ++x) {
             POKE(j, i & 0xff);
+            //if(x == 0 && y == 0) fatal("%x %x %x\n", j, i & 0xff, i >> 8);
             ++j;
             POKE(j, i >> 8);
             ++j;
@@ -104,23 +107,21 @@ void clear_map_tiles(void)
     dma_fill(0x58000, 0x00, 0x8000);
 }
 
-byte loadFromFile(word size, dword address)
+void load_from_file(FILE *f, word size, dword address)
 {
     // Read <size> bytes from file; return 1 if ok, 0 if error
-    byte num_read;
+    static byte num_read, n;
     while(size > 0) {
-        num_read = cbm_read(1,
-            (char *) TMPBUFFER,
-            size < TMPBUFFER_SIZE ? size : TMPBUFFER_SIZE);
-        if(num_read == 0) {
-            cbm_close(1);
-            return 0;
+        n = size < TMPBUFFER_SIZE ? size : TMPBUFFER_SIZE;
+        num_read = fread((char *) TMPBUFFER, 1, n, f);
+        if(num_read != n) {
+            fclose(f);
+            fatal("file error");
         }
         dma_copy(TMPBUFFER, address, num_read);
         address += num_read;
         size -= num_read;
     }
-    return 1;
 }
 
 dword load_FCI(char *filename, dword address, BitmapInfo *bitmap)
@@ -130,32 +131,32 @@ dword load_FCI(char *filename, dword address, BitmapInfo *bitmap)
     // Note: cannot print while file is open as channel 1
     // (add printout after cbm_close(1); below)
     //
-    byte options, last_color_index, reserved_sys_palette;
+    FILE *f;
 
     // read header
-    cbm_open(1,8,0,filename);
-    cbm_read(1, (char *) TMPBUFFER, 9);
-    if(((char *) TMPBUFFER)[0] != 0x66) fatal("fci not found: %s", filename);
+    f = fopen(filename, "r");
+    fread((char *) TMPBUFFER, 1, 9, f);
+    if(((char *) TMPBUFFER)[0] != 0x66) return 0;
     bitmap->rows = ((char *) TMPBUFFER)[5];
     bitmap->columns = ((char *) TMPBUFFER)[6];
-    options = ((char *) TMPBUFFER)[7];
-    last_color_index = ((char *) TMPBUFFER)[8];
-    reserved_sys_palette = options & 2;
+    bitmap->options = ((char *) TMPBUFFER)[7];
+    bitmap->num_colors = ((char *) TMPBUFFER)[8];
+    bitmap->reserved_sys_palette = bitmap->options & 2;
 
     // read palette
-    bitmap->palette_size = (last_color_index + 1) * 3;
+    bitmap->palette_size = (bitmap->num_colors + 1) * 3;
     bitmap->palette_address = address;
-    if(!loadFromFile(bitmap->palette_size, bitmap->palette_address)) return 0;
+    load_from_file(f, bitmap->palette_size, bitmap->palette_address);
 
     // read "IMG"
-    cbm_read(1, (char *) TMPBUFFER, 3);
+    fread((char *) TMPBUFFER, 1, 3, f);
 
     // read bitmap
     bitmap->bitmap_size = bitmap->rows * bitmap->columns * 64;
     bitmap->bitmap_address = address + bitmap->palette_size;
-    if(!loadFromFile(bitmap->bitmap_size, bitmap->bitmap_address)) return 0;
-    cbm_close(1);
-    printf("aa %d\n", last_color_index);
+    load_from_file(f, bitmap->bitmap_size, bitmap->bitmap_address);
+
+    fclose(f);
     return address + bitmap->bitmap_size + bitmap->palette_size;
 }
 
@@ -165,6 +166,36 @@ void prepare_tile(TileInfo *tile, BitmapInfo *bitmap, byte x, byte y, byte w, by
     tile->height = h;
     tile->row_skip_length_in_bytes = 64 * (bitmap->columns - w);
     tile->base_address = bitmap->bitmap_address + 64*(x + y * bitmap->columns);
+}
+
+static unsigned char swp;
+unsigned char swap_nibbles(unsigned char in) // oh why?!
+{
+    swp = in;
+    __asm__("lda %v", swp);
+    __asm__("asl  a");
+    __asm__("adc  #$80");
+    __asm__("rol a");
+    __asm__("asl a");
+    __asm__("adc  #$80");
+    __asm__("rol  a");
+    __asm__("sta %v", swp);
+    return swp;
+}
+
+void set_palette(BitmapInfo *bitmap)
+{
+    dword address;
+    x  = bitmap->reserved_sys_palette ? 16 : 0;
+    address = bitmap->palette_address + 3 * x;
+    for(y = x; y <= bitmap->num_colors; ++y) {
+        POKE(0xd100u + y, swap_nibbles(dma_peek(address)));
+        ++address;
+        POKE(0xd200u + y, swap_nibbles(dma_peek(address)));
+        ++address;
+        POKE(0xd300u + y, swap_nibbles(dma_peek(address)));
+        ++address;
+    }
 }
 
 void draw_tile(byte x0, byte y0, TileInfo *tile)
@@ -179,10 +210,18 @@ void draw_tile(byte x0, byte y0, TileInfo *tile)
     screen = SCREENBASE + 2 * 80 * y0 + 2 * x0;
     screen_skip = 2 * (80 - tile->width);
     tile_bitmap = tile->base_address;
-    fatal("%x %d %lx", screen, screen_skip, tile_bitmap);
+#ifdef SCREENBASE_UNDER_RAM
+    asm("sei");
+    POKE(1,0x35);
+#endif
     for(y = 0; y < tile->height; ++y) {
         for(x = 0; x < tile->width; ++x) {
-            screen_bitmap = 64 * (PEEK(screen) + 256 * PEEK(screen + 1));
+#ifdef SCREENBASE_FIRST_C64K
+            screen_bitmap = (PEEK(screen) + 256 * PEEK(screen + 1));
+#else
+            screen_bitmap = (dma_peek(screen) + 256 * dma_peek(screen + 1));
+#endif
+            screen_bitmap *= 64;
             dma_copy(tile_bitmap, screen_bitmap, 64);
             screen += 2;
             tile_bitmap += 64;
@@ -190,5 +229,9 @@ void draw_tile(byte x0, byte y0, TileInfo *tile)
         tile_bitmap += tile->row_skip_length_in_bytes;
         screen += screen_skip;
     }
+#ifdef SCREENBASE_UNDER_RAM
+    POKE(1,0x36);
+    asm("cli");
+#endif
 }
 

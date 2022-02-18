@@ -7,89 +7,51 @@ byte dma_byte;
 
 void mega65_io_enable(void)
 {
-  // Gate C65 IO enable
-  POKE(0xd02fU, 0x47);
-  POKE(0xd02fU, 0x53);
-  // Force to full speed
-  POKE(0, 65);
+    // Gate C65 IO enable
+    POKE(0xd02fU, 0x47);
+    POKE(0xd02fU, 0x53);
+    // Force to full speed
+    POKE(0, 65);
 }
 
-struct {
-    // extended options
-    unsigned char option_0b;
-    unsigned char option_80;
-    unsigned char source_mb;
-    unsigned char option_81;
+#define EXTENDED_COMMANDS \
+    unsigned char option_0b; \
+    unsigned char option_80; \
+    unsigned char source_mb; \
+    unsigned char option_81; \
     unsigned char dest_mb;
-    unsigned char end_of_options;
-    // F018B format DMA request
-    unsigned char command;
-    unsigned int count;
-    unsigned int source_addr;
-    unsigned char source_bank;
-    unsigned int dest_addr;
-    unsigned char dest_bank;
-    unsigned char sub_cmd;
+
+#define F018B_COMMANDS \
+    unsigned char end_of_options; \
+    unsigned char command; \
+    unsigned int count; \
+    unsigned int source_addr; \
+    unsigned char source_bank; \
+    unsigned int dest_addr; \
+    unsigned char dest_bank; \
+    unsigned char sub_cmd; \
     unsigned int modulo;
+
+struct {
+    EXTENDED_COMMANDS
+    F018B_COMMANDS
 } dma_peeklist;
 
 struct {
-    // extended options
-    unsigned char option_0b;
-    unsigned char option_80;
-    unsigned char source_mb;
-    unsigned char option_81;
-    unsigned char dest_mb;
-    unsigned char end_of_options;
-    // F018B format DMA request
-    unsigned char command;
-    unsigned int count;
-    unsigned int source_addr;
-    unsigned char source_bank;
-    unsigned int dest_addr;
-    unsigned char dest_bank;
-    unsigned char sub_cmd;
-    unsigned int modulo;
+    EXTENDED_COMMANDS
+    F018B_COMMANDS
 } dma_pokelist;
 
 struct {
-    // extended options
-    unsigned char option_0b;
-    unsigned char option_80;
-    unsigned char source_mb;
-    unsigned char option_81;
-    unsigned char dest_mb;
-    unsigned char end_of_options;
-    // F018B format DMA request
-    unsigned char command;
-    unsigned int count;
-    unsigned int source_addr;
-    unsigned char source_bank;
-    unsigned int dest_addr;
-    unsigned char dest_bank;
-    unsigned char sub_cmd;
-    unsigned int modulo;
+    EXTENDED_COMMANDS
+    F018B_COMMANDS
 } dma_copylist;
 
 struct {
-    // extended options
-    unsigned char option_0b;
-    unsigned char option_80;
-    unsigned char source_mb;
-    unsigned char option_81;
-    unsigned char dest_mb;
+    EXTENDED_COMMANDS
     unsigned char option_85;
     unsigned char dest_skip;
-    unsigned char end_of_options;
-    // F018B format DMA request
-    unsigned char command;
-    unsigned int count;
-    unsigned int source_addr;
-    unsigned char source_bank;
-    unsigned int dest_addr;
-    unsigned char dest_bank;
-    unsigned char sub_cmd;
-    unsigned int modulo;
+    F018B_COMMANDS
 } dma_filllist;
 
 void dma_init() {

@@ -124,7 +124,7 @@ void main(void)
 	//debug_BitmapInfo(&tiles);
 	//debug_TileInfo(&tiles);
 #endif
-	draw_tile(1, 1, &desert_tile);
+	draw_tile(0, 0, &desert_tile);
 
 
 	//lpoke(0x19000, 1);

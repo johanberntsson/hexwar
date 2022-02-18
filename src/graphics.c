@@ -215,14 +215,17 @@ void draw_tile(byte x0, byte y0, TileInfo *tile)
     POKE(1,0x35);
 #endif
     for(y = 0; y < tile->height; ++y) {
+        if(y + y0 >= 50) continue;
         for(x = 0; x < tile->width; ++x) {
+            if(x + x0 < 80) {
 #ifdef SCREENBASE_FIRST_C64K
-            screen_bitmap = (PEEK(screen) + 256 * PEEK(screen + 1));
+                screen_bitmap = (PEEK(screen) + 256 * PEEK(screen + 1));
 #else
-            screen_bitmap = (dma_peek(screen) + 256 * dma_peek(screen + 1));
+                screen_bitmap = (dma_peek(screen) + 256 * dma_peek(screen + 1));
 #endif
-            screen_bitmap *= 64;
-            dma_copy(tile_bitmap, screen_bitmap, 64);
+                screen_bitmap *= 64;
+                dma_copy(tile_bitmap, screen_bitmap, 64);
+            }
             screen += 2;
             tile_bitmap += 64;
         }
@@ -234,4 +237,5 @@ void draw_tile(byte x0, byte y0, TileInfo *tile)
     asm("cli");
 #endif
 }
+
 

@@ -109,7 +109,6 @@ void main(void)
     start_benchmark();
     dma_init();
 	init_graphics_mode();
-    clear_map_tiles();
     HOTREG &= 0x7f;   // disable hotreg
 
 	next_address = load_FCI("tiles.fci", 0x8400000, &tiles);

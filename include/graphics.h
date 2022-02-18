@@ -36,9 +36,10 @@ typedef struct _BitmapInfo {
     bool reserved_sys_palette;
 } BitmapInfo;
 
-void setup_main_screen();
+void setup_vertical_framebuffer();
+void setup_horizontal_framebuffer();
 void init_graphics_mode(void);
-void clear_map_tiles(void);
+void clear_framebuffer(void);
 byte loadFromFile(word size, dword address);
 dword load_FCI(char *filename, dword address, BitmapInfo *info);
 void set_palette(BitmapInfo *bitmap);

@@ -6,7 +6,28 @@
 void load_from_file(FILE *f, word size, dword address);
 unsigned char swap_nibbles(unsigned char in);
 
-void setup_main_screen()
+void setup_vertical_framebuffer()
+{
+    // byte x, y;
+    // word i, j;
+
+    // Layout screen so that map tile data comes from $19000 -- $5FFFF
+    for (x = 0; x < 80; ++x) {
+        for (y = 0; y < 50; ++y) {
+            i = SCREENBASE + 160 * y + 2 * x;
+            j = (0x19000 / 0x40) + y + 50 * x;
+            // skip DOS
+            if (j >= (0x1f800 / 0x40)) j += (0x4800 / 0x40);
+            // skip C64 kernal
+            if (j >= (0x2c000 / 0x40)) j += (0x4000 / 0x40);
+            POKE(i, j & 0xff);
+            POKE(i + 1, j >> 8);
+            //if(x == 1 && y == 0) fatal("%x %x %x\n", i, j & 0xff, j >> 8);
+        }
+    }
+}
+
+void setup_horizontal_framebuffer()
 {
     // byte x, y;
     // word i, j;
@@ -65,6 +86,11 @@ void init_graphics_mode(void)
     // 2c000 - 2ffff.
     // See the MEGA65 book, page F-11
     asm("jsr %v", assembler);
+    clear_framebuffer();
+    setup_vertical_framebuffer();
+    // Clear colour RAM
+    dma_fill(0xff80000L, 0x00, 80 * 50 * 2);
+
 
     // 16-bit text mode, full-colour text for high chars
     VIC4CTRL = 0x05;
@@ -84,16 +110,11 @@ void init_graphics_mode(void)
     SCNPTR_2 = 0x00;
     SCNPTR_3 = 0x00;
 
-    setup_main_screen();
-
-    // Clear colour RAM
-    dma_fill(0xff80000L, 0x00, 80 * 50 * 2);
-
     BORDERCOL = 0;
     SCREENCOL = 0;
 }
 
-void clear_map_tiles(void)
+void clear_framebuffer(void)
 {
     dma_fill(0x19000, 0x00, 0x6800);
     //  skip DOS ($1f800 - $24000)
@@ -203,7 +224,7 @@ void draw_tile(byte x0, byte y0, TileInfo *tile)
     // byte x, y;
     // word i, j;
     static word screen;         // screen RAM points to...
-    static dword screen_bitmap; // the screen bitmap, which has data from...
+    static dword framebuffer;   // the framebuffer, which has data from...
     static dword tile_bitmap;   // the tile with data loaded from the FCI file
     static byte screen_skip;
 
@@ -219,12 +240,12 @@ void draw_tile(byte x0, byte y0, TileInfo *tile)
         for(x = 0; x < tile->width; ++x) {
             if(x + x0 < 80) {
 #ifdef SCREENBASE_FIRST_C64K
-                screen_bitmap = (PEEK(screen) + 256 * PEEK(screen + 1));
+                framebuffer = (PEEK(screen) + 256 * PEEK(screen + 1));
 #else
-                screen_bitmap = (dma_peek(screen) + 256 * dma_peek(screen + 1));
+                framebuffer = (dma_peek(screen) + 256 * dma_peek(screen + 1));
 #endif
-                screen_bitmap *= 64;
-                dma_copy(tile_bitmap, screen_bitmap, 64);
+                framebuffer *= 64;
+                dma_copy(tile_bitmap, framebuffer, 64);
             }
             screen += 2;
             tile_bitmap += 64;
@@ -242,26 +263,19 @@ void draw_expanded_tile(byte x0, byte y0, TileInfo *tile)
 {
     // byte x, y;
     // word i, j;
-    static word screen;         // screen RAM points to...
-    static dword screen_bitmap; // the screen bitmap, which has data from...
-    static dword tile_bitmap;   // the tile with data loaded from the FCI file
-    static byte screen_skip;
+    static word screen;       // screen RAM points to...
+    static dword framebuffer; // the screen bitmap, which has data from...
+    static dword tile_bitmap; // the tile with data loaded from the FCI file
 
-    screen = SCREENBASE + 2 * 80 * y0 + 2 * x0;
-    screen_skip = 2 * (80 - tile->width);
     tile_bitmap = tile->base_address;
     asm("sei");
     POKE(1,0x35);
-    for(y = 0; y < 1; ++y) {
-        for(x = 0; x < 2; ++x) {
-            screen_bitmap = (PEEK(screen) + 256 * PEEK(screen + 1));
-            screen_bitmap *= 64;
-            dma_copy_skip(tile_bitmap, screen_bitmap, 32, 0x0200, 0x0100);
-            screen += 4;
-            //tile_bitmap += 32;
-        }
-        tile_bitmap += tile->row_skip_length_in_bytes;
-        screen += screen_skip;
+    for(x = 0; x < 32; ++x) {
+        screen = SCREENBASE + 2 * 80 * y0 + 2 * (x0 + (x >> 3));
+        framebuffer = (PEEK(screen) + 256 * PEEK(screen + 1));
+        framebuffer *= 64;
+        framebuffer += x;
+        dma_copy_skip(tile_bitmap + x, framebuffer, 32, 0x0100, 0x0800);
     }
     POKE(1,0x36);
     asm("cli");

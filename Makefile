@@ -12,8 +12,8 @@ SOURCES :=  $(wildcard src/*.c)
 OBJS := $(subst src, obj, $(SOURCES:%.c=%.o))
 
 # png files to convert and add to the floppy
-PNGS := $(wildcard assets-img/*.png)
-FCIS := $(subst assets-img, d81data, $(PNGS:%.png=%.fci))
+PNGS := $(wildcard assets-fci/*.png)
+FCIS := $(subst assets-fci, d81data, $(PNGS:%.png=%.fci))
 
 # phony target is simply a target that is always out-of-date
 .PHONY: debug, release, all, clean
@@ -23,12 +23,14 @@ FCIS := $(subst assets-img, d81data, $(PNGS:%.png=%.fci))
 
 all: debug
 
+release: CC += -Osir -Cl
+release: hexwar
+
 debug: CC += -DDEBUG
-debug: release
+debug: hexwar
 
-release: prepare_dirs hexwar.d81
+hexwar: prepare_dirs hexwar.d81
 	$(XEMU) -8 hexwar.d81 > /dev/null
-
 
 c64: prepare_dirs hexwar.d64
 	x64 hexwar.d64 > /dev/null
@@ -44,7 +46,7 @@ bin/%.prg: $(OBJS)
 	$(CC) $(LDFLAGS) -o $@ $^
 
 # convert png to fci (MEGA65 full color mode graphics)
-d81data/%.fci: assets-img/%.png
+d81data/%.fci: assets-fci/%.png
 	python3 tools/png2fci.py -v0r $< $@
 
 %.d81: bin/%.prg $(FCIS)

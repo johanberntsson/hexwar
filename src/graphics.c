@@ -224,7 +224,7 @@ void draw_tile(byte x0, byte y0, TileInfo *tile)
     // byte x, y;
     // word i, j;
     static word screen;         // screen RAM points to...
-    static dword framebuffer;   // the framebuffer, which has data from...
+    static dword framebuffer;  // the framebuffer, which has data from...
     static dword tile_bitmap;   // the tile with data loaded from the FCI file
     static byte screen_skip;
 
@@ -239,8 +239,8 @@ void draw_tile(byte x0, byte y0, TileInfo *tile)
         if(y + y0 >= 50) continue;
         for(x = 0; x < tile->width; ++x) {
             if(x + x0 < 80) {
-#ifdef SCREENBASE_FIRST_C64K
-                framebuffer = (PEEK(screen) + 256 * PEEK(screen + 1));
+#ifdef SCREENBASE_FIRST_64K
+                framebuffer = *((word *) screen);
 #else
                 framebuffer = (dma_peek(screen) + 256 * dma_peek(screen + 1));
 #endif
@@ -263,21 +263,17 @@ void draw_expanded_tile(byte x0, byte y0, TileInfo *tile)
 {
     // byte x, y;
     // word i, j;
-    static word screen;       // screen RAM points to...
+    static dword screen;      // screen RAM points to...
     static dword framebuffer; // the screen bitmap, which has data from...
     static dword tile_bitmap; // the tile with data loaded from the FCI file
 
     tile_bitmap = tile->base_address;
     asm("sei");
     POKE(1,0x35);
-    for(x = 0; x < 32; ++x) {
-        screen = SCREENBASE + 2 * 80 * y0 + 2 * (x0 + (x >> 3));
-        framebuffer = (PEEK(screen) + 256 * PEEK(screen + 1));
-        framebuffer *= 64;
-        framebuffer += x;
-        dma_copy_skip(tile_bitmap + x, framebuffer, 32, 0x0100, 0x0800);
-    }
+    framebuffer = 0x19000;
+    dma_copy_skip(tile_bitmap, framebuffer, 4*64, 0x0100, 0x0800);
     POKE(1,0x36);
     asm("cli");
+    //fatal("%lx %lx", screen, framebuffer);
 }
 

@@ -119,12 +119,12 @@ void main(void)
 	//debug_BitmapInfo(&tiles);
 	//debug_TileInfo(&tiles);
 #endif
-	draw_tile(0, 0, &desert_tile);
-	draw_expanded_tile(10, 10, &desert_tile);
+	draw_tile(10, 10, &desert_tile);
+	//draw_expanded_tile(0, 0, &desert_tile);
 
-
-	//lpoke(0x19000, 1);
-	//lpoke(0x30000, 1);
+	//dma_poke(0x19000, 1);
+	//dma_poke(0x19010, 1);
+	//dma_poke(0x19000 + 50*64, 1);
 
     //stop_benchmark();
 	for(;;) {

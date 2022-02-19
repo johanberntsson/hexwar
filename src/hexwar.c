@@ -14,7 +14,7 @@
 
 // temp variables (much faster to keep them global)
 word i, j;
-byte x, y;
+byte x, y, u, v;
 
 /*  Memory layout:
          334 -      3fb : tmp buffer for loadFCI etc. (200 bytes)
@@ -119,13 +119,14 @@ void main(void)
 	//debug_BitmapInfo(&tiles);
 	//debug_TileInfo(&tiles);
 #endif
-	draw_tile(10, 10, &desert_tile);
-	draw_tile(14, 10, &desert_tile);
-	draw_tile(18, 10, &desert_tile);
-	draw_tile(12, 13, &desert_tile);
-	draw_tile(16, 13, &desert_tile);
-	draw_tile(20, 13, &desert_tile);
+	draw_tile_in_view(10, 10, &desert_tile);
+	draw_tile_in_view(14, 10, &desert_tile);
+	draw_tile_in_view(18, 10, &desert_tile);
+	draw_tile_in_view(12, 13, &desert_tile);
+	draw_tile_in_view(16, 13, &desert_tile);
+	draw_tile_in_view(20, 13, &desert_tile);
 	//draw_expanded_tile(0, 0, &desert_tile);
+	draw_tile_anywhere(6, 9, &desert_tile);
 
 	//dma_poke(0x19000, 1);
 	//dma_poke(0x19010, 1);

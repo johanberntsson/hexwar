@@ -10,7 +10,7 @@ typedef unsigned long dword;
 
 // temp variables (much faster to keep them global)
 extern word i, j;
-extern byte x, y;
+extern byte x, y, u, v;
 
 // Screen location (with shortcuts if in bank 0)
 #define SCREENBASE 0xe000u
@@ -20,6 +20,12 @@ extern byte x, y;
 // Screen resolution: defaults to H320, V200 if not defined
 #define H640
 #define V400
+
+// map view limits
+#define VIEW_LEFT 10
+#define VIEW_RIGHT 21
+#define VIEW_TOP 10
+#define VIEW_BOTTOM 13
 
 // work buffer
 #define TMPBUFFER 0x03fbu

@@ -46,7 +46,8 @@ byte loadFromFile(word size, dword address);
 dword load_FCI(char *filename, dword address, BitmapInfo *info);
 void set_palette(BitmapInfo *bitmap);
 void prepare_tile(TileInfo *tile, BitmapInfo *bitmap, byte x, byte y, byte w, byte h);
-void draw_tile(byte x0, byte y0, TileInfo *tile);
+void draw_tile_anywhere(byte x0, byte y0, TileInfo *tile);
+void draw_tile_in_view(byte x0, byte y0, TileInfo *tile);
 void draw_expanded_tile(byte x0, byte y0, TileInfo *tile);
 
 #endif

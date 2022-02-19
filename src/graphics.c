@@ -217,9 +217,7 @@ void set_palette(BitmapInfo *bitmap)
     }
 }
 
-#ifdef EXPAND_TILE_X
-#else
-void draw_tile(byte x0, byte y0, TileInfo *tile)
+void draw_tile_anywhere(byte x0, byte y0, TileInfo *tile)
 {
     // byte x, y;
     // word i, j;
@@ -248,6 +246,51 @@ void draw_tile(byte x0, byte y0, TileInfo *tile)
             }
             screen += 2;
             tile_bitmap += 64;
+        }
+        tile_bitmap += tile->row_skip_length_in_bytes;
+        screen += screen_skip;
+    }
+#ifdef SCREENBASE_UNDER_RAM
+    POKE(1,0x36);
+    asm("cli");
+#endif
+}
+
+#ifdef EXPAND_TILE_X
+#else
+void draw_tile_in_view(byte x0, byte y0, TileInfo *tile)
+{
+    // byte x, y;
+    // word i, j;
+    static word screen;         // screen RAM points to...
+    static dword framebuffer;  // the framebuffer, which has data from...
+    static dword tile_bitmap;   // the tile with data loaded from the FCI file
+    static byte screen_skip;
+
+    screen = SCREENBASE + 2 * SCREEN_WIDTH * y0 + 2 * x0;
+    screen_skip = 2 * (SCREEN_WIDTH - tile->width);
+    tile_bitmap = tile->base_address;
+#ifdef SCREENBASE_UNDER_RAM
+    asm("sei");
+    POKE(1,0x35);
+#endif
+    for(y = 0; y < tile->height; ++y) {
+        u = y + y0;
+        if(u > VIEW_BOTTOM) continue;
+        if(u >= VIEW_TOP) {
+            for(x = 0; x < tile->width; ++x) {
+                v = x + x0;
+                if(v >= VIEW_LEFT && v <= VIEW_RIGHT) {
+#ifdef SCREENBASE_FIRST_64K
+                    framebuffer = *((word *) screen);
+#else
+                    framebuffer = (dma_peek(screen) + 256 * dma_peek(screen + 1));
+#endif
+                    dma_copy_transparent(tile_bitmap, framebuffer * 64, 64, 0);
+                }
+                screen += 2;
+                tile_bitmap += 64;
+            }
         }
         tile_bitmap += tile->row_skip_length_in_bytes;
         screen += screen_skip;

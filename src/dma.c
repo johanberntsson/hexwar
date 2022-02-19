@@ -165,9 +165,9 @@ void dma_copy(dword source_address, dword destination_address, word count)
     do_dma((unsigned int) &dma_copy_list);
 }
 
-void dma_copy_transparent(dword source_address, dword destination_address, word count, byte transparent_value)
+void dma_copy_transparent(dword source_address, dword destination_address, word count)
 {
-    dma_copy_transparent_list.transparent_value = transparent_value;
+    dma_copy_transparent_list.transparent_value = 0;
     dma_copy_transparent_list.source_mb = source_address >> 20;
     dma_copy_transparent_list.dest_mb = (destination_address >> 20);
     dma_copy_transparent_list.count = count;

@@ -48,6 +48,9 @@ void set_palette(BitmapInfo *bitmap);
 void prepare_tile(TileInfo *tile, BitmapInfo *bitmap, byte x, byte y, byte w, byte h);
 void draw_tile_anywhere(byte x0, byte y0, TileInfo *tile);
 void draw_tile_in_view(byte x0, byte y0, TileInfo *tile);
-void draw_expanded_tile(byte x0, byte y0, TileInfo *tile);
+void g_xy(byte x, byte y);
+void g_color(byte color);
+void g_attributes(byte attributes);
+void g_putc(byte c);
 
 #endif

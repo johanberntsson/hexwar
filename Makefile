@@ -7,9 +7,11 @@ LDFLAGS = -t c64 -m $(PROGRAM).map
 C1541 := c1541
 XEMU := xemu-xmega65
 
-# source and library files
-SOURCES :=  $(wildcard src/*.c) 
-OBJS := $(subst src, obj, $(SOURCES:%.c=%.o))
+# source and object files
+CSOURCES :=  $(wildcard src/*.c)
+ASOURCES :=  $(wildcard src/*.s) 
+OBJS := $(subst src, obj, $(CSOURCES:%.c=%.o)) 
+OBJS += $(subst src, obj, $(ASOURCES:%.s=%.a))
 
 # png files to convert and add to the floppy
 PNGS := $(wildcard assets-fci/*.png)
@@ -36,11 +38,15 @@ c64: prepare_dirs hexwar.d64
 	x64 hexwar.d64 > /dev/null
 
 prepare_dirs:
-	mkdir -p bin d81data obj
+	@echo $(SOURCES)
+	@mkdir -p bin d81data obj
 
 obj/%.o: src/%.c
 	$(CC) -c $(CFLAGS) -o $@ $<
 	#@$(MAKEDEPEND)
+
+obj/%.a: src/%.s
+	$(CC) -c $(CFLAGS) -o $@ $<
 
 bin/%.prg: $(OBJS)
 	$(CC) $(LDFLAGS) -o $@ $^
@@ -70,9 +76,10 @@ clean:
 	rm -rf bin obj d81data *.d81 *.d64
 
 # TODO: make this automatic
-DEPS    :=  $(wildcard include/*.h) 
+DEPS    :=  $(wildcard include/*.h) Makefile
 
 obj/dma.o: $(DEPS)
 obj/graphics.o: $(DEPS)
 obj/hexwar.o: $(DEPS)
+obj/assembler_utilities.a: $(DEPS)
 

@@ -1,7 +1,9 @@
+#include <c64.h>
 #include <stdio.h>
 
-#include "graphics.h"
 #include "dma.h"
+#include "graphics.h"
+#include "assembler_utilities.h"
 
 #ifdef H640
     #define SCREEN_WIDTH 80
@@ -17,6 +19,20 @@
         #define EXPAND_TILE_X
     #endif
 #endif
+
+#ifdef SCREENBASE_UNDER_RAM
+#define ENABLE_SCREEN_ACCESS asm("sei"); POKE(1,0x35);
+#define DISABLE_SCREEN_ACCESS POKE(1,0x36); asm("cli");
+#else
+#define ENABLE_SCREEN_ACCESS
+#define DISABLE_SCREEN_ACCESS
+#endif
+
+byte text_x;
+byte text_y;
+byte text_color;
+byte text_attributes;
+word text_screen_offset;
 
 void load_from_file(FILE *f, word size, dword address);
 unsigned char swap_nibbles(unsigned char in);
@@ -45,32 +61,12 @@ void setup_horizontal_framebuffer()
     }
 }
 
-byte assembler[] = {
-    // since cc65 doesn't allow 4510 opcodes I have
-    // written the assembler in acme, made a hexdump and
-    // stored it here
-    0xa9, 0x00,       // lda #$00
-    0xaa,             // tax
-    0xa8,             // tay
-    0x4b,             // taz
-    0x5c,             // map
-    0xa9, 0x36,       // lda #$36 (no basic)
-    0x85, 0x01,       // sta $01
-    0xa9, 0x47,       // lda #$47
-    0x8d, 0x2f, 0xd0, // sta $d02f
-    0xa9, 0x53,       // lda #$53
-    0x8d, 0x2f, 0xd0, // sta $d02f
-    0xea,             // eom
-    0xa9, 0x70,       // lda #$70
-    0x8d, 0x40, 0xd6, // sta $d640
-    0xea,             // nop
-    //0xee, 0x20, 0xd0, // inc $d020
-    0x60              // rts
-};
-
-
 void init_graphics_mode(void)
 {
+    g_xy(0,0);
+    g_attributes(0);
+    g_color(COLOR_RED);
+
     // Fast CPU, M65 IO
     mega65_io_enable();
 
@@ -79,7 +75,7 @@ void init_graphics_mode(void)
     // mode, we still need the kernal, so avoid writing on
     // 2c000 - 2ffff.
     // See the MEGA65 book, page F-11
-    asm("jsr %v", assembler);
+    disable_rom_protection();
     clear_framebuffer();
     setup_horizontal_framebuffer();
     // Clear colour RAM
@@ -191,14 +187,14 @@ static unsigned char swp;
 unsigned char swap_nibbles(unsigned char in) // oh why?!
 {
     swp = in;
-    __asm__("lda %v", swp);
-    __asm__("asl  a");
-    __asm__("adc  #$80");
-    __asm__("rol a");
-    __asm__("asl a");
-    __asm__("adc  #$80");
-    __asm__("rol  a");
-    __asm__("sta %v", swp);
+    asm("lda %v", swp);
+    asm("asl  a");
+    asm("adc  #$80");
+    asm("rol a");
+    asm("asl a");
+    asm("adc  #$80");
+    asm("rol  a");
+    asm("sta %v", swp);
     return swp;
 }
 
@@ -229,10 +225,7 @@ void draw_tile_anywhere(byte x0, byte y0, TileInfo *tile)
     screen = SCREENBASE + 2 * SCREEN_WIDTH * y0 + 2 * x0;
     screen_skip = 2 * (SCREEN_WIDTH - tile->width);
     tile_bitmap = tile->base_address;
-#ifdef SCREENBASE_UNDER_RAM
-    asm("sei");
-    POKE(1,0x35);
-#endif
+    ENABLE_SCREEN_ACCESS
     for(y = 0; y < tile->height; ++y) {
         if(y + y0 >= SCREEN_HEIGHT) continue;
         for(x = 0; x < tile->width; ++x) {
@@ -242,7 +235,7 @@ void draw_tile_anywhere(byte x0, byte y0, TileInfo *tile)
 #else
                 framebuffer = (dma_peek(screen) + 256 * dma_peek(screen + 1));
 #endif
-                dma_copy_transparent(tile_bitmap, framebuffer * 64, 64, 0);
+                dma_copy_transparent(tile_bitmap, framebuffer * 64, 64);
             }
             screen += 2;
             tile_bitmap += 64;
@@ -250,13 +243,86 @@ void draw_tile_anywhere(byte x0, byte y0, TileInfo *tile)
         tile_bitmap += tile->row_skip_length_in_bytes;
         screen += screen_skip;
     }
-#ifdef SCREENBASE_UNDER_RAM
-    POKE(1,0x36);
-    asm("cli");
-#endif
+    DISABLE_SCREEN_ACCESS
+}
+
+
+void g_xy(byte x, byte y)
+{
+    text_x = x;
+    text_y = y;
+}
+
+void g_color(byte color)
+{
+    text_color = color;
+}
+
+void g_attributes(byte attributes)
+{
+    text_attributes = attributes;
+}
+
+void g_putc(byte c)
+{
+    dword colorbase;
+
+    text_screen_offset = 2 * (text_x + SCREEN_WIDTH * text_y);
+    i = SCREENBASE + text_screen_offset;
+    colorbase = COLORBASE + text_screen_offset;
+    //fatal("%lx %lx %x ", COLORBASE, colorbase, text_screen_offset);
+
+    ENABLE_SCREEN_ACCESS
+    POKE(i, c);
+    POKE(i + 1, 0);
+    DISABLE_SCREEN_ACCESS
+    dma_poke(colorbase, 0);
+    dma_poke(colorbase + 1, text_color | 0x20);
+
+    if(++text_x >= SCREEN_WIDTH) {
+        text_x = 0;
+        if(++text_y >= SCREEN_HEIGHT) --text_y;
+    }
 }
 
 #ifdef EXPAND_TILE_X
+void draw_tile_in_view(byte x0, byte y0, TileInfo *tile)
+{
+    static word screen;         // screen RAM points to...
+    static dword framebuffer;  // the framebuffer, which has data from...
+    static dword tile_bitmap;   // the tile with data loaded from the FCI file
+    static byte screen_skip;
+
+    screen = SCREENBASE + 2 * (SCREEN_WIDTH * y0 + x0);
+    screen_skip = 2 * (SCREEN_WIDTH - 2 * tile->width);
+    tile_bitmap = tile->base_address;
+    ENABLE_SCREEN_ACCESS
+    for(y = 0; y < tile->height; ++y) {
+        u = y + y0;
+        if(u > VIEW_BOTTOM) continue;
+        if(u >= VIEW_TOP) {
+            for(x = 0; x < tile->width; ++x) {
+                v = 2*x + x0;
+                if(v >= VIEW_LEFT && v <= VIEW_RIGHT) {
+#ifdef SCREENBASE_FIRST_64K
+                    framebuffer = *((word *) screen);
+#else
+                    framebuffer = (dma_peek(screen) + 256 * dma_peek(screen + 1));
+#endif
+                    dma_copy(tile_bitmap, TMPBUFFER, 64);
+                    expand_fullcolor_char_x();
+                    dma_copy_transparent(TMPBUFFER + 64, framebuffer * 64, 64);
+                    dma_copy_transparent(TMPBUFFER + 128, (framebuffer + 1) * 64, 64);
+                }
+                screen += 4;
+                tile_bitmap += 64;
+            }
+        }
+        tile_bitmap += tile->row_skip_length_in_bytes;
+        screen += screen_skip;
+    }
+    DISABLE_SCREEN_ACCESS
+}
 #else
 void draw_tile_in_view(byte x0, byte y0, TileInfo *tile)
 {
@@ -267,13 +333,10 @@ void draw_tile_in_view(byte x0, byte y0, TileInfo *tile)
     static dword tile_bitmap;   // the tile with data loaded from the FCI file
     static byte screen_skip;
 
-    screen = SCREENBASE + 2 * SCREEN_WIDTH * y0 + 2 * x0;
+    screen = SCREENBASE + 2 * (SCREEN_WIDTH * y0 + x0);
     screen_skip = 2 * (SCREEN_WIDTH - tile->width);
     tile_bitmap = tile->base_address;
-#ifdef SCREENBASE_UNDER_RAM
-    asm("sei");
-    POKE(1,0x35);
-#endif
+    ENABLE_SCREEN_ACCESS
     for(y = 0; y < tile->height; ++y) {
         u = y + y0;
         if(u > VIEW_BOTTOM) continue;
@@ -286,7 +349,7 @@ void draw_tile_in_view(byte x0, byte y0, TileInfo *tile)
 #else
                     framebuffer = (dma_peek(screen) + 256 * dma_peek(screen + 1));
 #endif
-                    dma_copy_transparent(tile_bitmap, framebuffer * 64, 64, 0);
+                    dma_copy_transparent(tile_bitmap, framebuffer * 64, 64);
                 }
                 screen += 2;
                 tile_bitmap += 64;
@@ -295,10 +358,7 @@ void draw_tile_in_view(byte x0, byte y0, TileInfo *tile)
         tile_bitmap += tile->row_skip_length_in_bytes;
         screen += screen_skip;
     }
-#ifdef SCREENBASE_UNDER_RAM
-    POKE(1,0x36);
-    asm("cli");
-#endif
+    DISABLE_SCREEN_ACCESS
 }
 #endif
 

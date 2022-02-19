@@ -1,8 +1,15 @@
+TODO:
+- fix initialization so that always >$30000 and don't waste memory
+- 
+
+
+
+= Resources
+
 https://www.redblobgames.com/grids/hexagons/
 https://forums.civfanatics.com/threads/civ1-map-generation-explained.498630/#mapgenA
 
 
-tex = texture format (mirror, 90 degrees)
 = Civ 1
 
 Requirement: 640 KB

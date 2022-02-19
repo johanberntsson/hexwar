@@ -89,6 +89,8 @@ void stop_benchmark()
 
 BitmapInfo tiles;
 TileInfo desert_tile;
+TileInfo plains_tile;
+TileInfo ocean_tile;
 
 #ifdef DEBUG
 void debug_BitmapInfo(BitmapInfo *bitmap)
@@ -101,7 +103,31 @@ void debug_BitmapInfo(BitmapInfo *bitmap)
 void debug_TileInfo(TileInfo *tile)
 {
 }
+
+void draw_view_frame()
+{
+	// draw frame around view
+	g_attributes(64);
+	g_xy(VIEW_LEFT - 1, VIEW_TOP - 1);
+	for(x = VIEW_LEFT - 2; x <= VIEW_RIGHT; ++x) g_putc(0x30);
+	g_xy(VIEW_LEFT - 1, VIEW_BOTTOM + 1);
+	for(x = VIEW_LEFT - 2; x <= VIEW_RIGHT; ++x) g_putc(0x30);
+	for(y = VIEW_TOP; y <= VIEW_BOTTOM; ++y) {
+	    g_xy(VIEW_LEFT - 1, y); g_putc(0x30);
+	    g_xy(VIEW_RIGHT + 1, y); g_putc(0x30);
+    }
+}
 #endif 
+
+void draw_test_tiles()
+{
+	draw_tile_in_view(10, 10, &desert_tile);
+	draw_tile_in_view(14, 10, &plains_tile);
+	draw_tile_in_view(18, 10, &ocean_tile);
+	draw_tile_in_view(12, 13, &desert_tile);
+	draw_tile_in_view(16, 13, &desert_tile);
+	draw_tile_in_view(20, 13, &desert_tile);
+}
 
 void main(void) 
 {
@@ -115,18 +141,17 @@ void main(void)
 	if(next_address == 0) fatal("tiles.fci failed to load");
 	set_palette(&tiles);
 	prepare_tile(&desert_tile, &tiles, 0, 0, 4, 4);
+	prepare_tile(&plains_tile, &tiles, 4, 0, 4, 4);
+	prepare_tile(&ocean_tile, &tiles, 12, 0, 4, 4);
 #ifdef DEBUG
 	//debug_BitmapInfo(&tiles);
 	//debug_TileInfo(&tiles);
+
+	draw_view_frame();
+	draw_test_tiles();
 #endif
-	draw_tile_in_view(10, 10, &desert_tile);
-	draw_tile_in_view(14, 10, &desert_tile);
-	draw_tile_in_view(18, 10, &desert_tile);
-	draw_tile_in_view(12, 13, &desert_tile);
-	draw_tile_in_view(16, 13, &desert_tile);
-	draw_tile_in_view(20, 13, &desert_tile);
-	//draw_expanded_tile(0, 0, &desert_tile);
-	draw_tile_anywhere(6, 9, &desert_tile);
+	//draw_tile_anywhere(6, 9, &desert_tile);
+
 
 	//dma_poke(0x19000, 1);
 	//dma_poke(0x19010, 1);

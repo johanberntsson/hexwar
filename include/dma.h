@@ -1,6 +1,8 @@
 #ifndef __DMA_H
 #define __DMA_H
 
+#include "hexwar.h"
+
 #define POKE(X, Y) (*(unsigned char *)(X)) = Y
 #define PEEK(X) (*(unsigned char *)(X))
 
@@ -10,7 +12,7 @@ void mega65_io_enable(void);
 unsigned char dma_peek(dword address);
 void dma_poke(dword address, byte value);
 void dma_copy(dword source_address, dword destination_address, word count);
-void dma_copy_transparent(dword source_address, dword destination_address, word count, byte transparent_value);
+void dma_copy_transparent(dword source_address, dword destination_address, word count);
 void dma_fill(dword destination_address, byte value, word count);
 void dma_fill_skip(dword destination_address, byte value, word count, byte dest_skip);
 

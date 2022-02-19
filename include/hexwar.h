@@ -13,13 +13,14 @@ extern word i, j;
 extern byte x, y, u, v;
 
 // Screen location (with shortcuts if in bank 0)
-#define SCREENBASE 0xe000u
+#define SCREENBASE 0xe000U
 #define SCREENBASE_UNDER_RAM
 #define SCREENBASE_FIRST_64K
+#define COLORBASE 0xff80000L
 
 // Screen resolution: defaults to H320, V200 if not defined
 #define H640
-#define V400
+//#define V400
 
 // map view limits
 #define VIEW_LEFT 10
@@ -28,7 +29,7 @@ extern byte x, y, u, v;
 #define VIEW_BOTTOM 13
 
 // work buffer
-#define TMPBUFFER 0x03fbu
+#define TMPBUFFER 0x0334U
 #define TMPBUFFER_SIZE 200
 
 void go_8bit();

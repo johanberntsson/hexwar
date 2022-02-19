@@ -43,8 +43,6 @@ unsigned char swap_nibbles(unsigned char in);
 
 void setup_view()
 {
-    if((64 * VIEW_WIDTH * VIEW_HEIGHT) > 0x30000) fatal("View is too large");
-
     // Layout screen so that map tile data comes from $30000 -- $5FFFF
     i = 0x30000 / 0x40;
 

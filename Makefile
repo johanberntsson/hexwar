@@ -32,7 +32,7 @@ debug: CC += -DDEBUG
 debug: hexwar
 
 hexwar: prepare_dirs hexwar.d81
-	$(XEMU) -8 hexwar.d81 > /dev/null
+	@$(XEMU) -8 hexwar.d81 > /dev/null
 
 c64: prepare_dirs hexwar.d64
 	x64 hexwar.d64 > /dev/null
@@ -43,7 +43,6 @@ prepare_dirs:
 
 obj/%.o: src/%.c
 	$(CC) -c $(CFLAGS) -o $@ $<
-	#@$(MAKEDEPEND)
 
 obj/%.a: src/%.s
 	$(CC) -c $(CFLAGS) -o $@ $<
@@ -79,6 +78,7 @@ clean:
 DEPS    :=  $(wildcard include/*.h) Makefile
 
 obj/dma.o: $(DEPS)
+obj/map.o: $(DEPS)
 obj/graphics.o: $(DEPS)
 obj/hexwar.o: $(DEPS)
 obj/assembler_utilities.a: $(DEPS)

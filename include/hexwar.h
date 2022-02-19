@@ -31,6 +31,10 @@ extern byte x, y, u, v;
 #define VIEW_WIDTH (1 + VIEW_RIGHT - VIEW_LEFT)
 #define VIEW_HEIGHT (1 + VIEW_BOTTOM - VIEW_TOP)
 
+#if (64 * VIEW_WIDTH * VIEW_HEIGHT) >= 0x30000) 
+#error view is too big (> $30000)
+#endif
+
 // work buffer
 #define TMPBUFFER 0x0334U
 #define TMPBUFFER_SIZE 200

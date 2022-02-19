@@ -9,8 +9,9 @@
 #include <stdbool.h>
 
 #include "hexwar.h"
-#include "graphics.h"
+#include "map.h"
 #include "dma.h"
+#include "graphics.h"
 
 // temp variables (much faster to keep them global)
 word i, j;
@@ -102,6 +103,7 @@ void debug_BitmapInfo(BitmapInfo *bitmap)
 
 void debug_TileInfo(TileInfo *tile)
 {
+    printf("%d\n", tile->width);
 }
 
 void draw_view_frame()
@@ -146,6 +148,7 @@ void main(void)
     start_benchmark();
 
     dma_init();
+    map_init();
 	init_graphics_mode();
     HOTREG &= 0x7f;   // disable hotreg
 

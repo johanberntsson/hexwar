@@ -43,8 +43,11 @@ unsigned char swap_nibbles(unsigned char in);
 
 void setup_view()
 {
-    // Layout screen so that map tile data comes from $40000 -- $5FFFF
-    i = 0x40000 / 0x40;
+    if((64 * VIEW_WIDTH * VIEW_HEIGHT) > 0x30000) fatal("View is too large");
+
+    // Layout screen so that map tile data comes from $30000 -- $5FFFF
+    i = 0x30000 / 0x40;
+
     for (y = VIEW_TOP; y <= VIEW_BOTTOM; ++y) {
         for (x = VIEW_LEFT; x <= VIEW_RIGHT; ++x) {
             j = SCREENBASE + 2 * (x + y * SCREEN_WIDTH);
@@ -76,7 +79,7 @@ void init_graphics_mode(void)
     // mode, we still need the kernal and DOS, so avoid writing
     // on 1f800 - $24000 and  2c000 - 2ffff.
     // See the MEGA65 book, page F-11
-    //disable_rom_protection();
+    disable_rom_protection();
 
     // clear screen
     dma_fill(SCREENBASE, 0, 2 * SCREEN_SIZE);
@@ -124,8 +127,8 @@ void init_graphics_mode(void)
 
 void clear_view(void)
 {
-    //dma_fill(0x30000, 0x00, 0x8000);
-    //dma_fill(0x38000, 0x00, 0x8000);
+    dma_fill(0x30000, 0x00, 0x8000);
+    dma_fill(0x38000, 0x00, 0x8000);
     dma_fill(0x40000, 0x00, 0x8000);
     dma_fill(0x48000, 0x00, 0x8000);
     dma_fill(0x50000, 0x00, 0x8000);
@@ -361,14 +364,41 @@ void scroll_up(void)
 
 void scroll_down(void)
 {
+    ENABLE_SCREEN_ACCESS
+    for(y = VIEW_HEIGHT - 1; y > 0;  --y) {
+        dma_copy(
+            view_row_startaddress[y - 1],
+            view_row_startaddress[y], 
+            VIEW_WIDTH * 2);
+    }
+    DISABLE_SCREEN_ACCESS
 }
 
 void scroll_left(void)
 {
-    //fatal("left");
+    ENABLE_SCREEN_ACCESS
+    for(y = 0; y < VIEW_HEIGHT; ++y) {
+        dma_copy(
+            view_row_startaddress[y] + 2,
+            view_row_startaddress[y], 
+            VIEW_WIDTH * 2 - 2);
+    }
+    DISABLE_SCREEN_ACCESS
 }
 
 void scroll_right(void)
 {
+    byte xx;
+    ENABLE_SCREEN_ACCESS
+    for(y = 0; y < VIEW_HEIGHT; ++y) {
+        for(x = VIEW_WIDTH - 1; x > 0; --x) {
+            xx = x << 1; // to avoid multiplication (x * 2)
+            POKE(view_row_startaddress[y] + xx, 
+                PEEK(view_row_startaddress[y] + xx - 2));
+            POKE(view_row_startaddress[y] + 1 + xx, 
+                PEEK(view_row_startaddress[y] + xx - 1));
+        }
+    }
+    DISABLE_SCREEN_ACCESS
 }
 

@@ -296,58 +296,6 @@ void g_putc(byte c)
     }
 }
 
-void draw_tile_in_view(byte x0, byte y0, TileInfo *tile)
-{
-    static word screen;         // screen RAM points to...
-    static dword framebuffer;  // the framebuffer, which has data from...
-    static dword tile_bitmap;   // the tile with data loaded from the FCI file
-    static byte screen_skip;
-
-    screen = SCREENBASE + 2 * (SCREEN_WIDTH * y0 + x0);
-#ifdef EXPAND_TILE_X
-    screen_skip = 2 * (SCREEN_WIDTH - 2 * tile->width);
-#else
-    screen_skip = 2 * (SCREEN_WIDTH - tile->width);
-#endif
-    tile_bitmap = tile->base_address;
-    ENABLE_SCREEN_ACCESS
-    for(y = 0; y < tile->height; ++y) {
-        u = y + y0;
-        if(u > VIEW_BOTTOM) continue;
-        if(u >= VIEW_TOP) {
-            for(x = 0; x < tile->width; ++x) {
-#ifdef EXPAND_TILE_X
-                v = 2*x + x0;
-#else
-                v = x + x0;
-#endif
-                if(v >= VIEW_LEFT && v <= VIEW_RIGHT) {
-#ifdef SCREENBASE_FIRST_64K
-                    framebuffer = *((word *) screen);
-#else
-                    framebuffer = (dma_peek(screen) + 256 * dma_peek(screen + 1));
-#endif
-#ifdef EXPAND_TILE_X
-                    dma_copy(tile_bitmap, TMPBUFFER, 64);
-                    expand_fullcolor_char_x();
-                    dma_copy_transparent(TMPBUFFER + 64, framebuffer * 64, 64);
-                    dma_copy_transparent(TMPBUFFER + 128, (framebuffer + 1) * 64, 64);
-                }
-                screen += 4;
-#else
-                    dma_copy_transparent(tile_bitmap, framebuffer * 64, 64);
-                }
-                screen += 2;
-#endif
-                tile_bitmap += 64;
-            }
-        }
-        tile_bitmap += tile->row_skip_length_in_bytes;
-        screen += screen_skip;
-    }
-    DISABLE_SCREEN_ACCESS
-}
-
 void scroll_up(void)
 {
     ENABLE_SCREEN_ACCESS
@@ -379,24 +327,79 @@ void scroll_left(void)
         dma_copy(
             view_row_startaddress[y] + 2,
             view_row_startaddress[y], 
-            VIEW_WIDTH * 2 - 2);
+            2 * VIEW_WIDTH - 2);
     }
     DISABLE_SCREEN_ACCESS
 }
 
 void scroll_right(void)
 {
-    byte xx;
     ENABLE_SCREEN_ACCESS
     for(y = 0; y < VIEW_HEIGHT; ++y) {
-        for(x = VIEW_WIDTH - 1; x > 0; --x) {
-            xx = x << 1; // to avoid multiplication (x * 2)
-            POKE(view_row_startaddress[y] + xx, 
-                PEEK(view_row_startaddress[y] + xx - 2));
-            POKE(view_row_startaddress[y] + 1 + xx, 
-                PEEK(view_row_startaddress[y] + xx - 1));
-        }
+        dma_copy(view_row_startaddress[y], TMPBUFFER, 2 * VIEW_WIDTH - 2);
+        dma_copy(TMPBUFFER, view_row_startaddress[y] + 2, 2 * VIEW_WIDTH - 2);
     }
     DISABLE_SCREEN_ACCESS
+}
+
+
+void draw_tile_in_view(byte x0, byte y0, TileInfo *tile)
+{
+    static word screen;         // screen RAM points to...
+    static dword framebuffer;  // the framebuffer, which has data from...
+    static dword tile_bitmap;   // the tile with data loaded from the FCI file
+    static byte screen_skip;
+
+    screen = SCREENBASE + 2 * (SCREEN_WIDTH * y0 + x0);
+#ifdef EXPAND_TILE_X
+    screen_skip = 2 * (SCREEN_WIDTH - 2 * tile->width);
+#else
+    screen_skip = 2 * (SCREEN_WIDTH - tile->width);
+#endif
+    tile_bitmap = tile->base_address;
+    ENABLE_SCREEN_ACCESS
+    for(y = 0; y < tile->height; ++y) {
+        u = y + y0;
+        if(u > VIEW_BOTTOM) continue;
+        if(u < VIEW_TOP) {
+            screen += (2 * SCREEN_WIDTH);
+            tile_bitmap += (64 * tile->width) + tile->row_skip_length_in_bytes;
+            continue;
+        } else {
+            for(x = 0; x < tile->width; ++x) {
+#ifdef EXPAND_TILE_X
+                v = 2*x + x0;
+#else
+                v = x + x0;
+#endif
+                if(v >= VIEW_LEFT && v <= VIEW_RIGHT) {
+#ifdef SCREENBASE_FIRST_64K
+                    framebuffer = *((word *) screen);
+#else
+                    framebuffer = (dma_peek(screen) + 256 * dma_peek(screen + 1));
+#endif
+#ifdef EXPAND_TILE_X
+                    dma_copy(tile_bitmap, TMPBUFFER, 64);
+                    expand_fullcolor_char_x();
+                    dma_copy_transparent(TMPBUFFER + 64, framebuffer * 64, 64);
+                    dma_copy_transparent(TMPBUFFER + 128, (framebuffer + 1) * 64, 64);
+                }
+                screen += 4;
+#else
+                    dma_copy_transparent(tile_bitmap, framebuffer * 64, 64);
+                }
+                screen += 2;
+#endif
+                tile_bitmap += 64;
+            }
+        }
+        tile_bitmap += tile->row_skip_length_in_bytes;
+        screen += screen_skip;
+    }
+    DISABLE_SCREEN_ACCESS
+    return;
+error:
+    DISABLE_SCREEN_ACCESS
+    fatal("%d %d %d %d %d", u, y, y0, VIEW_TOP, VIEW_BOTTOM);
 }
 

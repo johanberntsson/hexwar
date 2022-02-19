@@ -111,12 +111,14 @@ void draw_view_frame()
 	// draw frame around view
 	g_attributes(64);
 	g_xy(VIEW_LEFT - 1, VIEW_TOP - 1);
-	for(x = VIEW_LEFT - 2; x <= VIEW_RIGHT; ++x) g_putc(0x30);
-	g_xy(VIEW_LEFT - 1, VIEW_BOTTOM + 1);
-	for(x = VIEW_LEFT - 2; x <= VIEW_RIGHT; ++x) g_putc(0x30);
+	for(x = VIEW_LEFT - 2; x <= VIEW_RIGHT; ++x) if(x < 79) g_putc(0x30);
+	if(VIEW_BOTTOM <49) {
+	    g_xy(VIEW_LEFT - 1, VIEW_BOTTOM + 1);
+	    for(x = VIEW_LEFT - 2; x <= VIEW_RIGHT; ++x) if(x < 79) g_putc(0x30);
+    }
 	for(y = VIEW_TOP; y <= VIEW_BOTTOM; ++y) {
 	    g_xy(VIEW_LEFT - 1, y); g_putc(0x30);
-	    g_xy(VIEW_RIGHT + 1, y); g_putc(0x30);
+	    if(VIEW_RIGHT < 79) g_xy(VIEW_RIGHT + 1, y); g_putc(0x30);
     }
 }
 #endif 
@@ -131,13 +133,24 @@ void draw_test_tiles()
     dx = 8;
     ox = 4;
 #endif
-    xx = 10; yy = 10; dy = 3; 
-	draw_tile_in_view(xx        , yy, &desert_tile);
-	draw_tile_in_view(xx+dx     , yy, &plains_tile);
-	draw_tile_in_view(xx+2*dx   , yy, &ocean_tile);
-	draw_tile_in_view(xx+ox     , yy+dy, &desert_tile);
-	draw_tile_in_view(xx+ox+dx  , yy+dy, &desert_tile);
-	draw_tile_in_view(xx+ox+2*dx, yy+dy, &desert_tile);
+    xx = 18; yy = 1; dy = 3; 
+	draw_tile_in_view(xx        , yy     , &desert_tile);
+	draw_tile_in_view(xx+dx     , yy     , &plains_tile);
+	draw_tile_in_view(xx+2*dx   , yy     , &ocean_tile);
+	draw_tile_in_view(xx+3*dx   , yy     , &ocean_tile);
+	draw_tile_in_view(xx+4*dx   , yy     , &ocean_tile);
+	draw_tile_in_view(xx+5*dx   , yy     , &ocean_tile);
+	draw_tile_in_view(xx+6*dx   , yy     , &ocean_tile);
+	draw_tile_in_view(xx+7*dx   , yy     , &ocean_tile);
+	draw_tile_in_view(xx+ox     , yy+  dy, &desert_tile);
+	draw_tile_in_view(xx+ox+dx  , yy+  dy, &desert_tile);
+	draw_tile_in_view(xx+ox+2*dx, yy+  dy, &desert_tile);
+	draw_tile_in_view(xx        , yy+2*dy, &plains_tile);
+	draw_tile_in_view(xx+ox     , yy+3*dy, &desert_tile);
+	draw_tile_in_view(xx        , yy+4*dy, &plains_tile);
+	draw_tile_in_view(xx+ox     , yy+5*dy, &desert_tile);
+	draw_tile_in_view(xx        , yy+6*dy, &plains_tile);
+	draw_tile_in_view(xx+ox     , yy+7*dy, &desert_tile);
 }
 
 void main(void) 
@@ -148,7 +161,6 @@ void main(void)
     start_benchmark();
 
     dma_init();
-    map_init();
 	init_graphics_mode();
     HOTREG &= 0x7f;   // disable hotreg
 
@@ -163,7 +175,11 @@ void main(void)
 	//debug_TileInfo(&tiles);
 
 	draw_view_frame();
-	draw_test_tiles();
+	//draw_test_tiles();
+
+    map_init();
+	map_center(40,25);
+
 #endif
 	//draw_tile_anywhere(6, 9, &desert_tile);
 

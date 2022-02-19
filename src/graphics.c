@@ -30,6 +30,8 @@
 #define DISABLE_SCREEN_ACCESS
 #endif
 
+dword view_row_startaddress[VIEW_HEIGHT];
+
 byte text_x;
 byte text_y;
 byte text_color;
@@ -60,6 +62,11 @@ void init_graphics_mode(void)
     g_xy(0,0);
     g_attributes(0);
     g_color(COLOR_RED);
+
+    // prepare row offsets
+    for(y = 0; y < VIEW_HEIGHT; ++y) {
+        view_row_startaddress[y] = SCREENBASE + 2 * (VIEW_LEFT + (y + VIEW_TOP) * SCREEN_WIDTH);
+    }
 
     // Fast CPU, M65 IO
     mega65_io_enable();
@@ -342,6 +349,14 @@ void draw_tile_in_view(byte x0, byte y0, TileInfo *tile)
 
 void scroll_up(void)
 {
+    ENABLE_SCREEN_ACCESS
+    for(y = 1; y < VIEW_HEIGHT; ++y) {
+        dma_copy(
+            view_row_startaddress[y],
+            view_row_startaddress[y - 1], 
+            VIEW_WIDTH * 2);
+    }
+    DISABLE_SCREEN_ACCESS
 }
 
 void scroll_down(void)
@@ -350,7 +365,7 @@ void scroll_down(void)
 
 void scroll_left(void)
 {
-    fatal("left");
+    //fatal("left");
 }
 
 void scroll_right(void)

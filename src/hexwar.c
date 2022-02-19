@@ -172,6 +172,7 @@ void main(void)
     //stop_benchmark();
 	for(;;) {
 	    key = PEEK(0xd610);
+	    POKE(0xd610, 0);
         if(key == 97 || key == 157) scroll_left();
         if(key == 100 || key == 29) scroll_right();
         if(key == 119 || key == 145) scroll_up();

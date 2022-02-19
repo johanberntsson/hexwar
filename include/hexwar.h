@@ -27,7 +27,9 @@ extern byte x, y, u, v;
 #define VIEW_LEFT 10
 #define VIEW_RIGHT 40
 #define VIEW_TOP 10
-#define VIEW_BOTTOM 23
+#define VIEW_BOTTOM 18
+#define VIEW_WIDTH (1 + VIEW_RIGHT - VIEW_LEFT)
+#define VIEW_HEIGHT (1 + VIEW_BOTTOM - VIEW_TOP)
 
 // work buffer
 #define TMPBUFFER 0x0334U

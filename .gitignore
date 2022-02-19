@@ -1,9 +1,9 @@
 # Generated binaries
+.map
 *.prg
 bin/autoboot.c65
 hexwar.c64
 hexwar.d64
 hexwar.d81
-obj/c64/*
-obj/c64/*
+obj/*
 

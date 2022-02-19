@@ -120,6 +120,11 @@ void main(void)
 	//debug_TileInfo(&tiles);
 #endif
 	draw_tile(10, 10, &desert_tile);
+	draw_tile(14, 10, &desert_tile);
+	draw_tile(18, 10, &desert_tile);
+	draw_tile(12, 13, &desert_tile);
+	draw_tile(16, 13, &desert_tile);
+	draw_tile(20, 13, &desert_tile);
 	//draw_expanded_tile(0, 0, &desert_tile);
 
 	//dma_poke(0x19000, 1);

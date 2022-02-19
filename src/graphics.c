@@ -3,29 +3,23 @@
 #include "graphics.h"
 #include "dma.h"
 
+#ifdef H640
+    #define SCREEN_WIDTH 80
+#else
+    //TODO
+#endif
+
+#ifdef V400
+    #define SCREEN_HEIGHT 50
+#else
+    #define SCREEN_HEIGHT 25
+    #ifdef H640
+        #define EXPAND_TILE_X
+    #endif
+#endif
+
 void load_from_file(FILE *f, word size, dword address);
 unsigned char swap_nibbles(unsigned char in);
-
-void setup_vertical_framebuffer()
-{
-    // byte x, y;
-    // word i, j;
-
-    // Layout screen so that map tile data comes from $19000 -- $5FFFF
-    for (x = 0; x < 80; ++x) {
-        for (y = 0; y < 50; ++y) {
-            i = SCREENBASE + 160 * y + 2 * x;
-            j = (0x19000 / 0x40) + y + 50 * x;
-            // skip DOS
-            if (j >= (0x1f800 / 0x40)) j += (0x4800 / 0x40);
-            // skip C64 kernal
-            if (j >= (0x2c000 / 0x40)) j += (0x4000 / 0x40);
-            POKE(i, j & 0xff);
-            POKE(i + 1, j >> 8);
-            //if(x == 1 && y == 0) fatal("%x %x %x\n", i, j & 0xff, j >> 8);
-        }
-    }
-}
 
 void setup_horizontal_framebuffer()
 {
@@ -35,8 +29,8 @@ void setup_horizontal_framebuffer()
     // Layout screen so that map tile data comes from $19000 -- $5FFFF
     i = 0x19000 / 0x40;
     j = SCREENBASE;
-    for (y = 0; y < 50; ++y) {
-        for (x = 0; x < 80; ++x) {
+    for (y = 0; y < SCREEN_WIDTH; ++y) {
+        for (x = 0; x < SCREEN_HEIGHT; ++x) {
             POKE(j, i & 0xff);
             //if(x == 0 && y == 0) fatal("%x %x %x\n", j, i & 0xff, i >> 8);
             ++j;
@@ -87,24 +81,28 @@ void init_graphics_mode(void)
     // See the MEGA65 book, page F-11
     asm("jsr %v", assembler);
     clear_framebuffer();
-    setup_vertical_framebuffer();
+    setup_horizontal_framebuffer();
     // Clear colour RAM
-    dma_fill(0xff80000L, 0x00, 80 * 50 * 2);
-
+    dma_fill(0xff80000L, 0x00, 2 * SCREEN_WIDTH * SCREEN_HEIGHT);
 
     // 16-bit text mode, full-colour text for high chars
     VIC4CTRL = 0x05;
+#ifdef V400
     // H640, fast CPU, V400
     VIC3CTRL = 0xC8;
+#else
+    // H640, fast CPU, V200
+    VIC3CTRL = 0xC0;
+#endif
     // Adjust D016 smooth scrolling for VIC-III H640 offset
     VIC2CTRL = 0xC9;
     // 640x400 16bits per char, 8 pixels wide per char
     // = 640/16 x 8 bits = 160 bytes per row
-    CHARSTEP_LO = 160;
+    CHARSTEP_LO = SCREEN_WIDTH * 2;
     CHARSTEP_HI = 0;
-    // Draw 80 chars per row
-    CHRCOUNT = 80;
-    // Put 80x50x2 = 8KB screen at SCREENBASE
+    // Draw SCREEN_WIDTH chars per row
+    CHRCOUNT = SCREEN_WIDTH;
+    // Put max 80x50x2 = 8KB screen at SCREENBASE
     SCNPTR_0 = 0x00;
     SCNPTR_1 = 0xe0;
     SCNPTR_2 = 0x00;
@@ -219,6 +217,8 @@ void set_palette(BitmapInfo *bitmap)
     }
 }
 
+#ifdef EXPAND_TILE_X
+#else
 void draw_tile(byte x0, byte y0, TileInfo *tile)
 {
     // byte x, y;
@@ -228,24 +228,23 @@ void draw_tile(byte x0, byte y0, TileInfo *tile)
     static dword tile_bitmap;   // the tile with data loaded from the FCI file
     static byte screen_skip;
 
-    screen = SCREENBASE + 2 * 80 * y0 + 2 * x0;
-    screen_skip = 2 * (80 - tile->width);
+    screen = SCREENBASE + 2 * SCREEN_WIDTH * y0 + 2 * x0;
+    screen_skip = 2 * (SCREEN_WIDTH - tile->width);
     tile_bitmap = tile->base_address;
 #ifdef SCREENBASE_UNDER_RAM
     asm("sei");
     POKE(1,0x35);
 #endif
     for(y = 0; y < tile->height; ++y) {
-        if(y + y0 >= 50) continue;
+        if(y + y0 >= SCREEN_HEIGHT) continue;
         for(x = 0; x < tile->width; ++x) {
-            if(x + x0 < 80) {
+            if(x + x0 < SCREEN_WIDTH) {
 #ifdef SCREENBASE_FIRST_64K
                 framebuffer = *((word *) screen);
 #else
                 framebuffer = (dma_peek(screen) + 256 * dma_peek(screen + 1));
 #endif
-                framebuffer *= 64;
-                dma_copy(tile_bitmap, framebuffer, 64);
+                dma_copy_transparent(tile_bitmap, framebuffer * 64, 64, 0);
             }
             screen += 2;
             tile_bitmap += 64;
@@ -258,22 +257,5 @@ void draw_tile(byte x0, byte y0, TileInfo *tile)
     asm("cli");
 #endif
 }
-
-void draw_expanded_tile(byte x0, byte y0, TileInfo *tile)
-{
-    // byte x, y;
-    // word i, j;
-    static dword screen;      // screen RAM points to...
-    static dword framebuffer; // the screen bitmap, which has data from...
-    static dword tile_bitmap; // the tile with data loaded from the FCI file
-
-    tile_bitmap = tile->base_address;
-    asm("sei");
-    POKE(1,0x35);
-    framebuffer = 0x19000;
-    dma_copy_skip(tile_bitmap, framebuffer, 4*64, 0x0100, 0x0800);
-    POKE(1,0x36);
-    asm("cli");
-    //fatal("%lx %lx", screen, framebuffer);
-}
+#endif
 

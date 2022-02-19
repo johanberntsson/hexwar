@@ -121,12 +121,21 @@ void draw_view_frame()
 
 void draw_test_tiles()
 {
-	draw_tile_in_view(10, 10, &desert_tile);
-	draw_tile_in_view(14, 10, &plains_tile);
-	draw_tile_in_view(18, 10, &ocean_tile);
-	draw_tile_in_view(12, 13, &desert_tile);
-	draw_tile_in_view(16, 13, &desert_tile);
-	draw_tile_in_view(20, 13, &desert_tile);
+    byte xx, yy, dx, ox, dy; // dx = tile width, ox = half tile width
+#ifdef V400
+    dx = 4;
+    ox = 2;
+#else
+    dx = 8;
+    ox = 4;
+#endif
+    xx = 10; yy = 10; dy = 3; 
+	draw_tile_in_view(xx        , yy, &desert_tile);
+	draw_tile_in_view(xx+dx     , yy, &plains_tile);
+	draw_tile_in_view(xx+2*dx   , yy, &ocean_tile);
+	draw_tile_in_view(xx+ox     , yy+dy, &desert_tile);
+	draw_tile_in_view(xx+ox+dx  , yy+dy, &desert_tile);
+	draw_tile_in_view(xx+ox+2*dx, yy+dy, &desert_tile);
 }
 
 void main(void) 

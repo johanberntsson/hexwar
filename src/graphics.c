@@ -285,7 +285,6 @@ void g_putc(byte c)
     }
 }
 
-#ifdef EXPAND_TILE_X
 void draw_tile_in_view(byte x0, byte y0, TileInfo *tile)
 {
     static word screen;         // screen RAM points to...
@@ -294,7 +293,11 @@ void draw_tile_in_view(byte x0, byte y0, TileInfo *tile)
     static byte screen_skip;
 
     screen = SCREENBASE + 2 * (SCREEN_WIDTH * y0 + x0);
+#ifdef EXPAND_TILE_X
     screen_skip = 2 * (SCREEN_WIDTH - 2 * tile->width);
+#else
+    screen_skip = 2 * (SCREEN_WIDTH - tile->width);
+#endif
     tile_bitmap = tile->base_address;
     ENABLE_SCREEN_ACCESS
     for(y = 0; y < tile->height; ++y) {
@@ -302,56 +305,29 @@ void draw_tile_in_view(byte x0, byte y0, TileInfo *tile)
         if(u > VIEW_BOTTOM) continue;
         if(u >= VIEW_TOP) {
             for(x = 0; x < tile->width; ++x) {
+#ifdef EXPAND_TILE_X
                 v = 2*x + x0;
+#else
+                v = x + x0;
+#endif
                 if(v >= VIEW_LEFT && v <= VIEW_RIGHT) {
 #ifdef SCREENBASE_FIRST_64K
                     framebuffer = *((word *) screen);
 #else
                     framebuffer = (dma_peek(screen) + 256 * dma_peek(screen + 1));
 #endif
+#ifdef EXPAND_TILE_X
                     dma_copy(tile_bitmap, TMPBUFFER, 64);
                     expand_fullcolor_char_x();
                     dma_copy_transparent(TMPBUFFER + 64, framebuffer * 64, 64);
                     dma_copy_transparent(TMPBUFFER + 128, (framebuffer + 1) * 64, 64);
                 }
                 screen += 4;
-                tile_bitmap += 64;
-            }
-        }
-        tile_bitmap += tile->row_skip_length_in_bytes;
-        screen += screen_skip;
-    }
-    DISABLE_SCREEN_ACCESS
-}
 #else
-void draw_tile_in_view(byte x0, byte y0, TileInfo *tile)
-{
-    // byte x, y;
-    // word i, j;
-    static word screen;         // screen RAM points to...
-    static dword framebuffer;  // the framebuffer, which has data from...
-    static dword tile_bitmap;   // the tile with data loaded from the FCI file
-    static byte screen_skip;
-
-    screen = SCREENBASE + 2 * (SCREEN_WIDTH * y0 + x0);
-    screen_skip = 2 * (SCREEN_WIDTH - tile->width);
-    tile_bitmap = tile->base_address;
-    ENABLE_SCREEN_ACCESS
-    for(y = 0; y < tile->height; ++y) {
-        u = y + y0;
-        if(u > VIEW_BOTTOM) continue;
-        if(u >= VIEW_TOP) {
-            for(x = 0; x < tile->width; ++x) {
-                v = x + x0;
-                if(v >= VIEW_LEFT && v <= VIEW_RIGHT) {
-#ifdef SCREENBASE_FIRST_64K
-                    framebuffer = *((word *) screen);
-#else
-                    framebuffer = (dma_peek(screen) + 256 * dma_peek(screen + 1));
-#endif
                     dma_copy_transparent(tile_bitmap, framebuffer * 64, 64);
                 }
                 screen += 2;
+#endif
                 tile_bitmap += 64;
             }
         }
@@ -360,5 +336,4 @@ void draw_tile_in_view(byte x0, byte y0, TileInfo *tile)
     }
     DISABLE_SCREEN_ACCESS
 }
-#endif
 

@@ -173,8 +173,22 @@ void main(void)
 	for(;;) {
 	    key = PEEK(0xd610);
 	    POKE(0xd610, 0);
-        if(key == 97 || key == 157) scroll_left();
-        if(key == 100 || key == 29) scroll_right();
+        if(key == 97 || key == 157) {
+#ifdef V400
+            scroll_left();
+#else
+            scroll_left();
+            scroll_left();
+#endif
+        }
+        if(key == 100 || key == 29) {
+#ifdef V400
+            scroll_right();
+#else
+            scroll_right();
+            scroll_right();
+#endif
+        }
         if(key == 119 || key == 145) scroll_up();
         if(key == 115 || key == 17) scroll_down();
         if(key == 13) fatal("done");

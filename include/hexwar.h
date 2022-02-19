@@ -16,7 +16,8 @@ extern byte x, y, u, v;
 #define SCREENBASE 0xe000U
 #define SCREENBASE_UNDER_RAM
 #define SCREENBASE_FIRST_64K
-#define COLORBASE 0xff80000L
+// default color base ff80000 has DOS interference
+#define COLORBASE 0xff81000L
 
 // Screen resolution: defaults to H320, V200 if not defined
 #define H640
@@ -24,9 +25,9 @@ extern byte x, y, u, v;
 
 // map view limits
 #define VIEW_LEFT 10
-#define VIEW_RIGHT 21
+#define VIEW_RIGHT 40
 #define VIEW_TOP 10
-#define VIEW_BOTTOM 13
+#define VIEW_BOTTOM 23
 
 // work buffer
 #define TMPBUFFER 0x0334U

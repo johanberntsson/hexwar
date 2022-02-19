@@ -20,6 +20,8 @@
     #endif
 #endif
 
+# define SCREEN_SIZE (SCREEN_WIDTH * SCREEN_HEIGHT)
+
 #ifdef SCREENBASE_UNDER_RAM
 #define ENABLE_SCREEN_ACCESS asm("sei"); POKE(1,0x35);
 #define DISABLE_SCREEN_ACCESS POKE(1,0x36); asm("cli");
@@ -37,26 +39,18 @@ word text_screen_offset;
 void load_from_file(FILE *f, word size, dword address);
 unsigned char swap_nibbles(unsigned char in);
 
-void setup_horizontal_framebuffer()
+void setup_view()
 {
-    // byte x, y;
-    // word i, j;
-
-    // Layout screen so that map tile data comes from $19000 -- $5FFFF
-    i = 0x19000 / 0x40;
-    j = SCREENBASE;
-    for (y = 0; y < SCREEN_WIDTH; ++y) {
-        for (x = 0; x < SCREEN_HEIGHT; ++x) {
+    // Layout screen so that map tile data comes from $40000 -- $5FFFF
+    i = 0x40000 / 0x40;
+    for (y = VIEW_TOP; y <= VIEW_BOTTOM; ++y) {
+        for (x = VIEW_LEFT; x <= VIEW_RIGHT; ++x) {
+            j = SCREENBASE + 2 * (x + y * SCREEN_WIDTH);
             POKE(j, i & 0xff);
-            //if(x == 0 && y == 0) fatal("%x %x %x\n", j, i & 0xff, i >> 8);
-            ++j;
-            POKE(j, i >> 8);
-            ++j;
+            POKE(j + 1, i >> 8);
+            //printf("%d %d, %x, %x %x\n", x, y, j, i & 0xff, i >> 8);
+            //if(y > VIEW_TOP) fatal("%d %d, %x, %x %x\n", x, y, j, i & 0xff, i >> 8);
             ++i;
-            // skip DOS
-            if (i == (0x1f800 / 0x40)) i = 0x24000 / 0x40;
-            // skip C64 kernal
-            if (i == (0x2c000 / 0x40)) i = 0x30000 / 0x40;
         }
     }
 }
@@ -72,17 +66,25 @@ void init_graphics_mode(void)
 
     // bank out the C64/C65 ROM, freeing $2xxxx and $3xxxx.
     // But, assuming that the program is started from C64
-    // mode, we still need the kernal, so avoid writing on
-    // 2c000 - 2ffff.
+    // mode, we still need the kernal and DOS, so avoid writing
+    // on 1f800 - $24000 and  2c000 - 2ffff.
     // See the MEGA65 book, page F-11
-    disable_rom_protection();
-    clear_framebuffer();
-    setup_horizontal_framebuffer();
+    //disable_rom_protection();
+
+    // clear screen
+    dma_fill(SCREENBASE, 0, 2 * SCREEN_SIZE);
+    dma_fill_skip(SCREENBASE, 32, SCREEN_SIZE, 2);
     // Clear colour RAM
-    dma_fill(0xff80000L, 0x00, 2 * SCREEN_WIDTH * SCREEN_HEIGHT);
+    dma_fill(COLORBASE, 0x00, 2 * SCREEN_SIZE);
+
+    // setup map view
+    setup_view();
+    clear_view();
+
+    //HOTREG |= 0x80;
 
     // 16-bit text mode, full-colour text for high chars
-    VIC4CTRL = 0x05;
+    VIC4CTRL |= 0x05;
 #ifdef V400
     // H640, fast CPU, V400
     VIC3CTRL = 0xC8;
@@ -104,18 +106,19 @@ void init_graphics_mode(void)
     SCNPTR_2 = 0x00;
     SCNPTR_3 = 0x00;
 
+    // Move color ram to COLORBASE
+    // (ff80000 has DOS interference, so use ff81000 instead)
+    COLPTR_0 = 0x00;
+    COLPTR_1 = 0x10;
+
     BORDERCOL = 0;
     SCREENCOL = 0;
 }
 
-void clear_framebuffer(void)
+void clear_view(void)
 {
-    dma_fill(0x19000, 0x00, 0x6800);
-    //  skip DOS ($1f800 - $24000)
-    dma_fill(0x24000, 0x00, 0x8000);
-    // skip C64 kernal ($2c000 - $30000)
-    dma_fill(0x30000, 0x00, 0x8000);
-    dma_fill(0x38000, 0x00, 0x8000);
+    //dma_fill(0x30000, 0x00, 0x8000);
+    //dma_fill(0x38000, 0x00, 0x8000);
     dma_fill(0x40000, 0x00, 0x8000);
     dma_fill(0x48000, 0x00, 0x8000);
     dma_fill(0x50000, 0x00, 0x8000);
@@ -335,5 +338,22 @@ void draw_tile_in_view(byte x0, byte y0, TileInfo *tile)
         screen += screen_skip;
     }
     DISABLE_SCREEN_ACCESS
+}
+
+void scroll_up(void)
+{
+}
+
+void scroll_down(void)
+{
+}
+
+void scroll_left(void)
+{
+    fatal("left");
+}
+
+void scroll_right(void)
+{
 }
 

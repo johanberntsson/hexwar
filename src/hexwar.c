@@ -140,8 +140,11 @@ void draw_test_tiles()
 
 void main(void) 
 {
+    byte key;
     dword next_address;
+
     start_benchmark();
+
     dma_init();
 	init_graphics_mode();
     HOTREG &= 0x7f;   // disable hotreg
@@ -168,5 +171,11 @@ void main(void)
 
     //stop_benchmark();
 	for(;;) {
+	    key = PEEK(0xd610);
+        if(key == 97 || key == 157) scroll_left();
+        if(key == 100 || key == 29) scroll_right();
+        if(key == 119 || key == 145) scroll_up();
+        if(key == 115 || key == 17) scroll_down();
+        if(key == 13) fatal("done");
     }
 }

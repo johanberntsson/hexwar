@@ -1,5 +1,6 @@
-#include "hexwar.h"
 #include "map.h"
+#include "hexwar.h"
+#include "graphics.h"
 
 
 // https://www.redblobgames.com/grids/hexagons/implementation.html
@@ -8,6 +9,11 @@
 // hx, hy is cubic coordonates for tiles (hexagons)
 // ax, ay is array coordinates for tile storage
 // vx, vy is screen coordintes for the view
+
+extern BitmapInfo tiles;
+extern TileInfo desert_tile;
+extern TileInfo plains_tile;
+extern TileInfo ocean_tile;
 
 void hex_init(hexcoord q, hexcoord r, Hex *hex)
 {
@@ -49,6 +55,7 @@ void map_init(void)
 
 void map_show_tile(Hex *tile)
 {
+    draw_tile_in_view(VIEW_CENTER_X, VIEW_CENTER_Y, &desert_tile);
 }
 
 void map_center(hexcoord x, hexcoord y)

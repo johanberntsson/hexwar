@@ -22,7 +22,7 @@ byte x, y, u, v;
          801 -     cfff : main program
         e000 -     ff40 : screen
        12000 -    18fff
-       19000 -    5ffff : screen bitmap
+       40000 -    5ffff : screen framebuffer (bitmap)
      8000000 -  83e8000 : map bitmap (4 MB for 80*50*4*4*64 (4*4 tiles))
      8400000 -          : bitmaps (loaded from disc)
     0ff80000 - 0ff81f40 : color and attributes memory

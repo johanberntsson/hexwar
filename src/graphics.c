@@ -43,9 +43,13 @@ unsigned char swap_nibbles(unsigned char in);
 
 void setup_view()
 {
+#if (64L * VIEW_WIDTH * VIEW_HEIGHT) >= 0x20000) 
     // Layout screen so that map tile data comes from $30000 -- $5FFFF
     i = 0x30000 / 0x40;
-
+#else
+    // Layout screen so that map tile data comes from $40000 -- $5FFFF
+    i = 0x40000 / 0x40;
+#endif
     for (y = VIEW_TOP; y <= VIEW_BOTTOM; ++y) {
         for (x = VIEW_LEFT; x <= VIEW_RIGHT; ++x) {
             j = SCREENBASE + 2 * (x + y * SCREEN_WIDTH);
@@ -77,7 +81,9 @@ void init_graphics_mode(void)
     // mode, we still need the kernal and DOS, so avoid writing
     // on 1f800 - $24000 and  2c000 - 2ffff.
     // See the MEGA65 book, page F-11
+#if (64L * VIEW_WIDTH * VIEW_HEIGHT) >= 0x20000) 
     disable_rom_protection();
+#endif
 
     // clear screen
     dma_fill(SCREENBASE, 0, 2 * SCREEN_SIZE);
@@ -125,8 +131,10 @@ void init_graphics_mode(void)
 
 void clear_view(void)
 {
+#if (64L * VIEW_WIDTH * VIEW_HEIGHT) >= 0x20000) 
     dma_fill(0x30000, 0x00, 0x8000);
     dma_fill(0x38000, 0x00, 0x8000);
+#endif
     dma_fill(0x40000, 0x00, 0x8000);
     dma_fill(0x48000, 0x00, 0x8000);
     dma_fill(0x50000, 0x00, 0x8000);

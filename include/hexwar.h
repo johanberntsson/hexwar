@@ -24,12 +24,18 @@ extern byte x, y, u, v;
 //#define V400
 
 // map view limits
-#define VIEW_LEFT 17
-#define VIEW_RIGHT 79
-#define VIEW_TOP 2
-#define VIEW_BOTTOM 49
+#define VIEW_LEFT 2
+#define VIEW_RIGHT 78
+#define VIEW_TOP 1
+#define VIEW_BOTTOM 23
 #define VIEW_WIDTH (1 + VIEW_RIGHT - VIEW_LEFT)
 #define VIEW_HEIGHT (1 + VIEW_BOTTOM - VIEW_TOP)
+#define VIEW_CENTER_Y (VIEW_TOP - 2 + (VIEW_HEIGHT >> 1))
+#ifdef V400
+    #define VIEW_CENTER_X (VIEW_LEFT - 4 + (VIEW_WIDTH >> 1))
+#else
+    #define VIEW_CENTER_X (VIEW_LEFT - 2 + (VIEW_WIDTH >> 1))
+#endif
 
 #if (64L * VIEW_WIDTH * VIEW_HEIGHT) >= 0x30000) 
 #error view is too big (> $30000)

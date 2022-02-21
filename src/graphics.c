@@ -351,12 +351,14 @@ void scroll_right(void)
 }
 
 
-void draw_tile_in_view(byte x0, byte y0, TileInfo *tile)
+void draw_tile_in_view(hexcoord x0, hexcoord y0, TileInfo *tile)
 {
     static word screen;         // screen RAM points to...
     static dword framebuffer;  // the framebuffer, which has data from...
     static dword tile_bitmap;   // the tile with data loaded from the FCI file
     static byte screen_skip;
+    static hexcoord u;
+    static hexcoord v;
 
     screen = SCREENBASE + 2 * (SCREEN_WIDTH * y0 + x0);
 #ifdef EXPAND_TILE_X
@@ -374,6 +376,7 @@ void draw_tile_in_view(byte x0, byte y0, TileInfo *tile)
             tile_bitmap += (64 * tile->width) + tile->row_skip_length_in_bytes;
             continue;
         } else {
+            //goto error;
             for(x = 0; x < tile->width; ++x) {
 #ifdef EXPAND_TILE_X
                 v = 2*x + x0;
@@ -390,7 +393,10 @@ void draw_tile_in_view(byte x0, byte y0, TileInfo *tile)
                     dma_copy(tile_bitmap, TMPBUFFER, 64);
                     expand_fullcolor_char_x();
                     dma_copy_transparent(TMPBUFFER + 64, framebuffer * 64, 64);
-                    dma_copy_transparent(TMPBUFFER + 128, (framebuffer + 1) * 64, 64);
+                    ++v;
+                    if(v <= VIEW_RIGHT) {
+                        dma_copy_transparent(TMPBUFFER + 128, (framebuffer + 1) * 64, 64);
+                    }
                 }
                 screen += 4;
 #else
@@ -408,6 +414,6 @@ void draw_tile_in_view(byte x0, byte y0, TileInfo *tile)
     return;
 error:
     DISABLE_SCREEN_ACCESS
-    fatal("%d %d %d %d %d", u, y, y0, VIEW_TOP, VIEW_BOTTOM);
+    fatal("u %d v %d y %d y0 %d top %d bottom %d", u, v, y, y0, VIEW_TOP, VIEW_BOTTOM);
 }
 

@@ -91,6 +91,7 @@ void stop_benchmark()
 BitmapInfo tiles;
 TileInfo desert_tile;
 TileInfo plains_tile;
+TileInfo hills_tile;
 TileInfo ocean_tile;
 
 #ifdef DEBUG
@@ -155,8 +156,13 @@ void draw_test_tiles()
 
 void main(void) 
 {
+    Hex hex;
     byte key;
     dword next_address;
+    byte vx, vy; // view offset (0 - 3)
+    byte cx, cy; // center tile position
+    byte redraw_view;
+    hexcoord xx, yy; 
 
     start_benchmark();
 
@@ -169,6 +175,7 @@ void main(void)
 	set_palette(&tiles);
 	prepare_tile(&desert_tile, &tiles, 0, 0, 4, 4);
 	prepare_tile(&plains_tile, &tiles, 4, 0, 4, 4);
+	prepare_tile(&hills_tile, &tiles,  8, 0, 4, 4);
 	prepare_tile(&ocean_tile, &tiles, 12, 0, 4, 4);
 #ifdef DEBUG
 	//debug_BitmapInfo(&tiles);
@@ -177,8 +184,82 @@ void main(void)
 	draw_view_frame();
 	//draw_test_tiles();
 
+	vx = 4;
+	vy = 2;
+	cx = 40;
+	cy = 12;
+	redraw_view = true;
     map_init();
-	map_center(40,25);
+	map_center(cx,cy);
+    for(;;) {
+        if(redraw_view) {
+	        map_center(cx,cy);
+            redraw_view = false;
+            map_viewoffset(vx, vy);
+            for(yy = -4; yy < 5; yy++) {
+                for(xx = -7; xx < 7; xx++) {
+                    map_show_tile_xy(xx, yy);
+                }
+            }
+        }
+        g_xy(VIEW_LEFT + VIEW_WIDTH/2, VIEW_TOP + VIEW_HEIGHT/2);
+        g_putc(0x30);
+
+        key = PEEK(0xd610);
+        POKE(0xd610, 0);
+        if(key != 0) redraw_view = true;
+        switch(key) {
+            case 97:
+            case 157:
+                // left
+                if(vx > 0) {
+                    vx = vx - 2;
+                } else {
+                    vx = 8;
+                    cx = cx - 1;
+                    redraw_view = true;
+                }
+                //printf("left %d\n", vx);
+                break;
+            case 100:
+            case 29:
+                // right
+                if(vx < 6) {
+                    vx = vx + 2;
+                } else {
+                    vx = 0;
+                    cx = cx + 1;
+                    redraw_view = true;
+                }
+                //printf("right %d\n", vx);
+                break;
+            case 119:
+            case 145:
+                // up
+                if(vy > 0) {
+                    vy = vy - 1;
+                } else {
+                    vy = 3;
+                    cy = cy - 1;
+                    redraw_view = true;
+                }
+                //printf("up %d\n", vy);
+                break;
+            case 115:
+            case 17:
+                // down
+                if(vy < 4) {
+                    vy = vy + 1;
+                } else {
+                    vy = 0;
+                    cy = cy + 1;
+                    redraw_view = true;
+                }
+                //printf("down %d\n", vy);
+                break;
+            case 13: fatal("done");
+        }
+    }
 
 #endif
 	//draw_tile_anywhere(6, 9, &desert_tile);

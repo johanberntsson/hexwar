@@ -180,9 +180,17 @@ void main(void)
 #ifdef DEBUG
 	//debug_BitmapInfo(&tiles);
 	//debug_TileInfo(&tiles);
-
 	draw_view_frame();
 	//draw_test_tiles();
+#endif
+	//draw_tile_anywhere(6, 9, &desert_tile);
+
+
+	//dma_poke(0x19000, 1);
+	//dma_poke(0x19010, 1);
+	//dma_poke(0x19000 + 50*64, 1);
+
+    //stop_benchmark();
 
 	vx = 4;
 	vy = 2;
@@ -202,8 +210,8 @@ void main(void)
                 }
             }
         }
-        g_xy(VIEW_LEFT + VIEW_WIDTH/2, VIEW_TOP + VIEW_HEIGHT/2);
-        g_putc(0x30);
+        //g_xy(VIEW_LEFT + VIEW_WIDTH/2, VIEW_TOP + VIEW_HEIGHT/2);
+        //g_putc(0x30);
 
         key = PEEK(0xd610);
         POKE(0xd610, 0);
@@ -215,9 +223,8 @@ void main(void)
                 if(vx > 0) {
                     vx = vx - 2;
                 } else {
-                    vx = 8;
+                    vx = 6;
                     cx = cx - 1;
-                    redraw_view = true;
                 }
                 //printf("left %d\n", vx);
                 break;
@@ -229,7 +236,6 @@ void main(void)
                 } else {
                     vx = 0;
                     cx = cx + 1;
-                    redraw_view = true;
                 }
                 //printf("right %d\n", vx);
                 break;
@@ -239,9 +245,16 @@ void main(void)
                 if(vy > 0) {
                     vy = vy - 1;
                 } else {
-                    vy = 3;
+                    vy = 2;
+                    if(vx < 4) {
+                        // left side of the previous tile
+                        vx += 4;
+                    } else {
+                        // right side of the previous tile
+                        vx -= 4;
+                        cx = cx + 1;
+                    }
                     cy = cy - 1;
-                    redraw_view = true;
                 }
                 //printf("up %d\n", vy);
                 break;
@@ -251,9 +264,16 @@ void main(void)
                 if(vy < 4) {
                     vy = vy + 1;
                 } else {
-                    vy = 0;
+                    vy = 2;
+                    if(vx < 4) {
+                        // left side of the previous tile
+                        vx += 4;
+                        cx = cx - 1;
+                    } else {
+                        // right side of the previous tile
+                        vx -= 4;
+                    }
                     cy = cy + 1;
-                    redraw_view = true;
                 }
                 //printf("down %d\n", vy);
                 break;
@@ -261,36 +281,4 @@ void main(void)
         }
     }
 
-#endif
-	//draw_tile_anywhere(6, 9, &desert_tile);
-
-
-	//dma_poke(0x19000, 1);
-	//dma_poke(0x19010, 1);
-	//dma_poke(0x19000 + 50*64, 1);
-
-    //stop_benchmark();
-	for(;;) {
-	    key = PEEK(0xd610);
-	    POKE(0xd610, 0);
-        if(key == 97 || key == 157) {
-#ifdef V400
-            scroll_left();
-#else
-            scroll_left();
-            scroll_left();
-#endif
-        }
-        if(key == 100 || key == 29) {
-#ifdef V400
-            scroll_right();
-#else
-            scroll_right();
-            scroll_right();
-#endif
-        }
-        if(key == 119 || key == 145) scroll_up();
-        if(key == 115 || key == 17) scroll_down();
-        if(key == 13) fatal("done");
-    }
 }

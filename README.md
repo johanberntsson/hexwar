@@ -43,3 +43,8 @@ tool chain and is selected by `--target=mega65`. There is nothing to clone.
 
 The display, the map and scrolling work. There is no game yet: the map is
 placeholder terrain from `map_init()`, and the panel is static text.
+
+## Licensing
+
+- **Source Code:** Distributed under the [MIT License](LICENSE).
+- **Game Assets (Graphics, Music, Story Text):** Distributed under [Creative Commons Attribution 4.0 International (CC BY 4.0)](https://creativecommons.org/licenses/by/4.0/).

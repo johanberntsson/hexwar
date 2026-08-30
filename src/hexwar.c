@@ -14,8 +14,8 @@
 #include "graphics.h"
 
 // temp variables (much faster to keep them global)
-word i, j;
-byte x, y, u, v;
+word _i, _j;
+byte _x, _y;
 
 /*  Memory layout:
          334 -      3fb : tmp buffer for loadFCI etc. (200 bytes)
@@ -88,11 +88,13 @@ void stop_benchmark()
     fatal("benchmark %ld jiffies", jiffies);
 }
 
-BitmapInfo tiles;
-TileInfo desert_tile;
-TileInfo plains_tile;
-TileInfo hills_tile;
-TileInfo ocean_tile;
+#define DESERT_TILE 0
+#define PLAINS_TILE 1
+#define HILLS_TILE 2
+#define OCEAN_TILE 3
+
+BitmapInfo bitmap_graphics;
+TileInfo bitmap_tile[4];
 
 #ifdef DEBUG
 void debug_BitmapInfo(BitmapInfo *bitmap)
@@ -110,16 +112,17 @@ void debug_TileInfo(TileInfo *tile)
 void draw_view_frame()
 {
 	// draw frame around view
-	g_attributes(64);
+	//g_attributes(64);
 	g_xy(VIEW_LEFT - 1, VIEW_TOP - 1);
-	for(x = VIEW_LEFT - 2; x <= VIEW_RIGHT; ++x) if(x < 79) g_putc(0x30);
+	for(_x = VIEW_LEFT - 2; _x <= VIEW_RIGHT; ++_x) if(_x < 79) g_putc(0x30);
 	if(VIEW_BOTTOM <49) {
 	    g_xy(VIEW_LEFT - 1, VIEW_BOTTOM + 1);
-	    for(x = VIEW_LEFT - 2; x <= VIEW_RIGHT; ++x) if(x < 79) g_putc(0x30);
+	    for(_x = VIEW_LEFT - 2; _x <= VIEW_RIGHT; ++_x) 
+	        if(_x < 79) g_putc(0x30);
     }
-	for(y = VIEW_TOP; y <= VIEW_BOTTOM; ++y) {
-	    g_xy(VIEW_LEFT - 1, y); g_putc(0x30);
-	    if(VIEW_RIGHT < 79) g_xy(VIEW_RIGHT + 1, y); g_putc(0x30);
+	for(_y = VIEW_TOP; _y <= VIEW_BOTTOM; ++_y) {
+	    g_xy(VIEW_LEFT - 1, _y); g_putc(0x30);
+	    if(VIEW_RIGHT < 79) g_xy(VIEW_RIGHT + 1, _y); g_putc(0x30);
     }
 }
 #endif 
@@ -135,23 +138,23 @@ void draw_test_tiles()
     ox = 4;
 #endif
     xx = 18; yy = 1; dy = 3; 
-	draw_tile_in_view(xx        , yy     , &desert_tile);
-	draw_tile_in_view(xx+dx     , yy     , &plains_tile);
-	draw_tile_in_view(xx+2*dx   , yy     , &ocean_tile);
-	draw_tile_in_view(xx+3*dx   , yy     , &ocean_tile);
-	draw_tile_in_view(xx+4*dx   , yy     , &ocean_tile);
-	draw_tile_in_view(xx+5*dx   , yy     , &ocean_tile);
-	draw_tile_in_view(xx+6*dx   , yy     , &ocean_tile);
-	draw_tile_in_view(xx+7*dx   , yy     , &ocean_tile);
-	draw_tile_in_view(xx+ox     , yy+  dy, &desert_tile);
-	draw_tile_in_view(xx+ox+dx  , yy+  dy, &desert_tile);
-	draw_tile_in_view(xx+ox+2*dx, yy+  dy, &desert_tile);
-	draw_tile_in_view(xx        , yy+2*dy, &plains_tile);
-	draw_tile_in_view(xx+ox     , yy+3*dy, &desert_tile);
-	draw_tile_in_view(xx        , yy+4*dy, &plains_tile);
-	draw_tile_in_view(xx+ox     , yy+5*dy, &desert_tile);
-	draw_tile_in_view(xx        , yy+6*dy, &plains_tile);
-	draw_tile_in_view(xx+ox     , yy+7*dy, &desert_tile);
+	draw_tile_in_view(xx        , yy     , &bitmap_tile[DESERT_TILE]);
+	draw_tile_in_view(xx+dx     , yy     , &bitmap_tile[PLAINS_TILE]);
+	draw_tile_in_view(xx+2*dx   , yy     , &bitmap_tile[OCEAN_TILE]);
+	draw_tile_in_view(xx+3*dx   , yy     , &bitmap_tile[OCEAN_TILE]);
+	draw_tile_in_view(xx+4*dx   , yy     , &bitmap_tile[OCEAN_TILE]);
+	draw_tile_in_view(xx+5*dx   , yy     , &bitmap_tile[OCEAN_TILE]);
+	draw_tile_in_view(xx+6*dx   , yy     , &bitmap_tile[OCEAN_TILE]);
+	draw_tile_in_view(xx+7*dx   , yy     , &bitmap_tile[OCEAN_TILE]);
+	draw_tile_in_view(xx+ox     , yy+  dy, &bitmap_tile[DESERT_TILE]);
+	draw_tile_in_view(xx+ox+dx  , yy+  dy, &bitmap_tile[DESERT_TILE]);
+	draw_tile_in_view(xx+ox+2*dx, yy+  dy, &bitmap_tile[DESERT_TILE]);
+	draw_tile_in_view(xx        , yy+2*dy, &bitmap_tile[PLAINS_TILE]);
+	draw_tile_in_view(xx+ox     , yy+3*dy, &bitmap_tile[DESERT_TILE]);
+	draw_tile_in_view(xx        , yy+4*dy, &bitmap_tile[PLAINS_TILE]);
+	draw_tile_in_view(xx+ox     , yy+5*dy, &bitmap_tile[DESERT_TILE]);
+	draw_tile_in_view(xx        , yy+6*dy, &bitmap_tile[PLAINS_TILE]);
+	draw_tile_in_view(xx+ox     , yy+7*dy, &bitmap_tile[DESERT_TILE]);
 }
 
 void main(void) 
@@ -170,13 +173,13 @@ void main(void)
 	init_graphics_mode();
     HOTREG &= 0x7f;   // disable hotreg
 
-	next_address = load_FCI("tiles.fci", 0x8400000, &tiles);
+	next_address = load_FCI("tiles.fci", 0x8400000, &bitmap_graphics);
 	if(next_address == 0) fatal("tiles.fci failed to load");
-	set_palette(&tiles);
-	prepare_tile(&desert_tile, &tiles, 0, 0, 4, 4);
-	prepare_tile(&plains_tile, &tiles, 4, 0, 4, 4);
-	prepare_tile(&hills_tile, &tiles,  8, 0, 4, 4);
-	prepare_tile(&ocean_tile, &tiles, 12, 0, 4, 4);
+	set_palette(&bitmap_graphics);
+	prepare_tile(&bitmap_tile[DESERT_TILE], &bitmap_graphics, 0, 0, 4, 4);
+	prepare_tile(&bitmap_tile[PLAINS_TILE], &bitmap_graphics, 4, 0, 4, 4);
+	prepare_tile(&bitmap_tile[HILLS_TILE], &bitmap_graphics,  8, 0, 4, 4);
+	prepare_tile(&bitmap_tile[OCEAN_TILE], &bitmap_graphics, 12, 0, 4, 4);
 #ifdef DEBUG
 	//debug_BitmapInfo(&tiles);
 	//debug_TileInfo(&tiles);
@@ -198,17 +201,13 @@ void main(void)
 	cy = 12;
 	redraw_view = true;
     map_init();
-	map_center(cx,cy);
+	//map_center(cx,cy);
     for(;;) {
         if(redraw_view) {
-	        map_center(cx,cy);
+            map_draw_top_tiles();
+	        //map_center(cx,cy);
             redraw_view = false;
-            map_viewoffset(vx, vy);
-            for(yy = -4; yy < 5; yy++) {
-                for(xx = -7; xx < 7; xx++) {
-                    map_show_tile_xy(xx, yy);
-                }
-            }
+            //map_viewoffset(vx, vy);
         }
         //g_xy(VIEW_LEFT + VIEW_WIDTH/2, VIEW_TOP + VIEW_HEIGHT/2);
         //g_putc(0x30);

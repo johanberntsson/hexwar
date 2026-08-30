@@ -18,7 +18,7 @@ PNGS := $(wildcard assets-fci/*.png)
 FCIS := $(subst assets-fci, d81data, $(PNGS:%.png=%.fci))
 
 # phony target is simply a target that is always out-of-date
-.PHONY: debug, release, all, clean
+.PHONY: debug, release, all, clean, lint
 
 # make so that no intermediate files are ever removed
 .SECONDARY:
@@ -30,6 +30,9 @@ release: hexwar
 
 debug: CC += -DDEBUG
 debug: hexwar
+
+lint:
+	splint -D__C64__ -D__fastcall__ -I ~/commodore/cc65/include/ -I include/ src/dma.c
 
 hexwar: prepare_dirs hexwar.d81
 	@$(XEMU) -8 hexwar.d81 > /dev/null

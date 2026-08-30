@@ -6,36 +6,20 @@
 #include "graphics.h"
 
 // https://www.redblobgames.com/grids/hexagons/implementation.html
+// We use double coordinates for hexagons
+//
+//  0,0     2,0     4,0
+//      1,1     3,1
+//  0,2     2,2     4,2
+//      1,3     3,3
+//
+// these can then be stored in a normal 2-dimensional array and
+// translated to screen coordinates as needed
+// 0,0  1,1  2,0  3,1 4,0
+// 0,2  1,3  2,2  3,3 4,2
 
-extern BitmapInfo tiles;
 
-extern TileInfo desert_tile;
-extern TileInfo plains_tile;
-extern TileInfo hills_tile;
-extern TileInfo ocean_tile;
-
-void hex_init(hexcoord q, hexcoord r, Hex *hex)
-{
-    hex->q = q;
-    hex->r = r;
-}
-
-void hex_add(Hex *a, Hex *b, Hex *result)
-{
-    result->q = a->q + b->q;
-    result->r = a->r + b->r;
-}
-
-byte view_offset_x;
-byte view_offset_y;
-
-Hex hex_directions[6];
-
-Hex hexview_top[10];
-Hex hexview_left[1];
-Hex hexview_right[1];
-Hex hexview_center[6];
-Hex hexview_bottom[9];
+extern TileInfo bitmap_tile[4];
 
 struct _Map {
     // The main map
@@ -44,92 +28,74 @@ struct _Map {
     Hex center;
 } map;
 
-void map_init(void)
+
+// Mapping from hex to storage array
+arraycoord x_hex2array(hexcoord x, hexcoord) { return x; }
+arraycoord y_hex2array(hexcoord, hexcoord y) { return y / 2; }
+
+// Mapping from storage (array) to hex
+hexcoord x_array2hex(arraycoord x, arraycoord) { return x; }
+hexcoord y_array2hex(arraycoord x, arraycoord y) { return y * 2 + (x % 2); }
+
+// Mapping from hex to screen coordinates
+screencoord x_hex2screen(hexcoord x, hexcoord y) { return x*4 + 4*(y % 2); }
+screencoord y_hex2screen(hexcoord x, hexcoord y) { return 6*(y/2) + 3*(y % 2); }
+
+// Mapping from screen coordinates to hex
+hexcoord x_screen2hex(screencoord x, screencoord y) {
+    hexcoord a = 2*(x/8) + (y % 2);
+    printf("%d %d -> %d\n", x, y, a);
+    return a;
+} 
+hexcoord y_screen2hex(screencoord x, screencoord y) { 
+    return 6*(y/2) + 3*(y % 2);
+} 
+
+void map_init()
 {
-    // adjacent hexagons
-    hex_init( 1,  0, &hex_directions[0]);
-    hex_init( 1, -1, &hex_directions[1]);
-    hex_init( 0, -1, &hex_directions[2]);
-    hex_init(-1,  0, &hex_directions[3]);
-    hex_init(-1,  1, &hex_directions[4]);
-    hex_init( 0,  1, &hex_directions[5]);
+    byte xx, yy;
+    for(_y = 0; _y < 50; _y++) {
+        for(_x = 0; _x < 80; _x++) {
+            map.tile[_x][_y] = (rand() % 3);
+        }
+    }
 
-    // hexagons in view (relative to center)
-    hex_init( 1,  0, &hexview_center[0]);
-    hex_init( 1, -1, &hexview_center[1]);
-    hex_init( 0, -1, &hexview_center[2]);
-    hex_init(-1,  0, &hexview_center[3]);
-    hex_init(-1,  1, &hexview_center[4]);
-    hex_init( 0,  1, &hexview_center[5]);
+    //if( x_screen2hex(0,0) != 0 || y_screen2hex(0,0) != 0 ||
+   //     x_screen2hex(7,0) != 0 || y_screen2hex(7,2) != 0
+        //x_screen2hex(8,0) != 2 || y_screen2hex(8,3) != 0 || 
+        //x_screen2hex(5,5) != 1 || x_screen2hex(5,5) != 1 ||
+        //x_screen2hex(13,5) != 3 || y_screen2hex(13,5) != 1
+   //     ) {
+   //     fatal("bad");
+   // }
 
-    hex_init( -3,  -4, &hexview_top[0]);
-    hex_init( -2,  -4, &hexview_top[1]);
-    hex_init( -1,  -4, &hexview_top[2]);
-    hex_init(  0,  -4, &hexview_top[3]);
-    hex_init(  1,  -4, &hexview_top[4]);
-    hex_init(  2,  -4, &hexview_top[5]);
-    hex_init(  3,  -4, &hexview_top[6]);
-    hex_init(  4,  -4, &hexview_top[7]);
-    hex_init(  5,  -4, &hexview_top[8]);
-    hex_init(  6,  -4, &hexview_top[9]);
 
-    hex_init( -6,  3, &hexview_bottom[0]);
-    hex_init( -5,  3, &hexview_bottom[1]);
-    hex_init( -4,  3, &hexview_bottom[2]);
-    hex_init( -3,  3, &hexview_bottom[3]);
-    hex_init( -2,  3, &hexview_bottom[4]);
-    hex_init( -1,  3, &hexview_bottom[5]);
-    hex_init(  0,  3, &hexview_bottom[6]);
-    hex_init(  1,  3, &hexview_bottom[7]);
-    hex_init(  2,  3, &hexview_bottom[8]);
-
-    // the earth start with just water
-    for(y = 0; y < 50; y++) {
-        for(x = 0; x < 80; x++) {
-            map.tile[x][y] = (rand() % 3);
+    //draw_tile_in_view(VIEW_LEFT,VIEW_TOP, &desert_tile);
+    for(yy = 0; yy < 1; ++yy)  {
+        for(xx = 0; xx < 5; xx += 2)  {
+            draw_tile_in_view(
+                VIEW_LEFT + x_hex2screen(xx, yy),
+                VIEW_TOP + y_hex2screen(xx, yy),
+                &bitmap_tile[0]);
         }
     }
 }
 
-void map_viewoffset(byte offset_x, byte offset_y)
+void map_show_tile(hexcoord hx, hexcoord hy)
 {
-    view_offset_x = offset_x;
-    view_offset_y = offset_y;
+    byte x, y;
+    x = x_hex2screen(hx, hy);
+    x = x_hex2screen(hx, hy);
+
 }
 
-void map_show_tile_xy(hexcoord hx, hexcoord hy)
+void map_draw_top_tiles()
 {
-    Hex offset;
-    hex_init(hx, hy, &offset);
-    map_show_tile(&offset);
-}
-
-void map_show_tile(Hex *offset)
-{
-    int xx, yy;
-    Hex hex;
-    TileInfo *tile;
-    hex_add(&map.center, offset, &hex);
-    switch(map.tile[hex.q][hex.r]) {
-        case 0: tile = &plains_tile; break;
-        case 1: tile = &desert_tile; break;
-        case 2: tile = &hills_tile; break;
-        default: tile = &ocean_tile;
+    byte x, hx, hy;
+    hx = x_screen2hex(0, 0);
+    hx = y_screen2hex(0, 0);
+    for(x = 0; x < VIEW_WIDTH_IN_TILES; ++x)  {
+        map_show_tile(hx, hy);
+        hx += 2;
     }
-
-    xx =  VIEW_CENTER_X - view_offset_x + 8 * offset->q + 4 * offset->r;
-    yy =  VIEW_CENTER_Y - view_offset_y + 3 * offset->r;
-    //printf("xx %d yy %d\n", xx, yy);
-    draw_tile_in_view(xx, yy, tile);
 }
-
-void map_center(hexcoord x, hexcoord y)
-{
-    hex_init(x, y, &map.center);
-    printf("%d %d\n", VIEW_CENTER_X, VIEW_CENTER_Y);
-
-    //for(i = 0; i < 7; i++) map_show_tile(&hexview_center[i]);
-    //for(i = 0; i < 10; i++) map_show_tile&hexview_top[i]);
-    //for(i = 0; i < 9; i++) map_show_tile(&hexview_bottom[i]);
-}
-

@@ -20,6 +20,12 @@
 #define COLPTR_0    (*(byte *)(0xd064))
 #define COLPTR_1    (*(byte *)(0xd065))
 
+// graphics
+#define DESERT_TILE 0
+#define PLAINS_TILE 1
+#define HILLS_TILE 2
+#define OCEAN_TILE 3
+
 typedef struct _TileInfo {
     dword base_address;
     byte width;
@@ -47,7 +53,7 @@ dword load_FCI(char *filename, dword address, BitmapInfo *info);
 void set_palette(BitmapInfo *bitmap);
 void prepare_tile(TileInfo *tile, BitmapInfo *bitmap, byte x, byte y, byte w, byte h);
 void draw_tile_anywhere(byte x0, byte y0, TileInfo *tile);
-void draw_tile_in_view(hexcoord x0, hexcoord y0, TileInfo *tile);
+void draw_tile_in_view(byte x0, byte y0, TileInfo *tile);
 void g_xy(byte x, byte y);
 void g_color(byte color);
 void g_attributes(byte attributes);
@@ -56,5 +62,6 @@ void scroll_up(void);
 void scroll_down(void);
 void scroll_left(void);
 void scroll_right(void);
+
 
 #endif

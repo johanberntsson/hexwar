@@ -2,6 +2,7 @@
 #include <stdio.h>
 
 #include "dma.h"
+#include "hexwar.h"
 #include "graphics.h"
 #include "assembler_utilities.h"
 
@@ -43,21 +44,29 @@ unsigned char swap_nibbles(unsigned char in);
 
 void setup_view()
 {
+#ifndef S_SPLINT_S
 #if (64L * VIEW_WIDTH * VIEW_HEIGHT) >= 0x20000) 
     // Layout screen so that map tile data comes from $30000 -- $5FFFF
-    i = 0x30000 / 0x40;
+    _i = 0x30000 / 0x40;
 #else
     // Layout screen so that map tile data comes from $40000 -- $5FFFF
-    i = 0x40000 / 0x40;
+    _i = 0x40000 / 0x40;
 #endif
-    for (y = VIEW_TOP; y <= VIEW_BOTTOM; ++y) {
-        for (x = VIEW_LEFT; x <= VIEW_RIGHT; ++x) {
-            j = SCREENBASE + 2 * (x + y * SCREEN_WIDTH);
-            POKE(j, i & 0xff);
-            POKE(j + 1, i >> 8);
+#endif
+    for(_y = VIEW_TOP; _y <= VIEW_BOTTOM; ++_y) {
+        for(_x = VIEW_LEFT; _x <= VIEW_RIGHT; ++_x) {
+            _j = SCREENBASE + 2 * (_x + _y * SCREEN_WIDTH);
+            POKE(_j, _i & 0xff);
+            POKE(_j + 1, _i >> 8);
+            // prepare row offsets
+            if(_x == VIEW_LEFT) {
+                view_row_startaddress[_y - VIEW_TOP] = ((dword) _i) << 6;
+                //printf("%d: %x %lx\n", _y, i, view_row_startaddress[_y - VIEW_TOP]);
+            }
+
             //printf("%d %d, %x, %x %x\n", x, y, j, i & 0xff, i >> 8);
             //if(y > VIEW_TOP) fatal("%d %d, %x, %x %x\n", x, y, j, i & 0xff, i >> 8);
-            ++i;
+            ++_i;
         }
     }
 }
@@ -68,11 +77,6 @@ void init_graphics_mode(void)
     g_attributes(0);
     g_color(COLOR_RED);
 
-    // prepare row offsets
-    for(y = 0; y < VIEW_HEIGHT; ++y) {
-        view_row_startaddress[y] = SCREENBASE + 2 * (VIEW_LEFT + (y + VIEW_TOP) * SCREEN_WIDTH);
-    }
-
     // Fast CPU, M65 IO
     mega65_io_enable();
 
@@ -81,8 +85,10 @@ void init_graphics_mode(void)
     // mode, we still need the kernal and DOS, so avoid writing
     // on 1f800 - $24000 and  2c000 - 2ffff.
     // See the MEGA65 book, page F-11
+#ifndef S_SPLINT_S
 #if (64L * VIEW_WIDTH * VIEW_HEIGHT) >= 0x20000) 
     disable_rom_protection();
+#endif
 #endif
 
     // clear screen
@@ -131,9 +137,11 @@ void init_graphics_mode(void)
 
 void clear_view(void)
 {
+#ifndef S_SPLINT_S
 #if (64L * VIEW_WIDTH * VIEW_HEIGHT) >= 0x20000) 
     dma_fill(0x30000, 0x00, 0x8000);
     dma_fill(0x38000, 0x00, 0x8000);
+#endif
 #endif
     dma_fill(0x40000, 0x00, 0x8000);
     dma_fill(0x48000, 0x00, 0x8000);
@@ -220,14 +228,14 @@ unsigned char swap_nibbles(unsigned char in) // oh why?!
 void set_palette(BitmapInfo *bitmap)
 {
     dword address;
-    x  = bitmap->reserved_sys_palette ? 16 : 0;
-    address = bitmap->palette_address + 3 * x;
-    for(y = x; y <= bitmap->num_colors; ++y) {
-        POKE(0xd100u + y, swap_nibbles(dma_peek(address)));
+    _x  = bitmap->reserved_sys_palette ? 16 : 0;
+    address = bitmap->palette_address + 3 * _x;
+    for(_y = _x; _y <= bitmap->num_colors; ++_y) {
+        POKE(0xd100u + _y, swap_nibbles(dma_peek(address)));
         ++address;
-        POKE(0xd200u + y, swap_nibbles(dma_peek(address)));
+        POKE(0xd200u + _y, swap_nibbles(dma_peek(address)));
         ++address;
-        POKE(0xd300u + y, swap_nibbles(dma_peek(address)));
+        POKE(0xd300u + _y, swap_nibbles(dma_peek(address)));
         ++address;
     }
 }
@@ -245,10 +253,10 @@ void draw_tile_anywhere(byte x0, byte y0, TileInfo *tile)
     screen_skip = 2 * (SCREEN_WIDTH - tile->width);
     tile_bitmap = tile->base_address;
     ENABLE_SCREEN_ACCESS
-    for(y = 0; y < tile->height; ++y) {
-        if(y + y0 >= SCREEN_HEIGHT) continue;
-        for(x = 0; x < tile->width; ++x) {
-            if(x + x0 < SCREEN_WIDTH) {
+    for(_y = 0; _y < tile->height; ++_y) {
+        if(_y + y0 >= SCREEN_HEIGHT) continue;
+        for(_x = 0; _x < tile->width; ++_x) {
+            if(_x + x0 < SCREEN_WIDTH) {
 #ifdef SCREENBASE_FIRST_64K
                 framebuffer = *((word *) screen);
 #else
@@ -287,13 +295,13 @@ void g_putc(byte c)
     dword colorbase;
 
     text_screen_offset = 2 * (text_x + SCREEN_WIDTH * text_y);
-    i = SCREENBASE + text_screen_offset;
+    _i = SCREENBASE + text_screen_offset;
     colorbase = COLORBASE + text_screen_offset;
     //fatal("%lx %lx %x ", COLORBASE, colorbase, text_screen_offset);
 
     ENABLE_SCREEN_ACCESS
-    POKE(i, c);
-    POKE(i + 1, 0);
+    POKE(_i, c);
+    POKE(_i + 1, 0);
     DISABLE_SCREEN_ACCESS
     dma_poke(colorbase, 0);
     dma_poke(colorbase + 1, text_color | 0x20);
@@ -307,11 +315,11 @@ void g_putc(byte c)
 void scroll_up(void)
 {
     ENABLE_SCREEN_ACCESS
-    for(y = 1; y < VIEW_HEIGHT; ++y) {
+    for(_y = 1; _y < VIEW_HEIGHT; ++_y) {
         dma_copy(
-            view_row_startaddress[y],
-            view_row_startaddress[y - 1], 
-            VIEW_WIDTH * 2);
+            view_row_startaddress[_y],
+            view_row_startaddress[_y - 1], 
+            VIEW_WIDTH * 64);
     }
     DISABLE_SCREEN_ACCESS
 }
@@ -319,11 +327,11 @@ void scroll_up(void)
 void scroll_down(void)
 {
     ENABLE_SCREEN_ACCESS
-    for(y = VIEW_HEIGHT - 1; y > 0;  --y) {
+    for(_y = VIEW_HEIGHT - 1; _y > 0;  --_y) {
         dma_copy(
-            view_row_startaddress[y - 1],
-            view_row_startaddress[y], 
-            VIEW_WIDTH * 2);
+            view_row_startaddress[_y - 1],
+            view_row_startaddress[_y], 
+            VIEW_WIDTH * 64);
     }
     DISABLE_SCREEN_ACCESS
 }
@@ -331,11 +339,11 @@ void scroll_down(void)
 void scroll_left(void)
 {
     ENABLE_SCREEN_ACCESS
-    for(y = 0; y < VIEW_HEIGHT; ++y) {
+    for(_y = 0; _y < VIEW_HEIGHT; ++_y) {
         dma_copy(
-            view_row_startaddress[y] + 2,
-            view_row_startaddress[y], 
-            2 * VIEW_WIDTH - 2);
+            view_row_startaddress[_y] + 64,
+            view_row_startaddress[_y], 
+            64 * (VIEW_WIDTH - 1));
     }
     DISABLE_SCREEN_ACCESS
 }
@@ -343,22 +351,22 @@ void scroll_left(void)
 void scroll_right(void)
 {
     ENABLE_SCREEN_ACCESS
-    for(y = 0; y < VIEW_HEIGHT; ++y) {
-        dma_copy(view_row_startaddress[y], TMPBUFFER, 2 * VIEW_WIDTH - 2);
-        dma_copy(TMPBUFFER, view_row_startaddress[y] + 2, 2 * VIEW_WIDTH - 2);
+    for(_y = 0; _y < VIEW_HEIGHT; ++_y) {
+        dma_copy(view_row_startaddress[_y], 0x800000, 64 * (VIEW_WIDTH - 1));
+        dma_copy(0x800000, view_row_startaddress[_y] + 64, 64 * (VIEW_WIDTH - 1));
     }
     DISABLE_SCREEN_ACCESS
 }
 
 
-void draw_tile_in_view(hexcoord x0, hexcoord y0, TileInfo *tile)
+void draw_tile_in_view(byte x0, byte y0, TileInfo *tile)
 {
     static word screen;         // screen RAM points to...
     static dword framebuffer;  // the framebuffer, which has data from...
     static dword tile_bitmap;   // the tile with data loaded from the FCI file
     static byte screen_skip;
-    static hexcoord u;
-    static hexcoord v;
+    static byte u;
+    static byte v;
 
     screen = SCREENBASE + 2 * (SCREEN_WIDTH * y0 + x0);
 #ifdef EXPAND_TILE_X
@@ -368,8 +376,8 @@ void draw_tile_in_view(hexcoord x0, hexcoord y0, TileInfo *tile)
 #endif
     tile_bitmap = tile->base_address;
     ENABLE_SCREEN_ACCESS
-    for(y = 0; y < tile->height; ++y) {
-        u = y + y0;
+    for(_y = 0; _y < tile->height; ++_y) {
+        u = _y + y0;
         if(u > VIEW_BOTTOM) continue;
         if(u < VIEW_TOP) {
             screen += (2 * SCREEN_WIDTH);
@@ -377,11 +385,11 @@ void draw_tile_in_view(hexcoord x0, hexcoord y0, TileInfo *tile)
             continue;
         } else {
             //goto error;
-            for(x = 0; x < tile->width; ++x) {
+            for(_x = 0; _x < tile->width; ++_x) {
 #ifdef EXPAND_TILE_X
-                v = 2*x + x0;
+                v = 2*_x + x0;
 #else
-                v = x + x0;
+                v = _x + x0;
 #endif
                 if(v >= VIEW_LEFT && v <= VIEW_RIGHT) {
 #ifdef SCREENBASE_FIRST_64K
@@ -411,9 +419,9 @@ void draw_tile_in_view(hexcoord x0, hexcoord y0, TileInfo *tile)
         screen += screen_skip;
     }
     DISABLE_SCREEN_ACCESS
-    return;
-error:
-    DISABLE_SCREEN_ACCESS
-    fatal("u %d v %d y %d y0 %d top %d bottom %d", u, v, y, y0, VIEW_TOP, VIEW_BOTTOM);
+//    return;
+//error:
+//    DISABLE_SCREEN_ACCESS
+//    fatal("u %d v %d y %d y0 %d top %d bottom %d", u, v, _y, y0, VIEW_TOP, VIEW_BOTTOM);
 }
 

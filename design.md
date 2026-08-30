@@ -1,16 +1,10 @@
-TODO:
-- fix initialization so that always >$30000 and don't waste memory
-- 
-
-
-
 = Resources
 
 https://www.redblobgames.com/grids/hexagons/
 https://forums.civfanatics.com/threads/civ1-map-generation-explained.498630/#mapgenA
 
 
-= Civ 1
+= How the map generator in the original Civ 1 works
 
 Requirement: 640 KB
 

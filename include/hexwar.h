@@ -9,8 +9,8 @@ typedef unsigned char byte;
 typedef unsigned long dword;
 
 // temp variables (much faster to keep them global)
-extern word i, j;
-extern byte x, y;
+extern word _i, _j;
+extern byte _x, _y;
 
 // Screen location (with shortcuts if in bank 0)
 #define SCREENBASE 0xe000U
@@ -30,11 +30,15 @@ extern byte x, y;
 #define VIEW_BOTTOM 23
 #define VIEW_WIDTH (1 + VIEW_RIGHT - VIEW_LEFT)
 #define VIEW_HEIGHT (1 + VIEW_BOTTOM - VIEW_TOP)
-#define VIEW_CENTER_X (VIEW_LEFT + (VIEW_WIDTH >> 1))
-#define VIEW_CENTER_Y (VIEW_TOP + (VIEW_HEIGHT >> 1))
+#define VIEW_WIDTH_IN_TILES (VIEW_WIDTH/8)
+#define VIEW_HEIGHT_IN_TILES (VIEW_HEIGHT/4)
+#define VIEW_CENTER_X (VIEW_LEFT + (VIEW_WIDTH / 2))
+#define VIEW_CENTER_Y (VIEW_TOP + (VIEW_HEIGHT / 2))
 
+#ifndef S_SPLINT_S
 #if (64L * VIEW_WIDTH * VIEW_HEIGHT) >= 0x30000) 
 #error view is too big (> $30000)
+#endif
 #endif
 
 // work buffer

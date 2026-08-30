@@ -83,4 +83,15 @@ void screen_set_palette_entry(byte index, byte red, byte green, byte blue);
 // 29 right, 145 up, 157 left).
 byte screen_getkey(void);
 
+// Block until the raster passes `line`, having first been above it, so the
+// caller always gets a fresh crossing rather than returning immediately.
+//
+// $D012 is the VIC-II raster line, 0-311 on PAL; the 200 visible lines of a
+// V200 screen run from about 51 to 250, so character row c is around line
+// 51 + 8c. See SCREEN_ROW_LINE and view_wait_for_redraw().
+void screen_wait_raster(byte line);
+
+// The first raster line of character row `c`.
+#define SCREEN_ROW_LINE(C) ((byte)(51 + 8 * (C)))
+
 #endif // HEXWAR_SCREEN_H

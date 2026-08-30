@@ -49,4 +49,20 @@ void lfill_skip(dword destination, byte value, word count, byte skip);
 void lcopy_transparent(dword source, dword destination, word count,
                        byte transparent);
 
+// **The fast path, and the reason it exists.**
+//
+// A 512-byte lcopy measured 84.8 us, of which the DMAgic itself is 27.2 --
+// the other 57.6 was this file taking two 32-bit addresses apart into
+// megabyte, bank and offset. Calypsi has no cheap way to do `>> 20` on a
+// dword, and a redraw does it 320 times.
+//
+// So the hot path splits the addresses *once*. blit_begin() sets everything
+// that stays put for a run -- both megabytes, the source bank, the transparent
+// byte -- and blit() then stores only four fields, all of them 8 or 16 bit.
+// The caller is responsible for keeping a blit inside one 64 KB bank; see the
+// padded row stride in src/view.h, which is arranged so it always is.
+void blit_begin(byte source_mb, byte source_bank, byte dest_mb,
+                byte transparent);
+void blit(word source_addr, byte dest_bank, word dest_addr, word count);
+
 #endif // HEXWAR_MEGA65_H

@@ -141,9 +141,19 @@ buffers at the default `$FF80000` and corrupts the display.
 | `$2001-$9FFF` | 32 KB | program, data, BSS, C stack. About 19 KB used |
 | `$1600-$1EFF` | 2304 | `zpsave`, free — `LOW_FREE` in `src/mega65.h` moves a variable there |
 | `$12000` | 4000 | screen RAM, 80x25 cells of 2 bytes |
-| `$40000-$559FF` | 88320 | the view's tile store, 60x23 cells of 64 bytes |
+| `$40000-$56EFF` | 94208 | the view's tile store, 23 rows of 4096 |
 | `$8000000` | 12288 | the x-expanded tile sheet, 48x4 characters |
 | `$FF81000` | 4000 | colour RAM |
+
+**The store's rows are padded to 4096 bytes, and the padding is load bearing.**
+A window row is 60 cells = 3840 bytes; end to end, rows would start at
+arbitrary offsets and could straddle a 64 KB bank boundary, so every blit's
+destination would have to be taken apart from a 32-bit address. At 4096 bytes
+sixteen rows fit exactly in a bank, so row `r` is at bank `4 + (r >> 4)`,
+offset `(r & 15) << 12` — both byte and word operations — and a 3840-byte row
+can never cross into the next bank. `VIEW_ROW_BANK` / `VIEW_ROW_ADDR` in
+`src/view.h`. The padding costs 5888 bytes that nothing else wanted, and buys
+back two-thirds of the drawing time; see **Tearing**.
 
 `$20000-$3FFFF` is left as the C65 ROM.
 
@@ -207,6 +217,21 @@ stores only the four or five fields that actually change. mega65-libc rebuilds
 all fourteen every time; `old-cc65/src/dma.c` already had the better
 arrangement. It matters because a redraw is hundreds of these in a row.
 
+**The drawing path uses `blit_begin`/`blit`, not `lcopy_transparent`, and the
+difference is most of the frame.** A 512-byte `lcopy` measured 84.8 µs of
+which the DMAgic itself is only 27.2 — the rest was this code taking two
+32-bit addresses apart into megabyte, bank and offset, which Calypsi has no
+cheap way to do and a redraw does 320 times. `blit_begin()` sets everything
+that stays put for a run (both megabytes, the source bank, the transparent
+byte) and `blit()` then stores four fields, all 8 or 16 bit. That plus the
+padded row stride took a redraw from **32.2 ms to 12.8 ms**.
+
+Two things that were tried and are not worth revisiting: **chaining DMA jobs**
+(bit 2 of the command byte) measured 25.8 µs a job against 27.2 for separate
+triggers — 5%, for a much more complicated inner loop. And the `$D02F` I/O
+knock that `do_dma()` performs on every job costs 1.3 µs, so removing it from
+`blit()` was worth almost nothing on its own.
+
 ## Scrolling
 
 **This is the part that never worked, twice, and the answer is not to scroll.**
@@ -233,6 +258,51 @@ One character a step is eight pixels across and one row down; a hexagon is 8
 characters wide and 3 rows apart, so that is eight sub-steps per column and
 three per row. That is the smoothness the `vx`/`vy` pair in
 `old-cc65/src/hexwar.c` was reaching for.
+
+## Tearing
+
+The first version of the redraw tore badly when a cursor key was held. It took
+**32.2 ms against a 19.97 ms frame** (PAL, measured), so it was always painting
+into the middle of a frame the beam was displaying. Three things fixed it, and
+all three have to stay:
+
+- **The redraw is fast enough to fit in a frame** — 12.8 ms, from the
+  `blit_begin`/`blit` path and the padded row stride above. There is no
+  double buffer: a second 94 KB store does not fit in the free banks, and
+  making room would mean banking out the ROM.
+- **It starts when the beam leaves the window.** `view_wait_for_redraw()` waits
+  for raster line 243, the bottom of the map window. Measured, the redraw runs
+  from `$D012` 243 to 136 of the next frame — about 205 lines — while the beam
+  needs window row *r* only at line 128 + 8*r*. It stays ahead by roughly 100
+  lines throughout, and finishes with ~6 ms of slack.
+- **It draws strictly top to bottom and never clears.** The `hy` loop makes the
+  destination row monotonically increasing, which is what "ahead of the beam"
+  means. A `view_clear()` first would blank rows the beam has not reached yet —
+  the flash it is trying to avoid — so the store is cleared **once**, in
+  `main()`, and never again.
+
+**The no-clear rule depends on the hexagons covering every byte between them,
+and they only do so where every neighbour exists.** A redraw at offset (0,0)
+leaves **4256 bytes** the transparent copies never wrote, because the first
+hexagon row has no row above it to fill the notches between its tiles, so those
+bytes keep the previous frame's picture. `VIEW_MIN_OFF_X`/`VIEW_MIN_OFF_Y` in
+`src/view.h` hold the view one hexagon inside the map on every side, which
+makes coverage total for nothing at run time. Verified at 0 uncovered bytes at
+all four corners of the reachable range, the middle, and an odd-parity offset.
+
+**Anything that makes the redraw slower risks bringing the tearing back**, and
+the budget is about 20 ms. Measure before and after: build a throwaway `main`
+that times `view_redraw` with CIA2 timer A, which ticks at ~1 MHz whatever the
+CPU is doing, so a reading is microseconds and 16 bits of it is 65 ms.
+
+```c
+POKE(0xdd0e, 0x00); POKE(0xdd04, 0xff); POKE(0xdd05, 0xff); POKE(0xdd0e, 0x11);
+// read $DD05/$DD04 hi,lo,hi until hi agrees; it counts *down*
+```
+
+The KERNAL jiffy clock at `$A0-$A2` does not advance here, so it is no use for
+this. And note `$D012` is 8 bits of a 0-311 raster, so it repeats for lines
+256-311; any line below 56 is ambiguous, and 243 is not.
 
 ## The things cc65 was doing silently
 

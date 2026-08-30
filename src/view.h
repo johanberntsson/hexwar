@@ -21,10 +21,34 @@
 // blocks into it; the screen words never change again, which is what makes
 // scrolling a redraw rather than a rearrangement.
 #define TILE_STORE 0x40000UL
-#define TILE_STORE_SIZE (64UL * VIEW_COLUMNS * VIEW_ROWS)   // 88320
+
+// **Rows are padded to 4096 bytes, and the padding buys 16-bit arithmetic.**
+// A row of the window is 60 cells = 3840 bytes. Laid end to end, a row would
+// start at an arbitrary offset and could straddle a 64 KB bank boundary, so
+// every blit would need its destination taken apart from a 32-bit address --
+// which measured at 57.6 us a job against the DMAgic's own 27.2, and a redraw
+// is 320 jobs.
+//
+// At 4096 bytes a row, sixteen rows fit exactly in a bank: row r is at bank
+// `4 + (r >> 4)`, offset `(r & 15) << 12`, and since a row is 3840 bytes it
+// can never cross into the next bank. Both are byte and word operations. The
+// padding costs 5888 bytes of RAM that nothing else wanted.
+// Plain integer constants, not casts: these appear in the #if checks below,
+// where the preprocessor has no idea what a `dword` is.
+#define VIEW_ROW_STRIDE 4096UL
+#define TILE_STORE_SIZE (VIEW_ROW_STRIDE * VIEW_ROWS)            // 94208
+#define VIEW_ROW_BANK(R) ((byte)(4 + ((R) >> 4)))
+#define VIEW_ROW_ADDR(R) ((word)(((R) & 15) << 12))
+
+#if (64 * VIEW_COLUMNS) > VIEW_ROW_STRIDE
+#error "a window row does not fit in VIEW_ROW_STRIDE"
+#endif
+#if (TILE_STORE & 0xffff) != 0
+#error "VIEW_ROW_BANK assumes the store starts on a 64 KB boundary"
+#endif
 
 // **This is why hexwar does not have to bank out the C65 ROM.** The store runs
-// $40000-$559FF, entirely inside the free banks 4 and 5, so the ROM area at
+// $40000-$56EBF, entirely inside the free banks 4 and 5, so the ROM area at
 // $20000-$3FFFF is never wanted -- see hexwar.scm. A larger window would not
 // fit and would drag in all the machinery the other two MEGA65 projects here
 // carry, so the check is worth keeping.
@@ -47,13 +71,41 @@ void view_draw_tile(int x, int y, byte tile);
 // Draw the map into the window. (off_x, off_y) is the map-space character
 // coordinate that lands on the window's top left corner, so incrementing off_x
 // scrolls the map one character -- eight pixels -- to the left.
+//
+// **It does not clear first, and it draws strictly top to bottom.** Both are
+// deliberate; see the tearing note in view.c. Call view_wait_for_redraw()
+// immediately before it.
 void view_redraw(word off_x, word off_y);
 
-// The map's full extent in screen characters, which is what bounds off_x and
-// off_y. See src/map.h for where the 4 and 6 come from.
-#define MAP_CHAR_WIDTH (4 * MAP_COLUMNS + 4)
-#define MAP_CHAR_HEIGHT (6 * MAP_ROWS + 4)
-#define VIEW_MAX_OFF_X (MAP_CHAR_WIDTH - VIEW_COLUMNS)
-#define VIEW_MAX_OFF_Y (MAP_CHAR_HEIGHT - VIEW_ROWS)
+// Block until the beam has just left the bottom of the window, which is where
+// a redraw has to start if it is to stay ahead of it.
+//
+// **This is half of what stopped the tearing.** A redraw takes about a third
+// of a frame and writes the window top to bottom; starting it here gives it
+// the bottom border and the vertical blank as a head start -- roughly eight
+// milliseconds -- so every row is rewritten well before the beam comes back
+// round to display it. The other half is that view_redraw() does not blank the
+// store first.
+void view_wait_for_redraw(void);
+
+// **How far the view may travel, and why it stops short of the map's edge.**
+//
+// view_redraw() does not clear the store; it relies on the hexagons covering
+// every byte of the window between them. They do -- but only where a cell has
+// all its neighbours. At the very top of the map the first hexagon row has no
+// row above it to fill the notches between its tiles, and a redraw at (0,0)
+// measured 4256 bytes of the store that no tile wrote. Off the map's edge
+// there is nothing to draw, so those bytes keep whatever the previous frame
+// left in them.
+//
+// Holding the view one hexagon inside the map on every side makes every
+// contributing row and column exist, and costs nothing at run time. The
+// bounds come from asking which cells cover the window's outermost characters:
+// a tile spans 8 characters from 4*ax and 4 rows from 3*hy, so window column 0
+// needs cells from ax >= (off_x-7)/4 and window row 0 needs hy >= (off_y-3)/3.
+#define VIEW_MIN_OFF_X 8
+#define VIEW_MIN_OFF_Y 4
+#define VIEW_MAX_OFF_X (4 * (MAP_COLUMNS - 1) - VIEW_COLUMNS)      // 256
+#define VIEW_MAX_OFF_Y (3 * (2 * MAP_ROWS - 1) - VIEW_ROWS)        // 274
 
 #endif // HEXWAR_VIEW_H

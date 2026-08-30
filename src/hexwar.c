@@ -72,8 +72,17 @@ int main(void)
     off_y = START_OFF_Y;
     dirty = 1;
 
+    // The store starts blank; after that view_redraw() covers every byte of it
+    // and deliberately does not clear, so that it can stay ahead of the beam.
+    view_clear();
+
     for (;;) {
         if (dirty) {
+            // Start the redraw the moment the beam leaves the map window, so
+            // that it is rewriting rows the beam has already passed. Without
+            // this the redraw lands in the middle of a displayed frame and the
+            // map tears while a cursor key is held.
+            view_wait_for_redraw();
             view_redraw(off_x, off_y);
             dirty = 0;
         }
@@ -88,7 +97,7 @@ int main(void)
         switch (key) {
         case 157:                                   // cursor left
         case 'a':
-            if (off_x > 0) { --off_x; dirty = 1; }
+            if (off_x > VIEW_MIN_OFF_X) { --off_x; dirty = 1; }
             break;
         case 29:                                    // cursor right
         case 'd':
@@ -96,7 +105,7 @@ int main(void)
             break;
         case 145:                                   // cursor up
         case 'w':
-            if (off_y > 0) { --off_y; dirty = 1; }
+            if (off_y > VIEW_MIN_OFF_Y) { --off_y; dirty = 1; }
             break;
         case 17:                                    // cursor down
         case 's':

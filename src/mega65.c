@@ -143,6 +143,48 @@ static void do_dma(word list)
     POKE(0xd705U, list & 0xff); // writing $D705 triggers an enhanced DMA
 }
 
+// The fast path. Same list shape as copy_transparent_list, kept separate so a
+// run of blits cannot be disturbed by an lpeek or an lfill in between.
+static struct dma_transparent blit_list;
+
+void blit_begin(byte source_mb, byte source_bank, byte dest_mb,
+                byte transparent)
+{
+    if (!initialised) dma_init();
+
+    blit_list.option_0b = 0x0b;
+    blit_list.option_07 = 0x07;
+    blit_list.option_80 = 0x80;
+    blit_list.option_81 = 0x81;
+    blit_list.option_86 = 0x86;
+    blit_list.end_of_options = 0x00;
+    blit_list.command = 0x00;   // copy
+    blit_list.sub_cmd = 0x00;
+
+    blit_list.source_mb = source_mb;
+    blit_list.source_bank = source_bank;
+    blit_list.dest_mb = dest_mb;
+    blit_list.transparent_value = transparent;
+
+    // $D702 and $D704 are part of the trigger and never change either, so
+    // they are set here rather than on every job. That is also why blit()
+    // does not call mega65_io_enable(): measured at 1.3 us a job, and the
+    // registers stay unlocked once something else has done the knock.
+    mega65_io_enable();
+    POKE(0xd702U, 0);
+    POKE(0xd704U, 0x00);
+}
+
+void blit(word source_addr, byte dest_bank, word dest_addr, word count)
+{
+    blit_list.source_addr = source_addr;
+    blit_list.dest_bank = dest_bank;
+    blit_list.dest_addr = dest_addr;
+    blit_list.count = count;
+    POKE(0xd701U, (word)&blit_list >> 8);
+    POKE(0xd705U, (word)&blit_list & 0xff);
+}
+
 byte lpeek(dword address)
 {
     if (!initialised) dma_init();

@@ -150,3 +150,12 @@ byte screen_getkey(void)
     if (key) ASCIIKEY = 0;   // writing anything acknowledges the key
     return key;
 }
+
+void screen_wait_raster(byte line)
+{
+    // Wait for a fresh crossing rather than returning at once if the beam
+    // happens to be below the line already: otherwise a redraw that finished
+    // late gets no head start at all and tears on the next frame.
+    while (PEEK(0xd012u) >= line) continue;
+    while (PEEK(0xd012u) < line) continue;
+}

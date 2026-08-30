@@ -12,11 +12,11 @@ void view_init(void)
     byte y, x;
     word charnum;
 
-    // Cell (x, y) of the window gets character number TILE_STORE/64 + the
-    // cell's index, so the store is linear and a run of cells along a row is a
-    // run of bytes in it.
-    charnum = (word)(TILE_STORE / 64);
+    // Cell (x, y) of the window gets the character number of its own 64 bytes
+    // in the store: TILE_STORE/64 + row stride + column. With the row stride
+    // padded to 4096 that is 64 characters a row, of which the window uses 60.
     for (y = 0; y < VIEW_ROWS; ++y) {
+        charnum = (word)(TILE_STORE / 64) + (word)y * (VIEW_ROW_STRIDE / 64);
         for (x = 0; x < VIEW_COLUMNS; ++x) {
             row_words[2 * x] = (byte)charnum;
             row_words[2 * x + 1] = (byte)(charnum >> 8);
@@ -30,16 +30,31 @@ void view_init(void)
 
 void view_clear(void)
 {
-    // A DMA job's count is 16 bits, so 88320 bytes is two of them.
-    lfill(TILE_STORE, 0, 0x8000);
-    lfill(TILE_STORE + 0x8000, 0, (word)(TILE_STORE_SIZE - 0x8000));
+    // A DMA job's count is 16 bits, so the store is more than one job.
+    dword at = TILE_STORE;
+    dword left = TILE_STORE_SIZE;
+    while (left) {
+        word chunk = (left > 0x8000UL) ? 0x8000 : (word)left;
+        lfill(at, 0, chunk);
+        at += chunk;
+        left -= chunk;
+    }
+}
+
+void view_wait_for_redraw(void)
+{
+    screen_wait_raster(SCREEN_ROW_LINE(VIEW_TOP + VIEW_ROWS));
 }
 
 void view_draw_tile(int x, int y, byte tile)
 {
     byte r;
+    // The source is the expanded sheet in attic RAM, which is 12288 bytes at
+    // a megabyte boundary -- so a source address is 16 bits and the megabyte
+    // and bank never change. blit_begin() in view_redraw() has set them.
+    word src = (word)(64U * ((word)tile * TILE_EXPANDED_COLUMNS));
 
-    for (r = 0; r < TILE_ROWS; ++r) {
+    for (r = 0; r < TILE_ROWS; ++r, src += 64U * SHEET_EXPANDED_COLUMNS) {
         int row = y + r;
         int first = x;              // leftmost column this row would touch
         byte skip = 0;              // source characters clipped off the left
@@ -60,13 +75,15 @@ void view_draw_tile(int x, int y, byte tile)
         // characters of a tile row are contiguous in the expanded sheet, and
         // the cells they land on are contiguous in the store, so the whole row
         // is a single copy. The same change was worth four times the speed in
-        // ~/commodore/mega65/hexgame (fc_displayTile), where it turned a full
-        // board draw from 51 jiffies into 13.
-        lcopy_transparent(
-            SHEET_TILE_ROW(tile, r) + 64UL * skip,
-            TILE_STORE + 64UL * ((word)row * VIEW_COLUMNS + (word)first),
-            (word)width * 64,
-            0);
+        // ~/commodore/mega65/hexgame (fc_displayTile).
+        //
+        // All four arguments are 8 or 16 bit. Nothing here takes a 32-bit
+        // address apart, which is what made the old lcopy_transparent path
+        // three times the cost of the DMA it was asking for.
+        blit(src + 64U * skip,
+             VIEW_ROW_BANK(row),
+             VIEW_ROW_ADDR(row) + 64U * (word)first,
+             (word)width * 64);
     }
 }
 
@@ -79,16 +96,22 @@ void view_draw_tile(int x, int y, byte tile)
 // tiles overlap a one-character strip and redraw them in the right order,
 // against a lattice where a tile is eight characters wide and three tall.
 //
-// Redrawing the lot is simpler and fast enough: about eighty tiles are visible,
-// four DMA jobs each, plus two fills to blank the store -- a few milliseconds.
-// It is also unconditionally correct, which the edge repair never was.
+// Redrawing the lot is simpler and, at about 320 DMA jobs, fits inside a frame.
+//
+// **It must not clear the store first, and it must draw top to bottom.** Both
+// are what keep the redraw ahead of the raster; see the tearing note in
+// CLAUDE.md. A clear would blank rows the beam has not reached yet, which is
+// exactly the flash it is trying to avoid -- and it is unnecessary, because
+// the hexagons tessellate and cover every byte of the window between them.
 void view_redraw(word off_x, word off_y)
 {
     byte hy;
     word hy_first, hy_last;
     word ax_first, ax_last;
 
-    view_clear();
+    // Source megabyte $80 (the expanded sheet in attic RAM), bank 0 within it;
+    // destination megabyte 0 (chip RAM); palette index 0 transparent.
+    blit_begin(0x80, 0x00, 0x00, 0x00);
 
     // Which map cells can touch the window. A tile is 8 characters wide and
     // starts at 4*ax, and 4 rows tall starting at 3*hy, so anything beyond
@@ -104,8 +127,8 @@ void view_redraw(word off_x, word off_y)
     // **Iterate by hexagon row, not by array row.** Tiles overlap by one
     // character row, so a later draw has to be the lower one -- and within one
     // array row the odd columns sit three character rows below the even ones.
-    // Stepping hy makes the screen y strictly increasing, so the painter's
-    // order is right without sorting anything.
+    // Stepping hy makes the screen y strictly increasing, which is both the
+    // right painter's order and what lets the redraw stay ahead of the beam.
     for (hy = (byte)hy_first; hy <= (byte)hy_last; ++hy) {
         byte ay = hy >> 1;
         byte parity = hy & 1;

@@ -4,118 +4,271 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this is
 
-Hexwar is a Civilization-style hex-grid strategy game for the **MEGA65**, written in C for the
-**cc65** compiler and targeting the C64 personality (`-t c64`) while using MEGA65-only hardware
-(VIC-IV, DMAgic, 28-bit address space). It runs under `xemu-xmega65`.
+A Civilization-style hex game for the **MEGA65**, written in C for the
+**Calypsi 6502** tool chain. It was a cc65 project until August 2026; that
+version is still on disk under `old-cc65/` and will be deleted once this one
+has everything it had.
 
-`basic/civ.bas` is an earlier XC=BASIC prototype kept for reference; it is not part of the build.
+`basic/civ.bas` is a more complete XC=BASIC 3 version of the same idea and
+`basic/civ-basic.png` is the layout it reached — **that screenshot is the
+specification for the display**, and the geometry in `src/view.h` comes
+straight from its `fc_setMergeTileMode(10, 1, 60, 23, true)`. Neither the
+BASIC nor the cc65 version ever scrolled correctly; see **Scrolling** below.
+`design.md` holds the hex-grid and Civ-1 map-generator research.
 
-## Build & run
-
-Requires `CC65_HOME` (currently `~/commodore/cc65`), `c1541` (VICE), `xemu-xmega65`, and
-`python3` with the `png` module for asset conversion.
+## Build and run
 
 ```sh
-make                      # == make debug: build, make hexwar.d81, launch xemu (blocks)
-make release              # optimised build (-Osir -Cl), then launch
-make bin/hexwar.prg       # compile+link only, no disk image, no emulator  <- use this to check a change compiles
-make hexwar.d81           # build the disk image without launching the emulator
-make c64                  # build a .d64 and run under VICE x64 instead
-make clean                # rm -rf bin obj d81data *.d81 *.d64
+make                      # build/hexwar.prg -- the whole game, one file
+make run                  # build it and boot it in xemu (blocks until closed)
+make d81                  # build/hexwar.d81, which is how it gets to real hardware
+make START_OFF_X=41       # start the view one character further right; see below
+make clean
 ```
 
-There are **no tests**. `make lint` runs `splint` on `src/dma.c` only (splint is not installed here).
-Verification is by building and running in the emulator.
+Needs `cc6502`/`as6502`/`ln6502` (Calypsi 5.18+), Python 3, and
+`xemu-xmega65`. `c1541` is needed only by `make d81`; `pypng` and ImageMagick
+only if the tile art changes, since `res/tiles.fci` is checked in.
 
-`make debug` defines `DEBUG`, which enables `printf` diagnostics and the `draw_view_frame()` helper
-in `src/hexwar.c`.
+There are no tests. Verification is running it — see **Verifying a change**.
 
-Build artifacts: `obj/*.o|*.a` → `bin/hexwar.prg` → concatenated after `c65bin/c65toc64wrapper.prg`
-into `bin/autoboot.c65` → written to `hexwar.d81` together with everything in `d81data/`.
-The linker map lands in `./.map` (the Makefile's `$(PROGRAM)` is never set, hence the odd name).
+**`ln6502 -o` names the ELF, not the PRG.** The PRG is written beside it under
+the same stem. Linking straight to a `.prg` name silently produces an ELF file
+that the MEGA65 then tries to RUN as BASIC.
 
-### Assets
+**`build/hexwar.lst` is the memory map and the only place the program's real
+size is written down.** Worth reading after anything that might have grown it.
+A change that will not link is more likely to be a few hundred bytes over than
+wrong.
 
-`assets-fci/*.png` are converted by `tools/png2fci.py` into `d81data/*.fci` (MEGA65 Full Colour
-Image) as part of the disk-image rule. `tiles/Makefile` is a **separate, manual** step: it uses
-ImageMagick to append the individual `tiles/tile_*.png` into a sheet and produce
-`assets-fci/tiles.png`. Run it by hand after editing tile art; the top-level build does not.
+### The board support library is already installed
 
-## Architecture
+`hth313/Calypsi-6502-Commodore` — which the rewrite was meant to be based on —
+ships *inside* the tool chain, byte for byte: its `src/` is
+`/usr/local/lib/calypsi-6502-5.18/contrib/MEGA65-SDK/src` and its
+`linker-files/` is `.../linker-rules` (`diff -rq` against a fresh clone is
+clean). `--target=mega65` already links it. **There is nothing to clone or
+vendor**, and no `mega65-libc` in this repo — the six things this game needs
+from that library are reimplemented in `src/mega65.c` and `src/screen.c`.
 
-Four layers, bottom-up:
+### Verifying a change
 
-- **`src/dma.c`** — MEGA65 DMAgic (F018B enhanced) job lists as pre-initialised structs, one per
-  operation, filled in and triggered by `do_dma()`. This is the only way the code touches memory
-  above 64 K. `dma_init()` must run before anything else in `main()`.
-  `dma_copy_transparent()` skips source bytes equal to 0, which is how tiles are blitted with a
-  transparent colour.
-- **`src/graphics.c`** — VIC-IV setup and the framebuffer abstraction (see below), FCI file
-  loading, palette upload, tile blitting, view scrolling, and a tiny text output API
-  (`g_xy`/`g_color`/`g_putc`).
-- **`src/map.c`** — the hex world: an `80 x 50` tile array plus the coordinate conversions.
-- **`src/hexwar.c`** — `main()`, the keyboard/scroll loop, `fatal()`, and the jiffy benchmark
-  helpers.
+xemu can be driven without a window, which is the fastest way to check that a
+change still boots and draws:
 
-`src/assembler_utilities.s` holds the two things that must be assembly: `disable_rom_protection`
-(hypervisor trap to free `$2xxxx`/`$3xxxx`) and `expand_fullcolor_char_x` (pixel-doubles a
-64-byte full-colour char into the two chars after it, via `$0334`/`$0374`/`$03b4`).
+```sh
+timeout -s TERM 20 xemu-xmega65 -skipconfigfile -headless -sleepless -besure \
+    -fastboot -screenshot $PWD/shot.png -dumpmem $PWD/mem.bin -prg build/hexwar.prg
+```
 
-### The framebuffer trick
+The screenshot is written when xemu exits, including on SIGTERM, so the
+`timeout` is the run length. `-skipconfigfile` **must be the first argument**;
+without it, concurrent runs race each other rewriting xemu's config template
+and pop up dialogs at whoever is at the machine.
 
-There is no bitmap mode. The screen is VIC-IV **16-bit text mode with full-colour chars**: each
-screen cell holds a 16-bit pointer to a 64-byte (8x8, one byte per pixel) character definition.
-`setup_view()` writes, once at startup, a *unique* character number into every cell of the map
-view so that the view's character definitions form a contiguous linear framebuffer at
-`$40000-$5FFFF` (or `$30000-$5FFFF` for large views, which is why ROM protection is disabled).
-Drawing a tile is therefore "DMA-copy 64-byte char bitmaps into the char slots the view cells
-already point at" — see `draw_tile_in_view()`. `view_row_startaddress[]` caches each view row's
-framebuffer address, which makes `scroll_up/down/left/right()` a handful of long DMA copies.
+**`-dumpmem` gives 384 KB of chip RAM (`$00000-$5FFFF`)**, which covers screen
+RAM at `$12000` and the whole tile store at `$40000`. It does *not* cover the
+expanded tile sheet in attic RAM.
 
-Screen RAM is at `$E000`, under the KERNAL. Every direct read/write of it must be wrapped in
-`ENABLE_SCREEN_ACCESS` / `DISABLE_SCREEN_ACCESS` (these `sei` and flip `$01` between `$35`/`$36`).
-The memory map is documented in the comment block at the top of `src/hexwar.c`; keep it current.
+**Nothing headless can press a key**, so `START_OFF_X` / `START_OFF_Y` (Makefile
+`-D`s, defaults in `src/hexwar.h`) exist to start the view somewhere else. Two
+builds one apart are how scrolling is checked: `make` then `make START_OFF_X=41`
+must shift the map exactly eight pixels and leave the panel byte-identical.
+Both were verified pixel-exact this way, along with one row vertically (16
+screenshot pixels, since V200 is displayed doubled).
 
-### Compile-time configuration
+**The config stamp is what makes that work at all.** `START_OFF_X` reaches the
+compiler as a `-D`, which make cannot see; without `$(STAMP)` in the Makefile a
+second build finds every object up to date and hands back the *previous*
+binary, which looks exactly like a change that did not take. It cost a
+verification run before it went in.
 
-`include/hexwar.h` is the config header: `H640`/`V400` resolution, `SCREENBASE` and its
-`SCREENBASE_UNDER_RAM` / `SCREENBASE_FIRST_64K` shortcuts, `COLORBASE`, and the `VIEW_LEFT/RIGHT/
-TOP/BOTTOM` bounds that everything else derives from. Changing a `VIEW_*` value changes the
-framebuffer layout, the scroll routines, and `map.c`'s tile counts at once.
+## The display
 
-`src/graphics.c` derives `EXPAND_TILE_X` when `H640 && !V400`: in that mode pixels are non-square,
-so 4x4-char tiles from the FCI are drawn 8 chars wide by running each char through
-`expand_fullcolor_char_x()`. Tile-drawing code has two variants under this `#ifdef` — change both.
+**There is no bitmap mode.** The screen is VIC-IV **16-bit text mode with
+full-colour characters**: each cell is two bytes holding a character *number*.
+A number below 256 draws the usual 8x8 monochrome glyph from the character ROM
+— that is the panel text. A number of 256 or more draws 64 bytes of palette
+indices, one per pixel, found at `number * 64` as an absolute 28-bit address.
 
-Note: several `#if (64L * VIEW_WIDTH * VIEW_HEIGHT) >= 0x20000)` guards in `hexwar.h` and
-`graphics.c` carry a stray closing paren. cc65 currently tolerates it and the condition is false
-for the default view size; fix the expression before relying on those branches.
+**Every cell of the map window owns 64 bytes of its own, and that is the whole
+trick.** `view_init()` writes a *unique* character number into each of the
+60x23 cells, once, so their definitions form one linear framebuffer at
+`TILE_STORE` (`$40000`). Drawing is then nothing but copying 64-byte blocks
+into it, and **the screen words never change again** — which is what makes
+scrolling a redraw rather than a rearrangement.
 
-### Hex coordinates
+### The ROM is never banked out, and that is unusual here
 
-`src/map.c` uses **doubled coordinates** (see redblobgames, linked in `design.md`): odd rows are
-offset, `x` steps by 2 within a row. Three spaces, with explicit converters between them:
+`~/commodore/mega65/hexgame` and `~/commodore/SearchAndRescue` both flatten the
+memory map to reach `$20000-$3FFFF`, and both pay heavily: a Hypervisor call to
+lift the ROM's write protection, **a second one to put it back** (it is a
+toggle that outlives the program, and forgetting it corrupts the *next* run), a
+copy of the whole 128 KB ROM to attic RAM so the machine can still be reset, and
+a rule that all disk I/O must finish first.
 
-- *hex* — game logic, `Hex{x,y}` (doubled)
-- *array* — storage in `map.tile[80][50]`, `x_hex2array` / `y_hex2array` (`y/2`) and back
-- *screen* — character cells, `x_hex2screen` = `x*4 + 4*(y%2)`, `y_hex2screen` = `6*(y/2) + 3*(y%2)`
+Hexwar needs none of it because of one number: the view is 60x23, so its tile
+store is `60*23*64 = 88320` bytes, and that fits in banks 4 and 5
+(`$40000-$559FF`) with 40 KB to spare. **So the KERNAL stays live, `printf`
+works, the interrupt vectors are still the ROM's, and quitting is a return from
+`main()`.** The `#error` in `src/view.h` guards the assumption. Enlarging the
+view past `$60000` would drag all of that machinery in — check the arithmetic
+before changing `VIEW_COLUMNS` or `VIEW_ROWS`.
 
-Tiles are 4x4 chars and overlap vertically by half, so a hex row advances 3 character rows.
+Screen RAM is at `$12000`, not `$E000` where the cc65 build had it. That
+retires the `ENABLE_SCREEN_ACCESS` / `$01` dance that used to bracket every
+screen access in `old-cc65/src/graphics.c`.
 
-## cc65 conventions used here
+Colour RAM is moved to `$FF81000` via `$D064`/`$D065`, because CBDOS keeps
+buffers at the default `$FF80000` and corrupts the display.
 
-These are deliberate performance choices for a 6502-class target — follow them in new code:
+### Two register habits worth keeping
 
-- Use the `byte`/`word`/`dword` typedefs from `hexwar.h`, not `int`.
-- Prefer the shared globals `_i`, `_j`, `_x`, `_y` for loop/temp variables; globals are far cheaper
-  than stack locals.
-- Locals that must persist across a call are declared `static` (see `draw_tile_in_view`) —
-  cc65 puts those in fixed storage rather than on the software stack.
-- `TMPBUFFER` (`$0334`, 200 bytes) is the shared scratch area for file loading and for
-  `expand_fullcolor_char_x`; both cannot be in flight at once.
-- `fatal()` switches back to 8-bit text mode, prints, and hangs — it is the only error path.
+- **The hot registers ($D05D bit 7) have to be on for the first half of
+  `screen_init()` and off for the second.** With them on, a write to a legacy
+  VIC-II/VIC-III register makes the VIC-IV recompute its layout — which is what
+  turns the H640 bit into a sensible 80-column geometry. Once that is done they
+  must go off, or the hand-written `CHRCOUNT`, `CHARSTEP` and `SCNPTR` are
+  undone by the next legacy write.
+- **`POKE(53272, PEEK(53272) | 0x02)` picks the lower case character set**, and
+  on a normal boot the KERNAL does it for you. Take it away and every capital
+  letter comes out as a graphic.
 
-## Reference
+## Memory map
 
-`design.md` collects the hex-grid and original-Civ-1 map-generator research the map code is
-being built from.
+| Address | Size | Contents |
+|---|---|---|
+| `$2001-$9FFF` | 32 KB | program, data, BSS, C stack. About 19 KB used |
+| `$1600-$1EFF` | 2304 | `zpsave`, free — `LOW_FREE` in `src/mega65.h` moves a variable there |
+| `$12000` | 4000 | screen RAM, 80x25 cells of 2 bytes |
+| `$40000-$559FF` | 88320 | the view's tile store, 60x23 cells of 64 bytes |
+| `$8000000` | 12288 | the x-expanded tile sheet, 48x4 characters |
+| `$FF81000` | 4000 | colour RAM |
+
+`$20000-$3FFFF` is left as the C65 ROM.
+
+**The 32 KB is what to watch.** The linked tile sheet is 6573 bytes and
+`map_tile` is 4000, so 10.5 KB is spoken for before any game code. If it gets
+tight the known fix is hexgame's exomizer one-file scheme
+(`~/commodore/mega65/hexgame/tools/mkprg.py`); a Civ-style ten-layer map
+(10 x 4000) will want attic RAM and Calypsi `__far` pointers regardless.
+
+**Naming `zdata` in `hexwar.scm`'s `freeSpace` would move the whole BSS to
+`$1600-$1EFF`** — which is what hexgame does — but `map_tile` alone does not
+fit in 2304 bytes. Use `LOW_FREE` per variable instead.
+
+## The hex grid
+
+**Doubled coordinates** (redblobgames): a hexagon is `(hx, hy)` with `hx` and
+`hy` always the same parity, so a step east is `hx += 2` and the four diagonal
+neighbours are `(hx±1, hy±1)`. Array cell `(ax, ay)` is hexagon
+`(ax, 2*ay + (ax & 1))`, which packs 80x50 = 4000 hexagons into a rectangle.
+
+Two constants in `src/map.h` carry the whole view geometry:
+
+```c
+#define MAP_CELL_X(AX)     (4 * (word)(AX))
+#define MAP_CELL_Y(AX, AY) (6 * (word)(AY) + 3 * ((AX) & 1))
+```
+
+A tile is **8x4 characters** once the sheet is expanded, and a hexagon column
+step is `hx += 2`, so `4*hx` puts the odd, offset rows exactly half a tile
+across **without a special case**. Vertically a hexagon row is 3 characters, so
+tiles overlap by one row — and that overlap is what the transparent copy is for.
+
+The cc65 build spelled these `x_hex2screen` = `x*4 + 4*(y%2)` and
+`y_hex2screen` = `6*(y/2) + 3*(y%2)` in `old-cc65/src/map.c`. The second is
+just `3*hy`; **the first was missing the doubling that x-expansion needs**,
+which is one reason that build never drew a correct map.
+
+## Drawing
+
+**The sheet is x-expanded once at boot, not once per character drawn.** At
+H640/V200 a screen pixel is half as wide as it is tall, so a tile drawn as it
+comes out of the file looks squashed. The cc65 build fixed that at draw time —
+`draw_tile_in_view` ran an assembly routine (`expand_fullcolor_char_x`) over
+*every character of every tile*, through a shared 200-byte scratch buffer at
+`$0334`, then issued two DMA jobs per source character. `sheet_expand()` does
+it once, in 96 iterations, leaving a sheet in which every tile is natively 8x4.
+After that there is no expansion step in the drawing path, no shared scratch
+buffer to collide over, and no assembly file at all.
+
+**A tile row is one DMA job, not eight.** The eight characters of a tile row
+are contiguous in the expanded sheet *and* the cells they land on are
+contiguous in the store, so the row is a single `lcopy_transparent`. The same
+change was worth four times the speed in hexgame's `fc_displayTile`.
+
+**Palette index 0 is transparent** — the DMAgic is told to skip source bytes of
+0 — which is what lets a hexagon be blitted over its neighbour without a
+rectangle of background around it.
+
+`src/mega65.c` keeps **one pre-initialised DMA list per operation**, so a call
+stores only the four or five fields that actually change. mega65-libc rebuilds
+all fourteen every time; `old-cc65/src/dma.c` already had the better
+arrangement. It matters because a redraw is hundreds of these in a row.
+
+## Scrolling
+
+**This is the part that never worked, twice, and the answer is not to scroll.**
+
+`view_redraw(off_x, off_y)` blanks the store and redraws every tile that
+intersects the window at that character offset. About eighty tiles are visible,
+four DMA jobs each, plus two fills — a few milliseconds. It is unconditionally
+correct.
+
+Both earlier attempts tried to *shift* the store with DMA row copies and repair
+the newly exposed edge: `scroll_up`/`scroll_down`/`scroll_left`/`scroll_right`
+in `old-cc65/src/graphics.c`, and `fc_scrollMerge*` in the XC=BASIC library.
+Both have to work out which tiles overlap a one-character strip and redraw them
+in the right order, against a lattice where a tile is eight characters wide and
+three tall. Neither ever came out right.
+
+**`view_redraw` iterates by hexagon row `hy`, not by array row `ay`.** Tiles
+overlap by one character row, so a later draw must be the lower one — and
+within one array row the odd columns sit three character rows *below* the even
+ones. Stepping `hy` makes the screen y strictly increasing, so painter's order
+falls out without sorting anything.
+
+One character a step is eight pixels across and one row down; a hexagon is 8
+characters wide and 3 rows apart, so that is eight sub-steps per column and
+three per row. That is the smoothness the `vx`/`vy` pair in
+`old-cc65/src/hexwar.c` was reaching for.
+
+## The things cc65 was doing silently
+
+Four differences account for most of the port, and are the first things to
+suspect when something behaves oddly:
+
+- **cc65 compiled string literals into PETSCII. Calypsi compiles them as
+  written.** Anything compared byte for byte against the outside world has to
+  be spelled the way the bytes really are — the FCI marker `sheet.c` looks for
+  is `"IMG"`, upper case, because that is what `png2fci.py` writes.
+- **The same in reverse for output.** `ascii_to_screencode()` in `src/screen.c`
+  exists only because of this; the cc65 build poked literal bytes at the
+  screen. Note it returns A–Z *unchanged*: with the lower case character set
+  selected, screen codes 1–26 are `a`–`z` and 65–90 are `A`–`Z`.
+- **The heap was whatever RAM was left. Calypsi's is what `--heap-size` says**,
+  and a `malloc` returning NULL here gets written to anyway. Nothing in this
+  program calls `malloc`.
+- **The linker picks the smallest `printf` the format strings it can see need.**
+  A runtime format passed through to `vsprintf` makes it pick `reduced`, which
+  has no field widths. Add `--rtattr printf=medium` to `LDFLAGS` if that
+  happens.
+
+## Assets
+
+`res/tiles.fci` is 24x4 characters — six 4x4 hex tiles side by side, in the
+order `tiles/Makefile` appends the PNGs (desert hill, grass, mountain, ocean,
+shallow ocean, tundra; `TILE_*` in `src/sheet.h`). It is checked in and
+identical to `~/commodore/xc-basic3.xxx/xc-megademo/res/civ.fci`, which is what
+the BASIC version used.
+
+**`tiles/Makefile` is a separate, manual step** — run it by hand after editing
+tile art. It appends the individual PNGs with ImageMagick and produces
+`assets-fci/tiles.png`; `tools/png2fci.py` turns that into an FCI. The top-level
+build does neither, since the FCI is checked in.
+
+`tools/bin2s.py` turns the FCI into `build/tiles.s`. It emits a **`code`**
+section, not `data`: Calypsi's `data` is *initialised* data, kept as an image
+the startup copies into RAM, so a 6.5 KB blob there would cost 13 KB of the 32
+and be copied for nothing.

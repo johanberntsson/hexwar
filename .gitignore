@@ -1,9 +1,14 @@
-# Generated binaries
-.map
-*.prg
-bin/autoboot.c65
-hexwar.c64
-hexwar.d64
-hexwar.d81
-obj/*
+# Everything the Calypsi build produces
+build/
 
+# Screenshots and memory dumps from headless xemu runs
+shot*.png
+mem.bin
+
+# The cc65 build's leavings, for as long as old-cc65/ is still here
+old-cc65/bin/
+old-cc65/obj/
+old-cc65/d81data/
+.map
+*.d64
+*.d81

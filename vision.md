@@ -120,21 +120,21 @@ Toward the late game, global development triggers the **Crisis Phase (c. 1200 BC
 │ trade line cuts │     │ fall, halting   │     │ and domestic    │
 │                 │     │ bronze builds   │     │ rebellions      │
 └─────────────────┘     └─────────────────┘     └─────────────────┘
-```[cite: 1]
+```
 
-1. **Sea Peoples & Migrations:** Hostile fleets spawn dynamically based on coastal wealth, raiding ports and severing shipping lanes[cite: 1].
-2. **Network Fracture:** Loss of critical tin or copper hubs instantly prevents empires from reinforcing elite bronze units[cite: 1].
-3. **Environmental Disasters:** Droughts and earthquakes reduce crop yields, causing widespread famine and internal rebellions[cite: 1].
+1. **Sea Peoples & Migrations:** Hostile fleets spawn dynamically based on coastal wealth, raiding ports and severing shipping lanes.
+2. **Network Fracture:** Loss of critical tin or copper hubs instantly prevents empires from reinforcing elite bronze units.
+3. **Environmental Disasters:** Droughts and earthquakes reduce crop yields, causing widespread famine and internal rebellions.
 
 ---
 
 ## 5. Victory Conditions
 
-Players compete across three victory pathways[cite: 1]:
+Players compete across three victory pathways.
 
-* **A. Survival (Crisis Endurance):** Maintain a functional state (city control, non-zero treasury, active supply lines) through $N$ turns of the Collapse while rival AI empires fracture into dark-age states[cite: 1].
-* **B. Lasting Legacy (Monuments & Culture):** Earn Legacy Points by constructing mega-projects (Pyramids, Palace of Knossos, Lion Gate)[cite: 1] and documenting knowledge on clay tablets (Linear B, Cuneiform law codes, the Alphabet)[cite: 1]. If your score threshold is highest, you win posthumously even if your cities fall during the Collapse[cite: 1].
-* **C. Highest Score (Hegemony):** Measured by percentage of strategic trade controlled[cite: 1], total vassal/tributary states[cite: 1], and active wealth/population reserves[cite: 1].
+* **A. Survival (Crisis Endurance):** Maintain a functional state (city control, non-zero treasury, active supply lines) through $N$ turns of the Collapse while rival AI empires fracture into dark-age states.
+* **B. Lasting Legacy (Monuments & Culture):** Earn Legacy Points by constructing mega-projects (Pyramids, Palace of Knossos, Lion Gate) and documenting knowledge on clay tablets (Linear B, Cuneiform law codes, the Alphabet). If your score threshold is highest, you win posthumously even if your cities fall during the Collapse.
+* **C. Highest Score (Hegemony):** Measured by percentage of strategic trade controlled, total vassal/tributary states, and active wealth/population reserves.
 
 ---
 
@@ -163,11 +163,9 @@ typedef struct {
     uint8_t  is_alive;           // 1 = Active, 0 = Collapsed
     uint16_t crisis_survival_turns; // Counter during Collapse phase
 } CivVictoryState;
-```[cite: 1]
+```
 
 ### Visuals & Hardware Specs
-* **Hex Engine on VIC-IV:** Staggered odd/even hex rows rendered using 16-color Full-Color Mode (FCM) or custom character matrices[cite: 1]. X/Y hardware pixel scrolling handles map navigation smoothly[cite: 1].
-* **CPU Utilization (40.5 MHz GS4510):** Ample processing overhead for A* hex pathfinding, AI trade route logic, and supply line state updates[cite: 1].
-* **Memory Footprint (128 KB Fast RAM + Expansion):** Map arrays, unit state tables, trade vectors, and diplomacy matrices fit easily within base fast RAM[cite: 1].
-
-```
+* **Hex Engine on VIC-IV:** Staggered odd/even hex rows rendered using 16-color Full-Color Mode (FCM) or custom character matrices. X/Y hardware pixel scrolling handles map navigation smoothly.
+* **CPU Utilization (40.5 MHz GS4510):** Ample processing overhead for A* hex pathfinding, AI trade route logic, and supply line state updates.
+* **Memory Footprint (128 KB Fast RAM + Expansion):** Map arrays, unit state tables, trade vectors, and diplomacy matrices fit easily within base fast RAM.

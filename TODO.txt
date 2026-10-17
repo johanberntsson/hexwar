@@ -1,5 +1,21 @@
 --- OPEN ---
 
+We should already prepare for different civilizations, and should problaby already now
+implement a start screen with "New Game", "Load Save", "Quit". New Game will then ask
+which civilization and difficulty level. Then the game starts.
+
+Each civ has a name and a leader, and later properties that guide the AI and make the civs
+distinct.
+
+Move game view to right side of screen, and add minimap in top left, with an outline of the
+current view. It should be possible to click directly in the minimap to move the view quickly
+(compare with civ1-reference/civ1-pic01.png)
+
+We should hide unknown tiles. We only uncover tiles next to one of our units. The other
+tiles are black until we come close. This applies to minimap too
+
+--- MILESTONES ---
+
 Milestone 2: build new units
 - Implement a city screen
 - Make it possible to change orders to build either warriors or builders

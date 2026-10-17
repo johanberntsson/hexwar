@@ -649,8 +649,10 @@ suspect when something behaves oddly:
 order `tiles/Makefile` lists the PNGs: six terrains (desert hill, grass,
 mountain, ocean, shallow ocean, tundra), then the city, the selection ring
 and three units (settler, warrior, builder); `TILE_*` in `src/sheet.h`. The
-terrain, city and unit art is OpenCiv's (`alltiles/README.txt`);
-`tile_select.png` is a placeholder drawn from the grass tile's outline.
+terrain, city and unit art is OpenCiv's, under CC BY 4.0
+(`tiles/README.txt`, and **Credits** in `README.md`, which must stay in
+step); `tile_select.png` is a placeholder drawn from the grass tile's
+outline.
 **Only what the game uses goes into `tiles/`** — `alltiles/` is the whole
 collection to pick from.
 

@@ -1,4 +1,4 @@
-# Hexwar
+# Seven Ships of the Enemy
 
 A Civilization-style hex-grid game for the **MEGA65**, in C.
 

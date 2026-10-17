@@ -2,7 +2,7 @@
 
 A Civilization-style hex-grid game for the **MEGA65**, in C.
 
-![the map view](basic/civ-basic.png)
+![the map view](screenshots/civ-popup.png)
 
 ## Building
 
@@ -29,7 +29,7 @@ tool chain and is selected by `--target=mega65`. There is nothing to clone.
 
 ## Where things are
 
-- `src/` — the game. `CLAUDE.md` describes the layers and the display.
+- `src/` — the game. documentation/techreport.md describes the layers and the display.
 - `res/tiles.fci` — the tile sheet, built from `tiles/*.png` by running
   `make` in `tiles/` (`tools/mktiles.py`). Checked in.
 - `alltiles/` — the full OpenCiv tile collection the art is picked from.
@@ -48,14 +48,14 @@ tool chain and is selected by `--target=mega65`. There is nothing to clone.
 
 Milestone 1 of `TODO.txt`: a generated, east-west wrapping map that scrolls;
 a mouse or joystick pointer; a turn loop; one settler, which can move and
-found a city. Controls are listed along the bottom of the screen and in
-`CLAUDE.md` (**The game**). Verified in xemu; not yet on a real MEGA65.
+found a city. Controls are listed along the bottom of the screen. Verified
+in xemu; not yet on a real MEGA65.
 
 Next is milestone 2: a city screen, and building warriors and builders.
 
 ## Credits
 
-The terrain, city and unit tiles are from [OpenCiv](https://github.com/RyanGrieb/OpenCiv)
+Most of the terrain, city and unit tiles are from [OpenCiv](https://github.com/RyanGrieb/OpenCiv)
 by Ryan Grieb, with art commissioned for it from lucasyoung988, brysia and
 pratamacam. They are licensed under
 [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/) (see OpenCiv's
@@ -64,7 +64,9 @@ pratamacam. They are licensed under
 
 They have been modified for this game: scaled to 32×32 pixels, reduced to a
 shared 240-colour palette, and widened at run time for the MEGA65's 640×200
-display. The selection ring is drawn from the grass tile's outline.
+display.
+
+Additional graphics and tiles were created by myself for this game.
 
 ## Licensing
 

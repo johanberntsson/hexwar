@@ -1,3 +1,12 @@
+--- OPEN ---
+
+Milestone 2: build new units
+- Implement a city screen
+- Make it possible to change orders to build either warriors or builders
+- Handle orders and create new units when ready
+
+--- DONE ---
+
 Milestone 1: found a city
 - add a mouse pointer (sprite) and control it with mouse or joystick
 - make the main game loop: 
@@ -7,9 +16,3 @@ Milestone 1: found a city
   - repeat unless game over
 - Init game with one settler unit
 - Implement "b" to found a city. Add city graphics on the tile
-
-Milestone 2: build new units
-- Implement a city screen
-- Make it possible to change orders to build either warriors or builders
-- Handle orders and create new units when ready
-

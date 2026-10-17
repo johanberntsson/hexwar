@@ -15,7 +15,11 @@ specification for the display**, and the geometry in `src/view.h` comes
 straight from its `fc_setMergeTileMode(10, 1, 60, 23, true)`. Neither the
 BASIC nor the cc65 version ever scrolled correctly; see **Scrolling** below.
 `design.md` holds the hex-grid and Civ-1 map-generator research, and
-`vision.md` is the game design document — a Late Bronze Age eastern
+`documentation/techreport.md` is the technical report for readers rather
+than for working on the code — program structure, memory allocation and the
+main loop, in the format of Ozmoo's (pandoc markdown, `\$` in tables). **Keep
+it in step** when the memory map, the startup or the loop changes; the
+figures in it come from `build/hexwar.lst`. `vision.md` is the game design document — a Late Bronze Age eastern
 Mediterranean 4X. Its §6 is the technical section and is written to agree
 with this file; **if the two ever disagree, this file is right and §6 is
 stale.** `vision-old.md` is a superseded draft.
@@ -212,8 +216,8 @@ not. Take these in order and stop as soon as it fits:
    memories. **Do not use `bank45` as shipped** — `(#x40000 . #x5ffff)` sits
    straight on top of the tile store and the expanded sheet. Trim it to
    `#x5c800 . #x5ffff` (14336 bytes) and leave bank 1 alone: screen RAM is at `$12000` and BASIC 65 owns
-   most of the rest. Attic RAM above the expanded sheet (`$8003000` up) is the
-   real reservoir, reached by DMA or `__huge`.
+   most of the rest. Attic RAM (`$8000000` up, all of it free now that the
+   expanded sheet has moved to bank 5) is the real reservoir, reached by DMA or `__huge`.
 2. **Bank BASIC out and put BSS at `$A000-$BFFF`.** Search And Rescue does
    exactly this and it is confirmed on a real MEGA65 (2 Oct 2026), disk I/O
    included. Copy its arrangement rather than inventing one: clear `$D030`
@@ -492,9 +496,20 @@ space skips the unit this turn, `w` asks again after the others, `f`
 fortifies; Return ends the turn; the cursor keys scroll; ESC or RUN/STOP
 quits. **`w a s d` no longer scroll**, since `a d` and `w` are orders now.
 
-**Not tried on the machine yet:** the mouse and joystick reads are hexgame's,
-which came from Ozmoo's tested code, but nothing in this build has run on a
-real MEGA65 — nor has loading the sheet off the disk.
+**Not tried on the machine yet** (as of 17 Oct 2026; the user is testing
+next): the mouse and joystick reads are hexgame's, which came from Ozmoo's
+tested code, but nothing in this build has run on a real MEGA65 — nor has
+loading the sheet off the disk, nor the sheet in bank 5. Things to look at
+there, roughly in order of suspicion: that `TILES.FCI` loads at all (the
+hot-register note below applies to it as much as to the map); which port the
+mouse turns up on (Ozmoo saw port 1 on hardware, port 2 in xemu — the button
+is read from both, the pots are the same registers either way); whether the
+arrow's tip lands where `pointer_hex()` thinks it is (`SPR_X_OFFSET`/
+`SPR_Y_OFFSET` in `src/input.c` were taken from hexgame, not measured here —
+the hover readout makes an error visible); and whether the redraw still keeps
+ahead of the beam. Also seen in xemu and not yet looked into: after quitting,
+the BASIC banner wraps oddly on the 40-column screen, which is
+`screen_go8bit()` and predates milestone 1.
 
 ## What the other Calypsi projects already found out
 

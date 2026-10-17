@@ -59,7 +59,32 @@
 // src/sheet.h), because for now every terrain has exactly one tile; when that
 // stops being true this layer keeps meaning terrain and the drawing grows a
 // lookup table.
+//
+// **Bit 7 is not terrain: it says a city or a unit is on the hexagon**, and
+// it is what lets view_redraw() find the few cells that need anything drawn
+// over them without a second 4 KB layer or a search of the unit list per
+// tile. unit_mark() keeps it right; read terrain through MAP_TERRAIN.
 extern byte map_tile[MAP_ROWS][MAP_COLUMNS];
+#define MAP_OCCUPIED 0x80
+#define MAP_TERRAIN(AX, AY) (map_tile[AY][AX] & 0x7f)
+
+// The six neighbours of a hexagon, clockwise from east. In doubled
+// coordinates east and west are hx +/- 2 and the four diagonals hx +/- 1,
+// hy +/- 1; the tiles are pointy-topped, so there is no north or south.
+#define DIR_E 0
+#define DIR_SE 1
+#define DIR_SW 2
+#define DIR_W 3
+#define DIR_NW 4
+#define DIR_NE 5
+#define DIR_NONE 0xff
+
+// The cell one step from (ax, ay) in direction `dir`, wrapping east-west.
+// Returns 0, and leaves *nax and *nay alone, off the top or bottom.
+byte map_neighbour(byte ax, byte ay, byte dir, byte *nax, byte *nay);
+
+// Which way (bx, by) is from (ax, ay), or DIR_NONE if not a neighbour.
+byte map_direction(byte ax, byte ay, byte bx, byte by);
 
 // The map file, made by tools/mapgen.py (which documents the layout) and put
 // on the disk next to the program by `make d81`.

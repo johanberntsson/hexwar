@@ -1,5 +1,7 @@
 # Everything the Calypsi build produces
 build/
+alltiles/
+civ1-reference/
 
 # Screenshots and memory dumps from headless xemu runs
 shot*.png

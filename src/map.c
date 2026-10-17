@@ -15,6 +15,37 @@ byte map_tile[MAP_ROWS][MAP_COLUMNS];
 #error "map_load reads a row per _Stub_read call, which must be under 256 bytes"
 #endif
 
+// One step in each direction, in doubled coordinates; DIR_* order. File scope
+// and 16 bit, because small static const arrays of int8_t inside a function
+// have been seen to compile to nothing with Calypsi 5.18 (CLAUDE.md).
+static const int dir_dhx[6] = { 2, 1, -1, -2, -1, 1 };
+static const int dir_dhy[6] = { 0, 1, 1, 0, -1, -1 };
+
+byte map_neighbour(byte ax, byte ay, byte dir, byte *nax, byte *nay)
+{
+    int hx = (int)ax + dir_dhx[dir];
+    int hy = 2 * (int)ay + (ax & 1) + dir_dhy[dir];
+
+    if (hy < 0 || hy >= 2 * MAP_ROWS) return 0;
+    if (hx < 0) hx += MAP_COLUMNS;
+    else if (hx >= MAP_COLUMNS) hx -= MAP_COLUMNS;
+    // hx and hy keep the same parity -- every step changes both by an odd
+    // amount or neither -- and MAP_COLUMNS is even, so the wrap keeps it too.
+    *nax = (byte)hx;
+    *nay = (byte)((hy - (hx & 1)) >> 1);
+    return 1;
+}
+
+byte map_direction(byte ax, byte ay, byte bx, byte by)
+{
+    byte dir, nx, ny;
+    for (dir = 0; dir < 6; ++dir) {
+        if (map_neighbour(ax, ay, dir, &nx, &ny) && nx == bx && ny == by)
+            return dir;
+    }
+    return DIR_NONE;
+}
+
 void map_cell_at(word cx, word cy, byte *ax, byte *ay)
 {
     // Work in half characters, so that the point is the middle of the

@@ -2,6 +2,11 @@
 #include "map.h"
 #include "screen.h"
 #include "sheet.h"
+#include "unit.h"
+
+#if TILE_STORE + TILE_STORE_SIZE > SHEET_EXPANDED
+#error "the tile store runs into the expanded sheet"
+#endif
 
 // One row of the window's screen words, built here and copied out in a single
 // DMA job rather than 120 lpokes.
@@ -49,10 +54,11 @@ void view_wait_for_redraw(void)
 void view_draw_tile(int x, int y, byte tile)
 {
     byte r;
-    // The source is the expanded sheet in attic RAM, which is 12288 bytes at
-    // a megabyte boundary -- so a source address is 16 bits and the megabyte
-    // and bank never change. blit_begin() in view_redraw() has set them.
-    word src = (word)(64U * ((word)tile * TILE_EXPANDED_COLUMNS));
+    // The source is the expanded sheet in bank 5, which fits inside the bank
+    // -- so a source address is 16 bits and the megabyte and bank never
+    // change. blit_begin() in view_redraw() has set them.
+    word src = SHEET_EXPANDED_ADDR
+               + (word)(64U * ((word)tile * TILE_EXPANDED_COLUMNS));
 
     for (r = 0; r < TILE_ROWS; ++r, src += 64U * SHEET_EXPANDED_COLUMNS) {
         int row = y + r;
@@ -103,6 +109,36 @@ void view_draw_tile(int x, int y, byte tile)
 // CLAUDE.md. A clear would blank rows the beam has not reached yet, which is
 // exactly the flash it is trying to avoid -- and it is unnecessary, because
 // the hexagons tessellate and cover every byte of the window between them.
+//
+// **Cities and units go one hexagon row behind the terrain.** They are drawn
+// over the terrain tile of their own cell, but a unit's feet are in the
+// tile's bottom character row, which is also the top row of the hexagons
+// below -- drawn later, and opaque in the middle. So the cells of row hy that
+// have MAP_OCCUPIED set are noted while its terrain is drawn, and their
+// overlays are drawn once row hy + 1's terrain is down. That is still top to
+// bottom, three character rows behind the terrain at worst, which costs the
+// beam race nothing.
+#define MAX_PENDING 16      // a window row holds at most 16 cells
+
+static byte pending_n[2];
+static byte pending_ax[2][MAX_PENDING];
+static int pending_tx[2][MAX_PENDING];
+
+static void draw_overlays(byte hy, int ty)
+{
+    byte list = hy & 1;
+    byte i, k, n;
+    byte ay = hy >> 1;
+    byte tiles[3];
+
+    for (i = 0; i < pending_n[list]; ++i) {
+        n = unit_overlay(pending_ax[list][i], ay, tiles);
+        for (k = 0; k < n; ++k)
+            view_draw_tile(pending_tx[list][i], ty, tiles[k]);
+    }
+    pending_n[list] = 0;
+}
+
 void view_redraw(word off_x, word off_y)
 {
     byte hy;
@@ -110,9 +146,9 @@ void view_redraw(word off_x, word off_y)
     word vx_first, vx_last;
     byte ax_first;
 
-    // Source megabyte $80 (the expanded sheet in attic RAM), bank 0 within it;
-    // destination megabyte 0 (chip RAM); palette index 0 transparent.
-    blit_begin(0x80, 0x00, 0x00, 0x00);
+    // Source: chip RAM, bank 5 (the expanded sheet); destination megabyte 0
+    // (chip RAM); palette index 0 transparent.
+    blit_begin(0x00, SHEET_EXPANDED_BANK, 0x00, 0x00);
 
     // Which map cells can touch the window. A tile is 8 characters wide and
     // starts at 4*ax, and 4 rows tall starting at 3*hy, so anything beyond
@@ -130,6 +166,8 @@ void view_redraw(word off_x, word off_y)
     hy_last = (off_y + VIEW_ROWS) / 3;
     if (hy_last >= 2 * MAP_ROWS) hy_last = 2 * MAP_ROWS - 1;
 
+    pending_n[0] = pending_n[1] = 0;
+
     // **Iterate by hexagon row, not by array row.** Tiles overlap by one
     // character row, so a later draw has to be the lower one -- and within one
     // array row the odd columns sit three character rows below the even ones.
@@ -138,6 +176,7 @@ void view_redraw(word off_x, word off_y)
     for (hy = (byte)hy_first; hy <= (byte)hy_last; ++hy) {
         byte ay = hy >> 1;
         byte parity = hy & 1;
+        byte list = parity;
         word vx = vx_first;
         byte ax = ax_first;
         int tx;
@@ -151,9 +190,21 @@ void view_redraw(word off_x, word off_y)
         }
         tx = (int)(4 * vx) - (int)(off_x + MAP_WIDTH_CHARS);
         for (; vx <= vx_last; vx += 2, tx += 8) {
-            view_draw_tile(tx, ty, map_tile[ay][ax]);
+            byte t = map_tile[ay][ax];
+            if (t & MAP_OCCUPIED) {
+                byte n = pending_n[list];
+                if (n < MAX_PENDING) {
+                    pending_ax[list][n] = ax;
+                    pending_tx[list][n] = tx;
+                    pending_n[list] = n + 1;
+                }
+                t &= (byte)~MAP_OCCUPIED;
+            }
+            view_draw_tile(tx, ty, t);
             ax += 2;
             if (ax >= MAP_COLUMNS) ax -= MAP_COLUMNS;
         }
+        if (hy != (byte)hy_first) draw_overlays(hy - 1, ty - 3);
     }
+    draw_overlays((byte)hy_last, (int)(3 * hy_last) - (int)off_y);
 }

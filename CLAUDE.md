@@ -27,15 +27,17 @@ make                      # build/hexwar.prg, build/hexwar.map and build/hexwar.
 make run                  # build them and boot it in xemu (blocks until closed)
 make START_OFF_X=41       # start the view one character further right; see below
 make MAP_SEED=7           # another map; MAP_LAND=45 for more land
+make FAKE_KEYS='{30,0,0,98}'  # "press" b on frame 30 of a headless run; see below
 make clean
 ```
 
 Needs `cc6502`/`as6502`/`ln6502` (Calypsi 5.18+), Python 3, `c1541` and
-`xemu-xmega65`. `pypng` and ImageMagick only if the tile art changes, since
-`res/tiles.fci` is checked in.
+`xemu-xmega65`. Pillow only if the tile art changes, since `res/tiles.fci` is
+checked in.
 
-**The program reads its map from drive 8**, so it needs the d81 mounted: `make
-run` does that, and a bare `-prg` boot stops at `cannot read HEXWAR.MAP`.
+**The program reads its tile sheet and its map from drive 8**, so it needs
+the d81 mounted: `make run` does that, and a bare `-prg` boot stops at
+`cannot read TILES.FCI`.
 
 There are no tests. Verification is running it — see **Verifying a change**.
 
@@ -75,8 +77,8 @@ without it, concurrent runs race each other rewriting xemu's config template
 and pop up dialogs at whoever is at the machine.
 
 **`-dumpmem` gives 384 KB of chip RAM (`$00000-$5FFFF`)**, which covers screen
-RAM at `$12000` and the whole tile store at `$40000`. It does *not* cover the
-expanded tile sheet in attic RAM.
+RAM at `$12000`, the whole tile store at `$40000` and the expanded tile sheet
+at `$57000`.
 
 **Nothing headless can press a key**, so `START_OFF_X` / `START_OFF_Y` (Makefile
 `-D`s, defaults in `src/hexwar.h`) exist to start the view somewhere else. Two
@@ -108,12 +110,14 @@ scrolling a redraw rather than a rearrangement.
 
 ### The ROM is never banked out, and that is unusual here
 
-`~/commodore/mega65/hexgame` and `~/commodore/SearchAndRescue` both flatten the
-memory map to reach `$20000-$3FFFF`, and both pay heavily: a Hypervisor call to
+`~/commodore/mega65/hexgame` flattens the memory map to reach `$20000-$3FFFF`,
+and pays heavily for it: a Hypervisor call to
 lift the ROM's write protection, **a second one to put it back** (it is a
 toggle that outlives the program, and forgetting it corrupts the *next* run), a
 copy of the whole 128 KB ROM to attic RAM so the machine can still be reset, and
-a rule that all disk I/O must finish first.
+a rule that all disk I/O must finish first. (`~/commodore/SearchAndRescue` was
+once listed here too, wrongly: it keeps the ROM and lives in banks 1, 4 and 5
+plus attic RAM, as this does.)
 
 Hexwar needs none of it because of one number: the view is 60x23, so its tile
 store is `60*23*64 = 88320` bytes, and that fits in banks 4 and 5
@@ -146,11 +150,11 @@ buffers at the default `$FF80000` and corrupts the display.
 
 | Address | Size | Contents |
 |---|---|---|
-| `$2001-$9FFF` | 32 KB | program, data, BSS, C stack. About 19 KB used |
+| `$2001-$9FFF` | 32 KB | program, data, BSS, C stack. About 20 KB used |
 | `$1600-$1EFF` | 2304 | `zpsave`, free — `LOW_FREE` in `src/mega65.h` moves a variable there |
 | `$12000` | 4000 | screen RAM, 80x25 cells of 2 bytes |
 | `$40000-$56EFF` | 94208 | the view's tile store, 23 rows of 4096 |
-| `$8000000` | 12288 | the x-expanded tile sheet, 48x4 characters |
+| `$57000-$5C7FF` | 22528 | the x-expanded tile sheet, 88x4 characters |
 | `$FF81000` | 4000 | colour RAM |
 
 **The store's rows are padded to 4096 bytes, and the padding is load bearing.**
@@ -165,14 +169,21 @@ back two-thirds of the drawing time; see **Tearing**.
 
 `$20000-$3FFFF` is left as the C65 ROM.
 
-**The 32 KB is what to watch.** The linked tile sheet is 6573 bytes and
-`map_tile` is 4096, so 10.5 KB is spoken for before any game code. At the last
-measurement `build/hexwar.lst` reported the region 62.4% full (12331 bytes
-free) with nothing in it but the display engine, the map loader and the position readout.
+**The 32 KB is what to watch.** `map_tile` is 4096 of it before any game
+code; the tile sheet used to be linked in too (6.5 KB, and growing a KB a
+tile) and now comes off the disk. At the last measurement `build/hexwar.lst`
+reported the region 61.9% full (about 12.5 KB free) with milestone 1 in it:
+the display engine, the loaders, input and the pointer, units, cities and
+the turn loop.
 
 **Naming `zdata` in `hexwar.scm`'s `freeSpace` would move the whole BSS to
 `$1600-$1EFF`** — which is what hexgame does — but `map_tile` alone does not
 fit in 2304 bytes. Use `LOW_FREE` per variable instead.
+
+**Nothing that must survive a KERNAL disk call may live in `LOW_FREE`.** It is
+below `$2001`, where the C65 ROM keeps its own buffers. Search And Rescue,
+which uses all of it, writes it only after the last file has been read. Here
+that means after `map_load()`, and again after any later load or save.
 
 ## Growing past 32 KB
 
@@ -199,13 +210,21 @@ not. Take these in order and stop as soon as it fits:
 1. **`__far` data.** Calypsi ships `mega65-banked.scm` next to `mega65-plain.scm`
    in `linker-rules/`, and it already declares `bank1` and `bank45` far
    memories. **Do not use `bank45` as shipped** — `(#x40000 . #x5ffff)` sits
-   straight on top of the tile store. Trim it to `#x57000 . #x5ffff` (37120
-   bytes) and leave bank 1 alone: screen RAM is at `$12000` and BASIC 65 owns
+   straight on top of the tile store and the expanded sheet. Trim it to
+   `#x5c800 . #x5ffff` (14336 bytes) and leave bank 1 alone: screen RAM is at `$12000` and BASIC 65 owns
    most of the rest. Attic RAM above the expanded sheet (`$8003000` up) is the
    real reservoir, reached by DMA or `__huge`.
-2. **Extend the `program` memory past `$9FFF`.** Part 2 says it can go to
-   `$BFFF` for 40 KB. One line in `hexwar.scm`, but unverified here — it needs
-   a headless boot before it is trusted, since the KERNAL stays live.
+2. **Bank BASIC out and put BSS at `$A000-$BFFF`.** Search And Rescue does
+   exactly this and it is confirmed on a real MEGA65 (2 Oct 2026), disk I/O
+   included. Copy its arrangement rather than inventing one: clear `$D030`
+   bit 4 in `__low_level_init` (`src/bank.s` there); declare the window in the
+   `.scm` with a name and a section and **no `(type …)`** — `(type any)` turns
+   it into a second content area the moment anything initialised lands in it
+   (*multiple program areas not allowed in prg output*), and `(type ram)` does
+   not work; and mark what moves per object (`HIGH_BSS`), BSS only, so nothing
+   loaded from the PRG has to go above `$9FFF`. The KERNAL stays in, and BASIC
+   goes back before returning to it. `map_tile` is the obvious first tenant.
+   TITAN Fall's C64 build does the same on the C64 (`$0801-$BFFF`).
 3. **MAP-register regions plus a dispatch stub**, per part 3: 24 KB windows at
    `$2000-$7FFF`, one `#pragma clang section text="r1Text" ...` per file, and a
    resident trampoline in the `$1600-$1EFF` common area. This is the expensive
@@ -215,7 +234,7 @@ not. Take these in order and stop as soon as it fits:
 4. **Major modes reloaded from disk.** Unbounded, and not needed.
 
 **Two rules for when step 3 arrives.** First, **the redraw path must stay
-resident and undispatched** — `view_redraw` is 12.8 ms against a 19.97 ms frame
+resident and undispatched** — `view_redraw` is 13.6 ms against a 19.97 ms frame
 and stays ahead of the beam by about 100 lines; a trampoline in that inner loop
 would spend the slack and bring the tearing back (see **Tearing**). View,
 sheet, screen and DMA code stay in the common/resident region. Only per-turn
@@ -224,7 +243,7 @@ banked region, where a dispatch call costs nothing that matters. Second,
 **give every new subsystem its own `.c` file now**, because that is what makes
 the eventual split a one-line pragma per file instead of a rewrite.
 
-**Do none of this yet.** As of the last check there were 12331 free bytes in
+**Do none of this yet.** As of the last check there were about 12.5 KB free in
 the program region. Revisit when `hexwar.lst` shows the region past ~26 KB.
 `~/commodore/mega65/hexgame/tools/mkprg.py` (exomizer, one file) is the other
 known trick if the *loaded* size rather than the addressable size is what gets
@@ -270,8 +289,9 @@ hexagon rows, so 80x50 looked like 40 hexagons across by 100 down — about
 1:1.9 on the glass, portrait (walking it took 11 s north to south and 7.2 s
 round east to west). 128x32 is 64 across by 64 down, 512 characters by 193
 rows, and a character's 1:2 aspect makes that about 1.33:1, landscape. The
-`ax,ay` readout at the top right of the screen (`draw_position()` in
-`src/hexwar.c`, via `map_cell_at()`) is there to make this visible.
+readout at the top right of the screen (`draw_hover()` in `src/game.c`, via
+`map_cell_at()`) names the terrain and the `ax,ay` of the hexagon under the
+arrow.
 
 Two constants in `src/map.h` carry the whole view geometry:
 
@@ -369,7 +389,9 @@ into the middle of a frame the beam was displaying. Three things fixed it, and
 all three have to stay:
 
 - **The redraw is fast enough to fit in a frame** — 12.8 ms, from the
-  `blit_begin`/`blit` path and the padded row stride above. There is no
+  `blit_begin`/`blit` path and the padded row stride above; 13.6 ms (to
+  raster line 143) once units and cities went in, measured with a settler
+  and with a city in view. There is no
   double buffer: a second 94 KB store does not fit in the free banks, and
   making room would mean banking out the ROM.
 - **It starts when the beam leaves the window.** `view_wait_for_redraw()` waits
@@ -409,6 +431,182 @@ The KERNAL jiffy clock at `$A0-$A2` does not advance here, so it is no use for
 this. And note `$D012` is 8 bits of a 0-311 raster, so it repeats for lines
 256-311; any line below 56 is ambiguous, and 243 is not.
 
+## The game
+
+TODO.txt's milestones are the plan. Milestone 1 (pointer, turn loop, a
+settler, founding a city) is in; milestone 2 is the city screen and building
+units.
+
+**One loop, once a frame** — `game_run()` in `src/game.c`: wait for raster
+line 243, redraw if `dirty`, then one `input_poll()` and act on what it
+returns. There is no nested wait-for-a-key anywhere, because the mouse and
+joystick must be read every frame whatever the game is waiting for, and
+`input_poll()` counts its calls as frames (the joystick's acceleration, the
+click debounce, `FAKE_KEYS`) because **the KERNAL jiffy clock does not
+advance in this program**. What the game is waiting for is only
+`unit_active`: a unit wanting orders, or `UNIT_NONE` and the end-of-turn
+prompt in the panel. A turn is: every human unit with moves and no standing
+orders gets asked, in list order (`unit_next()`); then the prompt; then
+`ai_turn()`, which does nothing yet; then the year moves on. The game is over
+when the human has neither units nor cities.
+
+**Units and cities are arrays per field** (`unit_kind[]`, `unit_ax[]`, …),
+not arrays of structs: a byte array indexed by a byte is `lda abs,x` in
+Calypsi, where a struct field is a multiply and a pointer. Kind 0 is a free
+slot, so zeroed BSS is an empty list.
+
+**Bit 7 of `map_tile` means "a city or unit is here"** (`MAP_OCCUPIED`; read
+terrain through `MAP_TERRAIN`). That is how `view_redraw()` finds the few
+cells that need anything drawn on them without another 4 KB layer or a search
+of the unit list for every tile. `unit_mark()` keeps it right, and everything
+that puts a unit or city on a hexagon or takes one off calls it.
+
+**Overlays are drawn one hexagon row behind the terrain.** A unit's feet are
+in its tile's bottom character row, which is also the top row of the
+hexagons below, which are drawn later and are opaque in the middle. So the
+occupied cells of row `hy` are noted while its terrain goes down, and their
+city, selection ring and unit are drawn once row `hy + 1`'s terrain is in.
+Still top to bottom, at most three character rows behind, so the beam race
+is unaffected.
+
+**The pointer** is sprite 0 (white body) over sprite 1 (black outline), as
+in hexgame, but 11 sprite pixels tall rather than 18. At H640/V200 a
+monochrome sprite pixel is two pixels by one line — square on the glass and
+exactly the size of a pixel of the x-expanded tiles. `input_x`/`input_y` are
+sprite units from the top left of the display, 0-319 by 0-199, so a
+character is 4 units across and 8 down; `pointer_hex()` in `src/game.c`
+turns that into a hexagon. The sprite pointer list is relocated with
+`SPRPTRADR` and 16-bit pointers, and **the list must be 64-byte aligned as
+well as the shapes** — hexgame found that the VIC-IV drops the low bits of
+the list address. Both are placed by hand in an over-sized BSS buffer;
+`LOW_FREE` would do but is under the ROM's disk buffers. `input_shutdown()`
+puts `SPRPTRADR` back before returning to BASIC.
+
+Controls: the mouse or a joystick in either port moves the arrow, and the
+button or fire is `KEY_CLICK`. A click next to the active unit moves it
+there, on one of the player's units hands it the orders, elsewhere on the
+map centres the view, and on the panel at the end of a turn ends it. Keys:
+`q e a d z c` move the active unit NW, NE, W, E, SW, SE (the tiles are
+pointy-topped, so there is no N or S); `b` founds a city with a settler;
+space skips the unit this turn, `w` asks again after the others, `f`
+fortifies; Return ends the turn; the cursor keys scroll; ESC or RUN/STOP
+quits. **`w a s d` no longer scroll**, since `a d` and `w` are orders now.
+
+**Not tried on the machine yet:** the mouse and joystick reads are hexgame's,
+which came from Ozmoo's tested code, but nothing in this build has run on a
+real MEGA65 — nor has loading the sheet off the disk.
+
+## What the other Calypsi projects already found out
+
+Two later projects use the same tool chain and have worked through problems
+this one will meet: `~/commodore/SearchAndRescue` (MEGA65, a full game, its
+`CLAUDE.md` sections **Memory map**, **Performance** and **Gotchas**) and
+`~/commodore/titanfall` on the `calypsi` branch (a C64 game ported from
+assembly to C; `c/README.md` and `c/COMPARISON.md`). Read those before
+solving something they cover. The points that bear on hexwar:
+
+**Attic RAM is slow to DMA *out of*, and xemu does not show it.** Measured on
+a real MEGA65 by Search And Rescue: a DMA copy chip to chip is 2.2 cycles a
+byte, **attic to chip 16.1** (7.3x), chip to attic 9.5. xemu runs attic at
+chip speed. The expanded tile sheet used to be in attic RAM (`$8000000`), and
+a redraw reads about 160 KB of it — roughly 9 ms from chip RAM and **about 65
+ms from attic**, three frames, so the tearing fix would not have held on the
+machine. **It is now in bank 5 at `$57000`**, just above the tile store, which
+also makes every source address 16 bits in one bank. Nothing hot may go back
+into attic RAM for the same reason. CPU access to attic is a flat ~15 cycles
+slower than chip, and writes into it are nearly free.
+
+**Timing in xemu:** never with `-sleepless` (about 19x real speed); time
+inside the machine against the raster or a CIA. xemu's figures are accurate
+for tight assembly and **optimistic by up to ~20% for compiled C**, so leave
+margin on the 20 ms budget.
+
+**Calypsi 5.18 code generation bugs, each of which cost someone a session.**
+Check the `--list-file` listing when arithmetic that looks unarguable comes
+out wrong:
+- a narrowing cast to `uint8_t` inside a wider expression is
+  **sign-extended**: `ptr + (uint8_t)(a + b)` lands 256 bytes low for
+  offsets 128-255. Put the byte in a variable first, or widen and mask. The
+  listing shows `ora #127`.
+- `int8_t` coordinates and small `static const` arrays inside a function have
+  produced a function that stored nothing at all. Use 16-bit coordinates.
+- `(uint16_t)p[i] | (uint16_t)p[i + 1] << 8` with a byte `i` loads only one
+  byte. Load the two halves into locals.
+- a constant-false term in `&&` can be dropped (`if (f < 40 && X == 1)` with
+  `X` 2 compiled to `if (f < 40)`). Use `#if` for compile-time switches.
+- a function call inside a 32-bit expression emits `_FillZPQ`, which no
+  library has. Hoist the call into a variable.
+- `int` is 16 bits: constant expressions overflow silently, and a call with
+  no prototype in scope truncates a 32-bit return (that one warns).
+- this project's own: `_Stub_read` miscounts when the file ends on a 256-byte
+  page boundary of the request (see the map loader under **The hex grid**).
+
+**Speed in compiled C:**
+- `--no-cross-call` is a per-file decision. Calypsi turns shared instruction
+  runs into `jsr` fragments, even two-instruction loop bodies. Turning that
+  off was worth 16% to a C hot loop in Search And Rescue, and TITAN Fall
+  builds with it everywhere (+3% size). Worth measuring on `view.c`.
+- `--strong-inline` gave **wrong answers** around the hardware multiplier. Do
+  not use it.
+- library `memcpy`/`memset` cost ~80 cycles a byte; a plain loop is ~20, and
+  DMA is better still.
+- integer promotion turns `(x + 6) / 12` into a call to `_UDivMod16`, and a
+  32-bit C multiply is ~2200 cycles against 85 on the hardware multiplier at
+  `$D770`. Keep hot arithmetic in bytes or shifts.
+- `(base + n)[i]` compiles to `sta abs,x`; `base[n + i]` builds a 16-bit
+  pointer every iteration.
+- a function prologue that saves pseudo-registers (`_AllocStackSave`) is often
+  the largest single item in a profile, so keep per-tile code flat.
+
+**Size:** `printf` costs 6.5 KB, and Search And Rescue got it out of the link
+entirely. Here `fatal()`'s `puts` pulls in `__lib_fwrite`, `__lib_fflush`,
+`__lib_rdflush` and `_Stub_write`, about 1.1 KB, for an error message that
+could be written with `screen_putsxy`.
+
+**Display:**
+- **colour RAM's second byte has attribute bits 4-7 even on full-colour
+  cells.** Blink, reverse, bold and underline apply to tiles too. An ink
+  above 15 put a blinking underline on every tile on a real MEGA65, and xemu
+  shows nothing. Map cells here get 0, which is right; keep it that way.
+- the VIC-IV latches `SCRNPTR`, `LINESTEP`, `CHRCOUNT` and `CHRXSCL` once a
+  frame. Changing them mid-screen does nothing, so a per-row geometry needs
+  the raster rewrite buffer. Flipping `SCRNPTR` between two screen tables is
+  how Search And Rescue double-buffers.
+- a raster interrupt through `$0314` on the C65 ROM is entered with **five**
+  bytes pushed (A, X, Y, Z, B), not the C64's three.
+- Search And Rescue inferred, by elimination and never run on its own, that
+  turning the hot registers off stopped the KERNAL opening files, so it loads
+  everything first. Hexwar loads its map *after* `screen_init()` has turned
+  them off, and that works in xemu. **Not yet tried on the machine**; if a
+  real MEGA65 cannot read the map, this is the first suspect.
+
+**Input and quitting:** the joysticks share CIA1 with the keyboard (port 1
+reads as keys and has to be masked; the fire button needs a debounce, and the
+scan wants to run once a frame) — all of which `src/input.c` now does, ported
+from hexgame. A reset re-runs
+`AUTOBOOT.C65`, so quitting is a return through the `SYS`, which works here
+because nothing is banked out. Search And Rescue's **The joystick** and
+**Quitting** sections have the details.
+
+**Headless testing:** the way to test anything that needs a key is a build
+that fakes it, the same idea as `START_OFF_X`. **`make FAKE_KEYS=...` does
+that here** (`src/input.c`): a list of `{frame, x, y, key}` entries, in frame
+order, each moving the arrow to sprite position `(x, y)` (0,0 leaves it) and
+returning `key` from `input_poll()` on that frame. `KEY_CLICK` is a mouse
+click. So `make FAKE_KEYS='{30,0,0,100},{60,0,0,13},{90,0,0,98}'` moves the
+settler east, ends the turn and founds a city, and a screenshot shows the
+result. Frames are counted in the game loop, so a `-sleepless` run is as
+deterministic as a real one. The script stops rather than wrapping, or the
+presses would replay. End xemu with `SIGTERM` (a background job from a script
+ignores `SIGINT`), and remember that the screenshot is taken when xemu
+finally exits, which can be well after the signal.
+
+**Map generation:** Search And Rescue's `tools/genmap.py` does its arithmetic
+in fixed-point integers so that a seed reproduces a map byte for byte, and
+routes roads with a Dijkstra in which high ground is a price, not a wall. Its
+notes on rivers (a river cut against the map it is changing digs a canyon)
+are worth reading before rivers go into `mapgen.py`.
+
 ## The things cc65 was doing silently
 
 Four differences account for most of the port, and are the first things to
@@ -417,7 +615,7 @@ suspect when something behaves oddly:
 - **cc65 compiled string literals into PETSCII. Calypsi compiles them as
   written.** Anything compared byte for byte against the outside world has to
   be spelled the way the bytes really are — the FCI marker `sheet.c` looks for
-  is `"IMG"`, upper case, because that is what `png2fci.py` writes.
+  is `"IMG"`, upper case, because that is what `mktiles.py` writes.
 - **The same in reverse for output.** `ascii_to_screencode()` in `src/screen.c`
   exists only because of this; the cc65 build poked literal bytes at the
   screen. Note it returns A–Z *unchanged*: with the lower case character set
@@ -432,18 +630,48 @@ suspect when something behaves oddly:
 
 ## Assets
 
-`res/tiles.fci` is 24x4 characters — six 4x4 hex tiles side by side, in the
-order `tiles/Makefile` appends the PNGs (desert hill, grass, mountain, ocean,
-shallow ocean, tundra; `TILE_*` in `src/sheet.h`). It is checked in and
-identical to `~/commodore/xc-basic3.xxx/xc-megademo/res/civ.fci`, which is what
-the BASIC version used.
+`res/tiles.fci` is 44x4 characters — eleven 4x4 tiles side by side, in the
+order `tiles/Makefile` lists the PNGs: six terrains (desert hill, grass,
+mountain, ocean, shallow ocean, tundra), then the city, the selection ring
+and three units (settler, warrior, builder); `TILE_*` in `src/sheet.h`. The
+terrain, city and unit art is OpenCiv's (`alltiles/README.txt`);
+`tile_select.png` is a placeholder drawn from the grass tile's outline.
+**Only what the game uses goes into `tiles/`** — `alltiles/` is the whole
+collection to pick from.
 
-**`tiles/Makefile` is a separate, manual step** — run it by hand after editing
-tile art. It appends the individual PNGs with ImageMagick and produces
-`assets-fci/tiles.png`; `tools/png2fci.py` turns that into an FCI. The top-level
-build does neither, since the FCI is checked in.
+**The sheet is read off the disk** (`TILES.FCI`, by `sheet_load()`), a
+character at a time, each widened and sent to bank 5 as it arrives, so none
+of it is in the program. It used to be linked in through a `bin2s.py`, at 1
+KB of the 32 a tile.
 
-`tools/bin2s.py` turns the FCI into `build/tiles.s`. It emits a **`code`**
-section, not `data`: Calypsi's `data` is *initialised* data, kept as an image
-the startup copies into RAM, so a 6.5 KB blob there would cost 13 KB of the 32
-and be copied for nothing.
+**`tiles/Makefile` is a separate, manual step** — run `make` in `tiles/`
+after editing tile art, and check `res/tiles.fci` in. It runs
+`tools/mktiles.py`, which reads the RGBA PNGs, makes every pixel with alpha
+below 128 palette index 0 (transparent), and quantises the rest across all
+tiles together to 240 colours at entries 16-255, leaving 0-15 to the system
+palette the panel text uses. The art has about 1450 colours between it, so
+it is quantised; with 240 or fewer it would be exact. `tiles/tiles.png` is
+left as a preview of the result. (The old route — ImageMagick `+append` then
+`tools/png2fci.py` — needed a single paletted PNG with transparency at index
+0, which ImageMagick gives no say over; `png2fci.py` is kept but unused.)
+
+### Adding tiles
+
+A new tile needs all of these, and nothing checks that they agree:
+
+1. the PNG in `tiles/`, 32x32 pixels (4x4 characters), transparent where
+   the neighbours should show through, **appended** to `TILES` in
+   `tiles/Makefile`. The order there *is* the tile numbering, so do not
+   reorder.
+2. `make` in `tiles/`, and `res/tiles.fci` checked in.
+3. `SHEET_COLUMNS` and the `TILE_*` list in `src/sheet.h` (4 columns a
+   tile). `sheet_load()` refuses a sheet whose size disagrees, so a stale
+   constant stops at boot with "cannot read TILES.FCI or it is not the sheet
+   this build expects".
+4. for terrain: the matching constants in `tools/mapgen.py`, the generator
+   taught to place it, and `terrain_name[]` in `src/game.c`. Terrain values
+   are still tile numbers, so a new terrain has to come before the
+   non-terrain tiles or the map layer grows a lookup table (see `map_tile`).
+5. room: each tile is 2 KB expanded, and the sheet must stay inside bank 5's
+   one 64 KB bank (an `#error` in `src/sheet.h`): from `$57000`, 18 tiles.
+   The tile store's own `#error` in `src/view.c` keeps the two apart.

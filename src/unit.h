@@ -1,0 +1,71 @@
+// Units: settlers, warriors and builders, and which one is waiting for
+// orders.
+//
+// **One array per field, not an array of structs.** Calypsi indexes a byte
+// array with a byte index as `lda abs,x`, and every field here is a byte, so
+// unit_ax[u] is one instruction where units[u].ax would be a multiply and a
+// pointer. It is also the shape vision.md §6 wants for the map layers.
+#ifndef HEXWAR_UNIT_H
+#define HEXWAR_UNIT_H
+
+#include "mega65.h"
+
+#define MAX_UNITS 64
+#define UNIT_NONE 0xff
+
+// Unit kinds. 0 is a free slot, so that a zeroed BSS is an empty list.
+#define KIND_NONE 0
+#define KIND_SETTLER 1
+#define KIND_WARRIOR 2
+#define KIND_BUILDER 3
+
+// Standing orders: what a unit does instead of asking for any.
+#define ORDERS_NONE 0
+#define ORDERS_FORTIFY 1
+
+// The players. There is one human and, for now, one AI that does nothing.
+#define PLAYER_HUMAN 0
+#define PLAYER_AI 1
+
+extern byte unit_kind[MAX_UNITS];
+extern byte unit_owner[MAX_UNITS];
+extern byte unit_ax[MAX_UNITS];
+extern byte unit_ay[MAX_UNITS];
+extern byte unit_moves[MAX_UNITS];      // left this turn
+extern byte unit_orders[MAX_UNITS];
+
+// The unit waiting for orders, which view_redraw() rings and draws on top of
+// anything else on its hexagon. UNIT_NONE between units and between turns.
+extern byte unit_active;
+
+// Per kind, indexed by KIND_*.
+extern const char *const unit_kind_name[];
+extern const byte unit_kind_moves[];
+
+// A new unit, with a full turn's moves. UNIT_NONE if the list is full.
+byte unit_create(byte kind, byte owner, byte ax, byte ay);
+void unit_remove(byte u);
+void unit_move_to(byte u, byte ax, byte ay);
+
+// Give every unit of `owner` its moves back. Fortified units keep their
+// orders and so are never offered for new ones.
+void unit_begin_turn(byte owner);
+
+// The next unit of `owner` after `after` (cyclically, and `after` itself
+// last) that has moves left and no standing orders, or UNIT_NONE. Pass
+// UNIT_NONE to start from the beginning.
+byte unit_next(byte owner, byte after);
+
+// How many units and cities `owner` has, for deciding the game is over.
+byte unit_count(byte owner);
+
+// Set or clear MAP_OCCUPIED on (ax, ay) from what is there now. Anything that
+// puts a unit or a city on a hexagon, or takes one off, calls this.
+void unit_mark(byte ax, byte ay);
+
+// What view_redraw() draws over the terrain of an occupied hexagon, bottom
+// first: the city, the selection ring, then the unit on top. Writes up to
+// three tile numbers into `tiles` and returns how many.
+byte unit_overlay(byte ax, byte ay, byte *tiles);
+
+#endif // HEXWAR_UNIT_H

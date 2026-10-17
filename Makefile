@@ -28,6 +28,14 @@ START_OFF_Y ?= 30
 
 CFLAGS   = $(TARGET) -O2 --speed -I src \
            -DSTART_OFF_X=$(START_OFF_X) -DSTART_OFF_Y=$(START_OFF_Y)
+
+# Keys for a headless run to "press", since nothing headless can: each entry
+# is {frame, arrow x, arrow y, key}, in frame order -- see src/input.c.
+#     make FAKE_KEYS='{30,0,0,98}'                 found a city on frame 30
+#     make FAKE_KEYS='{30,200,96,KEY_CLICK}'       click at (200,96)
+ifneq ($(FAKE_KEYS),)
+CFLAGS  += '-DFAKE_KEYS=$(FAKE_KEYS)'
+endif
 ASFLAGS  = $(TARGET)
 LDFLAGS  = $(TARGET) --output-format=prg
 LINKFILE = hexwar.scm
@@ -49,13 +57,13 @@ SRCS     = src/hexwar.c \
            src/screen.c \
            src/sheet.c \
            src/view.c \
-           src/map.c
+           src/map.c \
+           src/input.c \
+           src/unit.c \
+           src/city.c \
+           src/game.c
 
 OBJS     = $(patsubst src/%.c,$(BUILD)/%.o,$(SRCS))
-
-# The tile sheet, linked in rather than loaded off a disk. See tools/bin2s.py.
-SHEET_S   = $(BUILD)/tiles.s
-OBJS     += $(BUILD)/tiles.o
 
 ELF      = $(BUILD)/hexwar.elf
 PRG      = $(BUILD)/hexwar.prg
@@ -112,12 +120,6 @@ $(MAP): tools/mapgen.py $(MAP_STAMP) | $(BUILD)
 $(BUILD)/%.o: src/%.c $(HDRS) Makefile $(STAMP) | $(BUILD)
 	cc6502 $(CFLAGS) -c -o $@ $<
 
-$(SHEET_S): $(RES)/tiles.fci tools/bin2s.py | $(BUILD)
-	python3 tools/bin2s.py $< $@ tiles_fci
-
-$(BUILD)/tiles.o: $(SHEET_S) Makefile | $(BUILD)
-	as6502 $(ASFLAGS) -o $@ $<
-
 # The list file is the memory map, and the only place the program's real size
 # is written down -- worth reading after any change that might have pushed it
 # towards $9FFF.
@@ -132,17 +134,18 @@ $(ELF): $(OBJS) $(LINKFILE)
 $(PRG): $(ELF)
 
 # The disk image, which is how the program gets onto a real MEGA65 and where it
-# finds its map. The name autoboot.c65 is what makes the ROM boot it: a C65-mode
+# finds its map and its tile sheet (res/tiles.fci, which tiles/Makefile
+# makes and which is checked in). The name autoboot.c65 is what makes the ROM boot it: a C65-mode
 # PRG at $2001 needs no wrapper, which is what old-cc65/c65bin/c65toc64wrapper.prg
 # used to supply. c1541 writes host names as unshifted PETSCII, so hexwar.map
 # here is "HEXWAR.MAP" to the program; see MAP_FILE_NAME in src/map.h.
 d81: $(D81)
 
-$(D81): $(PRG) $(MAP)
+$(D81): $(PRG) $(MAP) $(RES)/tiles.fci
 	rm -f $@
 	cp $(PRG) $(BUILD)/autoboot.c65
 	c1541 -format hexwar,hw d81 $@ -write $(BUILD)/autoboot.c65 autoboot.c65 \
-	    -write $(MAP) hexwar.map
+	    -write $(MAP) hexwar.map -write $(RES)/tiles.fci tiles.fci
 
 clean:
 	rm -rf $(BUILD)

@@ -1,11 +1,12 @@
-// The tile sheet: an FCI image linked into the program, its palette, and the
+// The tile sheet: an FCI image read off the disk, its palette, and the
 // x-expanded copy of it that every tile is actually drawn from.
 //
 // **FCI** (Full Colour Image) is the format tools/png2fci.py writes. A header
 // of nine bytes, a palette of RGB triples, the marker "IMG", and then the
 // pixels as a row-major grid of 8x8 characters, 64 bytes each, one byte of
-// palette index per pixel. res/tiles.fci is 24x4 characters: six 4x4-character
-// hex tiles side by side, in the order tiles/Makefile appends them.
+// palette index per pixel. res/tiles.fci is 44x4 characters: eleven
+// 4x4-character tiles side by side, in the order tiles/Makefile lists them.
+// tools/mktiles.py writes it.
 //
 // **Palette index 0 is transparent.** The DMAgic's transparent copy is told to
 // skip source bytes of 0 (see lcopy_transparent), which is what lets a hexagon
@@ -15,13 +16,21 @@
 
 #include "mega65.h"
 
-// Where the x-expanded sheet is built, in attic RAM. 48 * 4 * 64 = 12288
-// bytes. Attic RAM because it is the one place nothing else competes for, and
-// because DMA reaches it as cheaply as anywhere else.
-#define SHEET_EXPANDED 0x8000000UL
+// Where the x-expanded sheet is built: bank 5, just above the view's tile
+// store. 88 * 4 * 64 = 22528 bytes, $57000-$5C7FF.
+//
+// **Not attic RAM, where it used to be.** Search And Rescue measured DMA *out
+// of* attic RAM on a real MEGA65 at 16.1 cycles a byte against 2.2 chip to
+// chip, and a redraw reads about 160 KB of sheet -- three frames from attic,
+// which would have brought the tearing back on the machine. xemu runs attic
+// at chip speed, so it never showed. Every source address is then 16 bits in
+// one bank, which is what view_draw_tile() wants anyway.
+#define SHEET_EXPANDED 0x57000UL
+#define SHEET_EXPANDED_BANK 0x05
+#define SHEET_EXPANDED_ADDR 0x7000u
 
 // The sheet as it is in the file, and as it is once expanded.
-#define SHEET_COLUMNS 24
+#define SHEET_COLUMNS 44
 #define SHEET_ROWS 4
 #define SHEET_EXPANDED_COLUMNS (SHEET_COLUMNS * 2)
 
@@ -38,11 +47,25 @@
 #define TILE_OCEAN 3
 #define TILE_SHALLOW_OCEAN 4
 #define TILE_TUNDRA 5
+// Not terrain: these are drawn over a terrain tile, never instead of one.
+#define TILE_CITY 6
+#define TILE_SELECT 7           // the ring round the unit waiting for orders
+#define TILE_SETTLER 8
+#define TILE_WARRIOR 9
+#define TILE_BUILDER 10
 
-// Parse the linked FCI, upload its palette, and build the expanded sheet.
-// Returns 0 and leaves nothing set up if the blob is not an FCI of the shape
-// declared above.
-byte sheet_init(void);
+// The FCI on the disk. Capitals, because that is how c1541 writes the host
+// name tiles.fci -- see MAP_FILE_NAME.
+#define SHEET_FILE_NAME "TILES.FCI"
+
+#if SHEET_EXPANDED_ADDR + 64UL * SHEET_EXPANDED_COLUMNS * SHEET_ROWS > 0x10000UL
+#error "the expanded sheet must fit in one bank for view_draw_tile"
+#endif
+
+// Read SHEET_FILE_NAME, upload its palette, and build the expanded sheet.
+// Returns 0 if the file cannot be read or is not an FCI of the shape declared
+// above.
+byte sheet_load(void);
 
 // Address of row `row` of tile `tile` in the expanded sheet. The eight
 // characters of that row are TILE_EXPANDED_COLUMNS * 64 = 512 contiguous

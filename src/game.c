@@ -1,0 +1,481 @@
+// The turn loop and the player's side of it.
+//
+// **Everything runs off one loop that goes round once a frame**, in
+// game_run(): wait for the beam to leave the map window, redraw the view if
+// anything changed, then read one frame's input and act on it. There is no
+// nested "wait for a key" anywhere, because the mouse and the joystick have
+// to be read every frame whatever the game is waiting for. The state that
+// says what it is waiting for is just unit_active: a unit wanting orders, or
+// UNIT_NONE and the end-of-turn prompt in the panel.
+
+#include "game.h"
+#include "city.h"
+#include "hexwar.h"
+#include "input.h"
+#include "map.h"
+#include "screen.h"
+#include "sheet.h"
+#include "unit.h"
+#include "view.h"
+
+#define PANEL_WIDTH VIEW_LEFT
+
+#define START_YEAR 1600         // BC; the Crisis is due about 1200
+#define YEARS_PER_TURN 10
+
+#define TEXT_COLOUR COLOR_LIGHTGREEN
+
+// Where the view sits on the map, in screen characters; see view_redraw().
+static word off_x;
+static word off_y;
+
+static byte dirty;              // the view wants redrawing
+static byte hover_dirty;        // the readout of what is under the arrow
+static byte game_over;
+static byte quit;
+static word turn;
+static word year;
+
+static const char *const terrain_name[] = {
+    "Hills", "Grassland", "Mountains", "Ocean", "Shallows", "Tundra",
+};
+
+// ------------------------------------------------------------------- text
+
+// A line of text built up a piece at a time, so that no printf is linked.
+static char line[41];
+static byte line_len;
+
+static void line_clear(void)
+{
+    line_len = 0;
+    line[0] = 0;
+}
+
+static void line_add(const char *s)
+{
+    while (*s && line_len < sizeof line - 1) line[line_len++] = *s++;
+    line[line_len] = 0;
+}
+
+static void line_add_num(word v)
+{
+    char digits[6];
+    byte i = sizeof digits - 1;
+    digits[i] = 0;
+    do { digits[--i] = (char)('0' + v % 10); v /= 10; } while (v);
+    line_add(digits + i);
+}
+
+// Text in the panel down the left, padded with spaces to the panel's width
+// so that it overwrites whatever was there.
+static void panel_text(byte row, const char *s, byte colour)
+{
+    byte x = 0;
+    while (*s && x < PANEL_WIDTH) screen_putcxy(x++, row, *s++, colour);
+    while (x < PANEL_WIDTH) screen_putcxy(x++, row, ' ', colour);
+}
+
+#define ROW_CIV 2
+#define ROW_YEAR 3
+#define ROW_TURN 4
+#define ROW_UNIT 7
+#define ROW_MOVES 8
+#define ROW_PROMPT 11           // four rows
+#define ROW_MESSAGE 17          // two rows
+
+static void message(const char *first, const char *second)
+{
+    panel_text(ROW_MESSAGE, first, COLOR_YELLOW);
+    panel_text(ROW_MESSAGE + 1, second, COLOR_YELLOW);
+}
+
+static void draw_frame(void)
+{
+    screen_putsxy(0, 0, "Game Orders Advisors World Civilopedia",
+                  TEXT_COLOUR);
+    panel_text(ROW_CIV, "Mycenaean", TEXT_COLOUR);
+    screen_putsxy(VIEW_LEFT + 1, SCREEN_ROWS - 1,
+                  "qe/ad/zc move  b found city  space skip  w wait  "
+                  "f fortify  esc quit",
+                  TEXT_COLOUR);
+}
+
+static void draw_status(void)
+{
+    line_clear();
+    line_add_num(year);
+    line_add(" BC");
+    panel_text(ROW_YEAR, line, TEXT_COLOUR);
+    line_clear();
+    line_add("Turn ");
+    line_add_num(turn);
+    panel_text(ROW_TURN, line, TEXT_COLOUR);
+}
+
+// The unit waiting for orders, or the end-of-turn prompt if there is none.
+static void draw_orders(void)
+{
+    byte u = unit_active;
+    byte r;
+
+    if (u != UNIT_NONE) {
+        panel_text(ROW_UNIT, unit_kind_name[unit_kind[u]], COLOR_WHITE);
+        line_clear();
+        line_add("Moves: ");
+        line_add_num(unit_moves[u]);
+        panel_text(ROW_MOVES, line, TEXT_COLOUR);
+        for (r = 0; r < 4; ++r) panel_text(ROW_PROMPT + r, "", TEXT_COLOUR);
+        return;
+    }
+    panel_text(ROW_UNIT, "", TEXT_COLOUR);
+    panel_text(ROW_MOVES, "", TEXT_COLOUR);
+    if (game_over) {
+        panel_text(ROW_PROMPT, "Game over", COLOR_WHITE);
+        panel_text(ROW_PROMPT + 1, "", TEXT_COLOUR);
+        panel_text(ROW_PROMPT + 2, "Press a", TEXT_COLOUR);
+        panel_text(ROW_PROMPT + 3, "key", TEXT_COLOUR);
+    } else {
+        panel_text(ROW_PROMPT, "End of", COLOR_WHITE);
+        panel_text(ROW_PROMPT + 1, "turn", COLOR_WHITE);
+        panel_text(ROW_PROMPT + 2, "Press", TEXT_COLOUR);
+        panel_text(ROW_PROMPT + 3, "Return", TEXT_COLOUR);
+    }
+}
+
+// ---------------------------------------------------------------- the view
+
+// Which hexagon is under the tip of the arrow. 0 if the arrow is not over
+// the map window. A sprite unit is two H640 pixels, so a character is four
+// units across and eight down.
+static byte pointer_hex(byte *ax, byte *ay)
+{
+    byte col = (byte)(input_x >> 2);
+    byte row = (byte)(input_y >> 3);
+    word cx;
+
+    if (col < VIEW_LEFT || col >= VIEW_LEFT + VIEW_COLUMNS) return 0;
+    if (row < VIEW_TOP || row >= VIEW_TOP + VIEW_ROWS) return 0;
+    cx = off_x + (col - VIEW_LEFT);
+    if (cx >= MAP_WIDTH_CHARS) cx -= MAP_WIDTH_CHARS;
+    map_cell_at(cx, off_y + (row - VIEW_TOP), ax, ay);
+    return 1;
+}
+
+// What is under the arrow, right-aligned at the end of the top row: a city's
+// name, the terrain, and the cell. Blank when the arrow is off the map.
+static void draw_hover(void)
+{
+    byte ax, ay, c, x;
+
+    line_clear();
+    if (pointer_hex(&ax, &ay)) {
+        c = city_at(ax, ay);
+        if (c != CITY_NONE) {
+            line_add(city_name_of(c));
+            line_add("  ");
+        }
+        line_add(terrain_name[MAP_TERRAIN(ax, ay)]);
+        line_add(" ");
+        line_add_num(ax);
+        line_add(",");
+        line_add_num(ay);
+    }
+    // Padded on the left to a fixed field, so a shorter text overwrites a
+    // longer one. The menu line ends at column 38.
+    for (x = 40; x < SCREEN_COLUMNS - line_len; ++x)
+        screen_putcxy(x, 0, ' ', COLOR_WHITE);
+    screen_putsxy(SCREEN_COLUMNS - line_len, 0, line, COLOR_WHITE);
+}
+
+// Whether all of (ax, ay)'s tile is inside the window.
+static byte in_view(byte ax, byte ay)
+{
+    word x = MAP_CELL_X(ax) + MAP_WIDTH_CHARS - off_x;
+    int y = (int)MAP_CELL_Y(ax, ay) - (int)off_y;
+    if (x >= MAP_WIDTH_CHARS) x -= MAP_WIDTH_CHARS;
+    return x <= VIEW_COLUMNS - TILE_EXPANDED_COLUMNS
+           && y >= 0 && y <= VIEW_ROWS - TILE_ROWS;
+}
+
+static void centre_on(byte ax, byte ay)
+{
+    int x = (int)MAP_CELL_X(ax) + TILE_EXPANDED_COLUMNS / 2 - VIEW_COLUMNS / 2;
+    int y = (int)MAP_CELL_Y(ax, ay) + TILE_ROWS / 2 - VIEW_ROWS / 2;
+    if (x < 0) x += MAP_WIDTH_CHARS;
+    if (y < VIEW_MIN_OFF_Y) y = VIEW_MIN_OFF_Y;
+    if (y > VIEW_MAX_OFF_Y) y = VIEW_MAX_OFF_Y;
+    off_x = (word)x;
+    off_y = (word)y;
+    dirty = 1;
+}
+
+// ------------------------------------------------------------------- turns
+
+// Hand the orders to the next unit after `after` that wants some, bringing
+// it into view. With none left, the panel asks for the end of the turn.
+static void select_unit(byte after)
+{
+    byte was = unit_active;
+    byte u = unit_next(PLAYER_HUMAN, after);
+
+    unit_active = u;
+    if (was != u) dirty = 1;   // the ring moves
+    if (u != UNIT_NONE && !in_view(unit_ax[u], unit_ay[u]))
+        centre_on(unit_ax[u], unit_ay[u]);
+    if (u == UNIT_NONE && unit_count(PLAYER_HUMAN) == 0) game_over = 1;
+    draw_orders();
+}
+
+// **The computer player, which does nothing yet.** It is here so that the
+// loop has the shape it will keep: the human moves, then every other player,
+// then the year turns over.
+static void ai_turn(void)
+{
+    unit_begin_turn(PLAYER_AI);
+}
+
+static void end_turn(void)
+{
+    ai_turn();
+    ++turn;
+    year -= YEARS_PER_TURN;
+    unit_begin_turn(PLAYER_HUMAN);
+    draw_status();
+    message("", "");
+    select_unit(UNIT_NONE);
+}
+
+// --------------------------------------------------------------- orders
+
+static void move_active(byte dir)
+{
+    byte u = unit_active;
+    byte nx, ny, t;
+
+    if (!map_neighbour(unit_ax[u], unit_ay[u], dir, &nx, &ny)) return;
+    t = MAP_TERRAIN(nx, ny);
+    if (t == TILE_OCEAN || t == TILE_SHALLOW_OCEAN) {
+        message("Cannot", "swim");
+        return;
+    }
+    message("", "");
+    unit_move_to(u, nx, ny);
+    --unit_moves[u];
+    dirty = 1;
+    if (unit_moves[u]) {
+        if (!in_view(nx, ny)) centre_on(nx, ny);
+        draw_orders();
+    } else {
+        select_unit(u);
+    }
+}
+
+static void found_city(void)
+{
+    byte u = unit_active;
+    byte c;
+
+    if (unit_kind[u] != KIND_SETTLER) {
+        message("Only", "settlers");
+        return;
+    }
+    c = city_found(PLAYER_HUMAN, unit_ax[u], unit_ay[u]);
+    if (c == CITY_NONE) {
+        message("Cannot", "found here");
+        return;
+    }
+    unit_remove(u);
+    message("Founded", city_name_of(c));
+    dirty = 1;
+    hover_dirty = 1;
+    select_unit(u);
+}
+
+static void unit_key(byte key)
+{
+    byte u = unit_active;
+
+    switch (key) {
+    case 'q': move_active(DIR_NW); break;
+    case 'e': move_active(DIR_NE); break;
+    case 'a': move_active(DIR_W); break;
+    case 'd': move_active(DIR_E); break;
+    case 'z': move_active(DIR_SW); break;
+    case 'c': move_active(DIR_SE); break;
+    case 'b': found_city(); break;
+    case KEY_SPACE:                         // no orders this turn
+        unit_moves[u] = 0;
+        select_unit(u);
+        break;
+    case 'w':                               // ask again after the others
+        select_unit(u);
+        break;
+    case 'f':
+        unit_orders[u] = ORDERS_FORTIFY;
+        select_unit(u);
+        break;
+    }
+}
+
+// A click on a hexagon next to the unit with orders moves it there. A click
+// on one of the player's own units that still has moves gives it the orders
+// instead, waking it if it was fortified. Anywhere else on the map centres
+// the view there; off the map, with the turn over, it ends the turn.
+static void click(void)
+{
+    byte ax, ay, u, dir;
+
+    if (!pointer_hex(&ax, &ay)) {
+        if (unit_active == UNIT_NONE && !game_over) end_turn();
+        return;
+    }
+    if (unit_active != UNIT_NONE) {
+        dir = map_direction(unit_ax[unit_active], unit_ay[unit_active],
+                            ax, ay);
+        if (dir != DIR_NONE) {
+            move_active(dir);
+            return;
+        }
+        if (unit_ax[unit_active] == ax && unit_ay[unit_active] == ay) return;
+    }
+    for (u = 0; u < MAX_UNITS; ++u) {
+        if (unit_kind[u] != KIND_NONE && unit_owner[u] == PLAYER_HUMAN
+            && unit_ax[u] == ax && unit_ay[u] == ay && unit_moves[u]) {
+            unit_orders[u] = ORDERS_NONE;
+            unit_active = u;
+            dirty = 1;
+            draw_orders();
+            return;
+        }
+    }
+    centre_on(ax, ay);
+}
+
+// --------------------------------------------------------------- the game
+
+// The land cell nearest (cx, cy) of the given terrain, searching outwards in
+// square rings of the array. Not hexagon distance, but this only has to find
+// somewhere sensible to start.
+static byte find_terrain(byte cx, byte cy, byte want, byte *rx, byte *ry)
+{
+    int r, dx, dy, y;
+    byte x;
+
+    for (r = 0; r < MAP_COLUMNS / 2; ++r) {
+        for (dy = -r; dy <= r; ++dy) {
+            y = (int)cy + dy;
+            if (y < 0 || y >= MAP_ROWS) continue;
+            for (dx = -r; dx <= r; ++dx) {
+                if (dx != -r && dx != r && dy != -r && dy != r) continue;
+                x = (byte)((int)cx + dx + MAP_COLUMNS) & (MAP_COLUMNS - 1);
+                if (MAP_TERRAIN(x, y) == want) {
+                    *rx = x;
+                    *ry = (byte)y;
+                    return 1;
+                }
+            }
+        }
+    }
+    return 0;
+}
+
+void game_init(void)
+{
+    byte cx, cy, ax, ay;
+
+    // START_OFF_X / START_OFF_Y are what let a headless run check
+    // scrolling: `make START_OFF_X=41` against a plain build must shift the
+    // map exactly eight pixels and leave the panel alone. The settler goes
+    // on the grassland nearest the middle of that view, so it is the same
+    // settler in both builds and neither has to recentre on it.
+    off_x = START_OFF_X;
+    off_y = START_OFF_Y;
+    map_cell_at(off_x + VIEW_COLUMNS / 2, off_y + VIEW_ROWS / 2, &cx, &cy);
+    if (!find_terrain(cx, cy, TILE_GRASS, &ax, &ay)
+        && !find_terrain(cx, cy, TILE_DESERT_HILL, &ax, &ay)) {
+        ax = cx;
+        ay = cy;
+    }
+    unit_create(KIND_SETTLER, PLAYER_HUMAN, ax, ay);
+
+    turn = 1;
+    year = START_YEAR;
+    dirty = 1;
+    hover_dirty = 1;
+}
+
+void game_run(void)
+{
+    byte key;
+
+    draw_frame();
+    draw_status();
+    select_unit(UNIT_NONE);
+
+    while (!quit) {
+        // Start the redraw the moment the beam leaves the map window, so
+        // that it is rewriting rows the beam has already passed. Without
+        // this the redraw lands in the middle of a displayed frame and the
+        // map tears while a cursor key is held. Waiting here every frame is
+        // also what makes one trip round this loop one frame, which
+        // input_poll() counts on.
+        view_wait_for_redraw();
+        if (dirty) {
+            view_redraw(off_x, off_y);
+            dirty = 0;
+            hover_dirty = 1;
+        }
+
+        key = input_poll();
+        if (input_moved()) hover_dirty = 1;
+        if (hover_dirty) {
+            draw_hover();
+            hover_dirty = 0;
+        }
+        if (!key) continue;
+        if (key >= 'A' && key <= 'Z') key += 'a' - 'A';
+
+        if (game_over) {
+            quit = 1;
+            continue;
+        }
+
+        // Two characters a step across and one row down, because that is
+        // the same distance on the glass: at H640/V200 a character is twice
+        // as tall as it is wide. A hexagon is 8 characters wide and 3 rows
+        // apart, so that is four sub-steps per column and three per row.
+        //
+        // Across there is no limit: the map wraps east-west, so off_x runs
+        // round 0..MAP_WIDTH_CHARS-1 and view_redraw() draws across the seam.
+        switch (key) {
+        case KEY_LEFT:
+            if (off_x < 2) off_x += MAP_WIDTH_CHARS;
+            off_x -= 2;
+            dirty = 1;
+            break;
+        case KEY_RIGHT:
+            off_x += 2;
+            if (off_x >= MAP_WIDTH_CHARS) off_x -= MAP_WIDTH_CHARS;
+            dirty = 1;
+            break;
+        case KEY_UP:
+            if (off_y > VIEW_MIN_OFF_Y) { --off_y; dirty = 1; }
+            break;
+        case KEY_DOWN:
+            if (off_y < VIEW_MAX_OFF_Y) { ++off_y; dirty = 1; }
+            break;
+        case KEY_ESC:
+        case KEY_RUNSTOP:
+            quit = 1;
+            break;
+        case KEY_CLICK:
+            click();
+            break;
+        default:
+            if (unit_active != UNIT_NONE) unit_key(key);
+            else if (key == KEY_RETURN) end_turn();
+            break;
+        }
+    }
+}

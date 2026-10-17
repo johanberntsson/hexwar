@@ -4,10 +4,9 @@
 ;;; (/usr/local/lib/calypsi-6502-5.18/linker-rules/mega65-plain.scm) with one
 ;;; line added, and it is worth knowing what is *not* here.
 ;;;
-;;; **The C65 ROM is left mapped and this program never banks it out.** The
-;;; other two MEGA65 projects in this tree (~/commodore/mega65/hexgame and
-;;; ~/commodore/SearchAndRescue) both flatten the memory map to get at
-;;; $20000-$3FFFF, and both pay for it: a Hypervisor call to lift the ROM's
+;;; **The C65 ROM is left mapped and this program never banks it out.**
+;;; ~/commodore/mega65/hexgame flattens the memory map to get at
+;;; $20000-$3FFFF, and pays for it: a Hypervisor call to lift the ROM's
 ;;; write protection, a second one to put it back (it is a toggle that
 ;;; outlives the program), a copy of the whole 128 KB ROM to attic RAM so the
 ;;; machine can still be reset, and a rule that all disk I/O must finish
@@ -23,9 +22,8 @@
 ;;; (setup_view in old-cc65/src/graphics.c). It is now the only branch.
 ;;;
 ;;; **$2001-$9FFF is 32 KB for everything**: code, data, BSS, C stack and heap.
-;;; The tile sheet is linked in rather than loaded (build/tiles.s, 6573 bytes)
-;;; and map_tile is another 4096, so about 10.5 KB is spoken for before any
-;;; game code. build/hexwar.lst is the only place the real figure is written
+;;; The tile sheet and the map both come off the disk, but map_tile is
+;;; still 4096 bytes of it before any game code. build/hexwar.lst is the only place the real figure is written
 ;;; down and is worth reading after anything that might have grown it.
 ;;;
 ;;; **$1600-$1EFF is 2304 bytes of ordinary chip RAM the rules hand to a

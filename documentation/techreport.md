@@ -63,6 +63,9 @@ most important routines included in each source file.
 | civ.c | the peoples, their leaders and city names, and the difficulty levels |
 | &nbsp;&nbsp;&nbsp;_civ\_choose_ | which people the human and the computer lead |
 |  |  |
+| popup.c | boxes of text over the map, closed with a click or a key |
+| &nbsp;&nbsp;&nbsp;_popup\_show_ | word-wraps and shows the text, waits, and puts the map back |
+|  |  |
 | input.c | keyboard, mouse, joystick and the pointer sprites |
 | &nbsp;&nbsp;&nbsp;_input\_poll_ | one frame's input, returned as a key code |
 |  |  |
@@ -136,14 +139,15 @@ it without banking. The figures below are from the linker's listing,
 | **Address range** | **KB** |  **Usage** |
 | -- |  - | ---- |
 | \$0002-\$0039 | 0.1 | Calypsi's pseudo registers, in zero page |
-| \$1600-\$1eff | 2.25 | free (the `zpsave` section, `LOW_FREE`) |
-| \$2001-\$236f | 0.9 | BASIC stub, startup code, constant data |
-| \$2370-\$573f | 13.0 | code |
-| \$5741-\$5940 | 0.5 | C stack |
-| \$5941-\$6f43 | 5.5 | BSS: the map, units, cities, buffers |
-| \$6f44-\$9fff | 12.2 | free |
+| \$1600-\$1790 | 0.4 | the popup's text (the `zpsave` section, `LOW_FREE`) |
+| \$1791-\$1eff | 1.9 | free |
+| \$2001-\$298a | 2.4 | BASIC stub, startup code, constant data and text |
+| \$298b-\$6836 | 15.7 | code |
+| \$6837-\$6a36 | 0.5 | C stack |
+| \$6a37-\$8097 | 5.6 | BSS: the map, units, cities, buffers |
+| \$8098-\$9fff | 7.9 | free |
 
-The PRG is everything up to \$5740; the C stack and the BSS are not stored in
+The PRG is everything up to \$6836; the C stack and the BSS are not stored in
 the file, only reserved after it.
 
 The largest item in the BSS is the terrain layer, `map_tile`, at 4096 bytes.
@@ -154,7 +158,9 @@ with a single indexed instruction.
 
 \$1600-\$1eff can hold variables that are marked `LOW_FREE`, but
 nothing that has to survive a disk access may be put there, since the C65 ROM
-keeps disk buffers below \$2001.
+keeps disk buffers below \$2001. The popup's 400-byte text buffer is there
+because a popup's text is put together and shown with no disk access in
+between.
 
 When the free space runs low, the order of things to try is written down in
 `CLAUDE.md` ("Growing past 32 KB"): move data out with `__far` first, then

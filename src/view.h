@@ -59,6 +59,11 @@
 // Write the window's character numbers into screen RAM. Once, at startup.
 void view_init(void);
 
+// Put back the window's own character numbers, and colour 0, over a
+// rectangle of it that something else has written on -- a popup. In window
+// characters, (col, row) the top left.
+void view_restore(byte col, byte row, byte columns, byte rows);
+
 // Blank the whole store. Tiles are drawn with a transparent copy, so this has
 // to happen before a redraw or the previous picture shows through the gaps.
 void view_clear(void);

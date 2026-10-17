@@ -113,9 +113,14 @@ static byte ascii_to_screencode(char c)
 
 void screen_putcxy(byte x, byte y, char c, byte color)
 {
+    screen_putcodexy(x, y, ascii_to_screencode(c), color);
+}
+
+void screen_putcodexy(byte x, byte y, byte code, byte color)
+{
     dword cell = SCREEN_CELL(x, y);
     dword col = COLOR_BASE + (cell - SCREEN_BASE);
-    lpoke(cell, ascii_to_screencode(c));
+    lpoke(cell, code);
     lpoke(cell + 1, 0);      // high byte 0: an ordinary text character
     lpoke(col, 0);           // no extended attributes
     lpoke(col + 1, color);

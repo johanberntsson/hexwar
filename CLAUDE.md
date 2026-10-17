@@ -31,7 +31,7 @@ make                      # build/hexwar.prg, build/hexwar.map and build/hexwar.
 make run                  # build them and boot it in xemu (blocks until closed)
 make START_OFF_X=41       # start the view one character further right; see below
 make MAP_SEED=7           # another map; MAP_LAND=45 for more land
-make FAKE_KEYS='{10,0,0,13},{12,0,0,13},{14,0,0,13},{30,0,0,98}'  # see below
+make FAKE_KEYS='{10,0,0,13},{12,0,0,13},{14,0,0,13},{16,0,0,13},{30,0,0,98}'  # see below
 make NO_TITLE=1           # straight to the map, no title screen
 make clean
 ```
@@ -112,7 +112,10 @@ trick.** `view_init()` writes a *unique* character number into each of the
 60x23 cells, once, so their definitions form one linear framebuffer at
 `TILE_STORE` (`$40000`). Drawing is then nothing but copying 64-byte blocks
 into it, and **the screen words never change again** — which is what makes
-scrolling a redraw rather than a rearrangement.
+scrolling a redraw rather than a rearrangement. The one exception is a
+popup (`src/popup.c`), which writes text cells over part of the window and
+then has `view_restore()` put the character numbers back; the tile store
+under it is never touched, so closing one needs no redraw.
 
 ### The ROM is never banked out, and that is unusual here
 
@@ -157,7 +160,7 @@ buffers at the default `$FF80000` and corrupts the display.
 | Address | Size | Contents |
 |---|---|---|
 | `$2001-$9FFF` | 32 KB | program, data, BSS, C stack. About 20 KB used |
-| `$1600-$1EFF` | 2304 | `zpsave`, free — `LOW_FREE` in `src/mega65.h` moves a variable there |
+| `$1600-$1EFF` | 2304 | `zpsave`: the popup's 400-byte text, the rest free — `LOW_FREE` in `src/mega65.h` moves a variable there |
 | `$12000` | 4000 | screen RAM, 80x25 cells of 2 bytes |
 | `$40000-$56EFF` | 94208 | the view's tile store, 23 rows of 4096 |
 | `$57000-$5C7FF` | 22528 | the x-expanded tile sheet, 88x4 characters |
@@ -178,9 +181,9 @@ back two-thirds of the drawing time; see **Tearing**.
 **The 32 KB is what to watch.** `map_tile` is 4096 of it before any game
 code; the tile sheet used to be linked in too (6.5 KB, and growing a KB a
 tile) and now comes off the disk. At the last measurement `build/hexwar.lst`
-reported the region 70.3% full (about 9.5 KB free) with milestone 1 in it:
+reported the region 75.5% full (about 8 KB free) with milestone 1 in it:
 the display engine, the loaders, input and the pointer, units, cities, the
-turn loop, and the title and new-game screens.
+turn loop, the title and new-game screens, and popups.
 
 **Naming `zdata` in `hexwar.scm`'s `freeSpace` would move the whole BSS to
 `$1600-$1EFF`** — which is what hexgame does — but `map_tile` alone does not
@@ -249,7 +252,7 @@ banked region, where a dispatch call costs nothing that matters. Second,
 **give every new subsystem its own `.c` file now**, because that is what makes
 the eventual split a one-line pragma per file instead of a rewrite.
 
-**Do none of this yet.** As of the last check there were about 9.5 KB free in
+**Do none of this yet.** As of the last check there were about 8 KB free in
 the program region. Revisit when `hexwar.lst` shows the region past ~26 KB.
 `~/commodore/mega65/hexgame/tools/mkprg.py` (exomizer, one file) is the other
 known trick if the *loaded* size rather than the addressable size is what gets
@@ -465,6 +468,16 @@ people each player is — the AI takes the one after the human's — and
 Great King) are there too, in `game_level`, which nothing reads yet.
 `NO_TITLE` builds play Mycenaeans against Hittites, as before.
 
+**Popups** (`src/popup.c`) are a box of word-wrapped text over the middle
+of the map window, closed by a click anywhere, fire, Return, space or Esc.
+Build the text with `popup_begin()`, `popup_add()` and `popup_add_num()`
+and show it with `popup_show()`, or `popup("...")` for a fixed one; `\n`
+breaks a line. Like the menus it has its own once-a-frame loop, so the
+input is still read every frame. **It must stay inside the map window**:
+closing it restores the window's cells with `view_restore()`, and nothing
+would put panel text back. A new game opens with one (`intro()` in
+`src/game.c`), drawn over the map, which `NO_TITLE` builds skip.
+
 **One loop, once a frame** — `game_run()` in `src/game.c`: wait for raster
 line 243, redraw if `dirty`, then one `input_poll()` and act on what it
 returns. There is no nested wait-for-a-key anywhere, because the mouse and
@@ -633,12 +646,13 @@ that here** (`src/input.c`): a list of `{frame, x, y, key}` entries, in frame
 order, each moving the arrow to sprite position `(x, y)` (0,0 leaves it) and
 returning `key` from `input_poll()` on that frame. `KEY_CLICK` is a mouse
 click. **The title and new-game screens come first and count frames
-too**, so a script starts with three Returns — Start Game, Mycenaeans,
-Scribe: `make FAKE_KEYS='{10,0,0,13},{12,0,0,13},{14,0,0,13},{30,0,0,100},{60,0,0,13},{90,0,0,98}'`
+too**, and so does the opening popup, so a script starts with four
+Returns — Start Game, Mycenaeans, Scribe, and closing the popup: `make
+FAKE_KEYS='{10,0,0,13},{12,0,0,13},{14,0,0,13},{16,0,0,13},{30,0,0,100},{60,0,0,13},{90,0,0,98}'`
 starts the game, moves the settler east, ends the turn and founds a city,
 and a screenshot shows the result. Menu item *i* is at sprite y `92 + 16i`
 (`{40,160,108,KEY_CLICK}` clicks the second); `make NO_TITLE=1` skips all
-three screens. Frames are counted in both loops, so a `-sleepless`
+three screens and the popup. Frames are counted in both loops, so a `-sleepless`
 run is as deterministic as a real one. The script stops rather than wrapping, or the
 presses would replay. End xemu with `SIGTERM` (a background job from a script
 ignores `SIGINT`), and remember that the screenshot is taken when xemu

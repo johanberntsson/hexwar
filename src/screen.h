@@ -73,6 +73,8 @@ void screen_clear(void);
 // codes happens here rather than in the compiler.
 void screen_putcxy(byte x, byte y, char c, byte color);
 void screen_putsxy(byte x, byte y, const char *s, byte color);
+// A screen code as it is, for the glyphs ASCII has no letter for.
+void screen_putcodexy(byte x, byte y, byte code, byte color);
 
 // A whole palette entry. `red`, `green` and `blue` are the FCI file's byte
 // values; the nibble swap the VIC-IV wants is done here.

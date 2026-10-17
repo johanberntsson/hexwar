@@ -14,6 +14,7 @@
 #include "hexwar.h"
 #include "input.h"
 #include "map.h"
+#include "popup.h"
 #include "screen.h"
 #include "sheet.h"
 #include "unit.h"
@@ -406,6 +407,23 @@ void game_init(void)
     hover_dirty = 1;
 }
 
+// The popup a new game opens with.
+static void intro(void)
+{
+    byte civ = player_civ[PLAYER_HUMAN];
+
+    popup_begin();
+    popup_add("The tribes of the ");
+    popup_add(civ_people[civ]);
+    popup_add(" have given up their wandering life to settle the land, "
+              "and have chosen you, ");
+    popup_add(civ_leader[civ]);
+    popup_add(", to lead them.\n\n"
+              "Move your settler to good land and press b to found your "
+              "first city.");
+    popup_show();
+}
+
 void game_run(void)
 {
     byte key;
@@ -413,6 +431,16 @@ void game_run(void)
     draw_frame();
     draw_status();
     select_unit(UNIT_NONE);
+
+    // Over the map rather than over a blank window, so the map is drawn
+    // first. A build without the title is for screenshots of the view, and
+    // has no popup to get in their way either.
+#ifndef NO_TITLE
+    view_wait_for_redraw();
+    view_redraw(off_x, off_y);
+    dirty = 0;
+    intro();
+#endif
 
     while (!quit) {
         // Start the redraw the moment the beam leaves the map window, so

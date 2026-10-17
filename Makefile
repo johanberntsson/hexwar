@@ -37,9 +37,9 @@ ifneq ($(FAKE_KEYS),)
 CFLAGS  += '-DFAKE_KEYS=$(FAKE_KEYS)'
 endif
 # Straight to the map, without the title screen: what a headless screenshot
-# of the view wants. With the title, FAKE_KEYS has to start with three
-# Returns, {10,0,0,13},{12,0,0,13},{14,0,0,13}: Start Game, the first people
-# and the first difficulty level.
+# of the view wants. With the title, FAKE_KEYS has to start with four
+# Returns, {10,0,0,13},{12,0,0,13},{14,0,0,13},{16,0,0,13}: Start Game, the
+# first people, the first difficulty level, and closing the opening popup.
 ifneq ($(NO_TITLE),)
 CFLAGS  += -DNO_TITLE
 endif
@@ -70,6 +70,7 @@ SRCS     = src/hexwar.c \
            src/city.c \
            src/game.c \
            src/civ.c \
+           src/popup.c \
            src/title.c
 
 OBJS     = $(patsubst src/%.c,$(BUILD)/%.o,$(SRCS))

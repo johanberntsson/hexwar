@@ -12,25 +12,34 @@
 // DMA job rather than 120 lpokes.
 static byte row_words[VIEW_COLUMNS * 2];
 
-void view_init(void)
+void view_restore(byte col, byte row, byte columns, byte rows)
 {
     byte y, x;
     word charnum;
+    dword cell;
 
     // Cell (x, y) of the window gets the character number of its own 64 bytes
     // in the store: TILE_STORE/64 + row stride + column. With the row stride
     // padded to 4096 that is 64 characters a row, of which the window uses 60.
-    for (y = 0; y < VIEW_ROWS; ++y) {
-        charnum = (word)(TILE_STORE / 64) + (word)y * (VIEW_ROW_STRIDE / 64);
-        for (x = 0; x < VIEW_COLUMNS; ++x) {
+    for (y = row; y < row + rows; ++y) {
+        charnum = (word)(TILE_STORE / 64) + (word)y * (VIEW_ROW_STRIDE / 64)
+                  + col;
+        for (x = 0; x < columns; ++x) {
             row_words[2 * x] = (byte)charnum;
             row_words[2 * x + 1] = (byte)(charnum >> 8);
             ++charnum;
         }
-        lcopy((dword)(word)row_words,
-              SCREEN_CELL(VIEW_LEFT, VIEW_TOP + y),
-              sizeof(row_words));
+        cell = SCREEN_CELL(VIEW_LEFT + col, VIEW_TOP + y);
+        lcopy((dword)(word)row_words, cell, 2 * columns);
+        // No colour and no attributes: blink and underline apply to
+        // full-colour characters too.
+        lfill(COLOR_BASE + (cell - SCREEN_BASE), 0, 2 * columns);
     }
+}
+
+void view_init(void)
+{
+    view_restore(0, 0, VIEW_COLUMNS, VIEW_ROWS);
 }
 
 void view_clear(void)

@@ -31,7 +31,8 @@ make                      # build/hexwar.prg, build/hexwar.map and build/hexwar.
 make run                  # build them and boot it in xemu (blocks until closed)
 make START_OFF_X=41       # start the view one character further right; see below
 make MAP_SEED=7           # another map; MAP_LAND=45 for more land
-make FAKE_KEYS='{30,0,0,98}'  # "press" b on frame 30 of a headless run; see below
+make FAKE_KEYS='{10,0,0,13},{12,0,0,13},{14,0,0,13},{30,0,0,98}'  # see below
+make NO_TITLE=1           # straight to the map, no title screen
 make clean
 ```
 
@@ -86,8 +87,9 @@ at `$57000`.
 
 **Nothing headless can press a key**, so `START_OFF_X` / `START_OFF_Y` (Makefile
 `-D`s, defaults in `src/hexwar.h`) exist to start the view somewhere else. Two
-builds one apart are how scrolling is checked: `make` then `make START_OFF_X=41`
-must shift the map exactly eight pixels and leave the panel byte-identical.
+builds one apart are how scrolling is checked: `make NO_TITLE=1` then `make
+NO_TITLE=1 START_OFF_X=41` must shift the map exactly eight pixels and leave
+the panel byte-identical.
 Both were verified pixel-exact this way, along with one row vertically (16
 screenshot pixels, since V200 is displayed doubled).
 
@@ -176,9 +178,9 @@ back two-thirds of the drawing time; see **Tearing**.
 **The 32 KB is what to watch.** `map_tile` is 4096 of it before any game
 code; the tile sheet used to be linked in too (6.5 KB, and growing a KB a
 tile) and now comes off the disk. At the last measurement `build/hexwar.lst`
-reported the region 61.9% full (about 12.5 KB free) with milestone 1 in it:
-the display engine, the loaders, input and the pointer, units, cities and
-the turn loop.
+reported the region 70.3% full (about 9.5 KB free) with milestone 1 in it:
+the display engine, the loaders, input and the pointer, units, cities, the
+turn loop, and the title and new-game screens.
 
 **Naming `zdata` in `hexwar.scm`'s `freeSpace` would move the whole BSS to
 `$1600-$1EFF`** — which is what hexgame does — but `map_tile` alone does not
@@ -247,7 +249,7 @@ banked region, where a dispatch call costs nothing that matters. Second,
 **give every new subsystem its own `.c` file now**, because that is what makes
 the eventual split a one-line pragma per file instead of a rewrite.
 
-**Do none of this yet.** As of the last check there were about 12.5 KB free in
+**Do none of this yet.** As of the last check there were about 9.5 KB free in
 the program region. Revisit when `hexwar.lst` shows the region past ~26 KB.
 `~/commodore/mega65/hexgame/tools/mkprg.py` (exomizer, one file) is the other
 known trick if the *loaded* size rather than the addressable size is what gets
@@ -441,6 +443,28 @@ TODO.txt's milestones are the plan. Milestone 1 (pointer, turn loop, a
 settler, founding a city) is in; milestone 2 is the city screen and building
 units.
 
+**The title screen comes first** (`src/title.c`): `title_show()` puts the
+title up before the disk is read, and `title_run()` runs the menu — Start
+Game, Load Saved Game (only says it is not implemented yet), Quit — after
+`input_init()`. Start Game goes on to two more screens, the people and the
+difficulty level, and Esc on either goes back one. All three are the one
+`menu_run()`: the arrow selects an item by hovering and a click picks it;
+the cursor keys and Return, or a letter (`s l q`, `m h e c`, `1`-`5`), do
+the same. It has its own once-a-frame loop of the same shape as
+`game_run()`'s, and it runs on the plain text screen, so it must be over
+before `view_init()` claims the map window's cells; `main()` clears the
+screen in between. Quit returns from `main()` without the map view ever
+having been set up.
+
+**The peoples are `src/civ.c`**: Mycenaeans, Hittites, Egyptians and
+Canaanites (vision.md §3), each a name for the menu, an adjective for the
+panel, a line about them, a leader and the title the diplomatic letters will
+use (kept apart for that reason), and a dozen city names. `player_civ[]` says which
+people each player is — the AI takes the one after the human's — and
+`city_name_of()` goes through it. The five difficulty levels (Scribe to
+Great King) are there too, in `game_level`, which nothing reads yet.
+`NO_TITLE` builds play Mycenaeans against Hittites, as before.
+
 **One loop, once a frame** — `game_run()` in `src/game.c`: wait for raster
 line 243, redraw if `dirty`, then one `input_poll()` and act on what it
 returns. There is no nested wait-for-a-key anywhere, because the mouse and
@@ -608,10 +632,14 @@ that fakes it, the same idea as `START_OFF_X`. **`make FAKE_KEYS=...` does
 that here** (`src/input.c`): a list of `{frame, x, y, key}` entries, in frame
 order, each moving the arrow to sprite position `(x, y)` (0,0 leaves it) and
 returning `key` from `input_poll()` on that frame. `KEY_CLICK` is a mouse
-click. So `make FAKE_KEYS='{30,0,0,100},{60,0,0,13},{90,0,0,98}'` moves the
-settler east, ends the turn and founds a city, and a screenshot shows the
-result. Frames are counted in the game loop, so a `-sleepless` run is as
-deterministic as a real one. The script stops rather than wrapping, or the
+click. **The title and new-game screens come first and count frames
+too**, so a script starts with three Returns — Start Game, Mycenaeans,
+Scribe: `make FAKE_KEYS='{10,0,0,13},{12,0,0,13},{14,0,0,13},{30,0,0,100},{60,0,0,13},{90,0,0,98}'`
+starts the game, moves the settler east, ends the turn and founds a city,
+and a screenshot shows the result. Menu item *i* is at sprite y `92 + 16i`
+(`{40,160,108,KEY_CLICK}` clicks the second); `make NO_TITLE=1` skips all
+three screens. Frames are counted in both loops, so a `-sleepless`
+run is as deterministic as a real one. The script stops rather than wrapping, or the
 presses would replay. End xemu with `SIGTERM` (a background job from a script
 ignores `SIGINT`), and remember that the screenshot is taken when xemu
 finally exits, which can be well after the signal.

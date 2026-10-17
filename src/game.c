@@ -10,6 +10,7 @@
 
 #include "game.h"
 #include "city.h"
+#include "civ.h"
 #include "hexwar.h"
 #include "input.h"
 #include "map.h"
@@ -94,7 +95,7 @@ static void draw_frame(void)
 {
     screen_putsxy(0, 0, "Game Orders Advisors World Civilopedia",
                   TEXT_COLOUR);
-    panel_text(ROW_CIV, "Mycenaean", TEXT_COLOUR);
+    panel_text(ROW_CIV, civ_adjective[player_civ[PLAYER_HUMAN]], TEXT_COLOUR);
     screen_putsxy(VIEW_LEFT + 1, SCREEN_ROWS - 1,
                   "qe/ad/zc move  b found city  space skip  w wait  "
                   "f fortify  esc quit",

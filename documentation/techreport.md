@@ -43,6 +43,10 @@ most important routines included in each source file.
 | hexwar.c | the main routine |
 | &nbsp;&nbsp;&nbsp;_main_ | where execution of Hexwar begins |
 |  |  |
+| title.c | the title screen and the new-game screens |
+| &nbsp;&nbsp;&nbsp;_title\_run_ | the title menu, then the people and the difficulty |
+| &nbsp;&nbsp;&nbsp;_menu\_run_ | one menu, picked by pointer or keyboard, once round per frame |
+|  |  |
 | game.c | the turn loop, the player's orders and the panel |
 | &nbsp;&nbsp;&nbsp;_game\_init_ | sets up a new game with one settler |
 | &nbsp;&nbsp;&nbsp;_game\_run_ | the main loop, once round per frame |
@@ -55,6 +59,9 @@ most important routines included in each source file.
 |  |  |
 | city.c | cities and their names |
 | &nbsp;&nbsp;&nbsp;_city\_found_ | founds a city |
+|  |  |
+| civ.c | the peoples, their leaders and city names, and the difficulty levels |
+| &nbsp;&nbsp;&nbsp;_civ\_choose_ | which people the human and the computer lead |
 |  |  |
 | input.c | keyboard, mouse, joystick and the pointer sprites |
 | &nbsp;&nbsp;&nbsp;_input\_poll_ | one frame's input, returned as a key code |
@@ -94,20 +101,26 @@ The build produces a disk image, `hexwar.d81`, holding three files:
 The C65 ROM boots AUTOBOOT.C65 automatically. `main()` then:
 
 1. switches the VIC-IV to 80x25 16-bit text mode with full colour characters
-   (`screen_init`);
+   (`screen_init`) and puts up the title screen (`title_show`);
 2. reads TILES.FCI, a character at a time. Each character is widened to twice
    its width, because a pixel of this screen mode is half as wide as it is
    tall, and copied into the expanded sheet in bank 5 (`sheet_load`);
 3. reads HEXWAR.MAP into `map_tile` (`map_load`);
-4. writes the map window's character numbers into screen RAM, once
-   (`view_init`), sets up the pointer sprites (`input_init`) and places the
-   player's settler (`game_init`);
-5. clears the tile store and enters the main loop (`game_run`).
+4. sets up the pointer sprites (`input_init`) and runs the title menu
+   (`title_run`): Start Game, Load Saved Game (not implemented yet) or Quit.
+   Start Game then asks for a people (Mycenaeans, Hittites, Egyptians or
+   Canaanites) and one of five difficulty levels. Each menu has a
+   once-a-frame loop of its own, like the main loop's, so that the mouse and
+   joystick can pick an item;
+5. clears the screen, writes the map window's character numbers into screen
+   RAM, once (`view_init`), and places the player's settler (`game_init`);
+6. clears the tile store and enters the main loop (`game_run`).
 
 All disk access is finished by the end of step 3. The KERNAL stays available
 throughout, because nothing the program does banks out the ROM.
 
-When the player quits, `main()` turns the sprites off, puts the screen back
+When the player quits, from the title menu or from the game, `main()` turns
+the sprites off, puts the screen back
 into the 40-column text mode, and returns to BASIC.
 
 # Memory

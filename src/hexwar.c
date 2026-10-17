@@ -11,6 +11,7 @@
 #include "mega65.h"
 #include "screen.h"
 #include "sheet.h"
+#include "title.h"
 #include "view.h"
 
 // A message on an otherwise empty 8-bit screen, for the things that stop the
@@ -27,6 +28,9 @@ int main(void)
 {
     mega65_io_enable();
     screen_init();
+#ifndef NO_TITLE
+    title_show();
+#endif
 
     // Both the tile sheet and the map come off the disk. The ROM is never
     // banked out, so there is no ordering rule about doing disk I/O before
@@ -37,8 +41,22 @@ int main(void)
                              " or it is not the sheet this build expects");
     if (!map_load()) fatal("cannot read " MAP_FILE_NAME);
 
-    view_init();
     input_init();
+
+    // The title's menu is on the plain text screen, so it has to be done
+    // with before view_init() takes the map window's cells for good.
+    // `make NO_TITLE=1` goes straight to the map, which is what a headless
+    // check of the view wants.
+#ifndef NO_TITLE
+    if (title_run() == TITLE_QUIT) {
+        input_shutdown();
+        screen_go8bit();
+        return 0;
+    }
+    screen_clear();
+#endif
+
+    view_init();
     game_init();
 
     // The store starts blank; after that view_redraw() covers every byte of it

@@ -2,7 +2,11 @@ Here is the updated and expanded Game Design Document, integrating the expanded 
 
 ---
 
-# Game Design Document: Bronze Age 4X (Working Title)
+# Game Design Document: Seven Ships of the Enemy (Working Title)
+
+*The title is from the last letter of Ammurapi, king of Ugarit, to the king of
+Alashiya (c. 1185 BCE): the seven ships of the enemy that came did great
+damage. Ugarit fell soon after. The code still calls the game Hexwar.*
 
 **Platform Target:** MEGA65 (GS4510 CPU @ 40.5 MHz, VIC-IV)
 
@@ -99,7 +103,19 @@ Armies away from friendly territory consume grain every turn. If supply fleets o
 
 * **Canaanite / Phoenician City-States:** Control Cedar Wood and Purple Dye. Rich middleman states with weak native armies that rely heavily on mercenaries.
 
+### Diplomacy in the Voice of the Letters
 
+All diplomacy is written as clay-tablet correspondence, in the fixed formulas
+of the Amarna and Ugarit letters, so the period's voice comes from a handful of
+templates rather than from much text.
+
+* **Between Great Kings:** "Say to the King of Mycenae, my brother: thus says the King of Hatti, your brother. For me all goes well. For you, your household, your chariots and your land, may all go well." Equals call each other *brother*; what follows is the request, gift or complaint.
+* **From vassals:** "To the king, my lord, say: thus says your servant. At the feet of my lord I fall, seven times and seven times." The forms of address show where each ruler stands, and change when a vassal's standing does.
+* **Trade and gifts:** gift exchange is how luxury goods move between courts, and the letters haggle over it ("in my brother's land gold is as plentiful as dust"). The tone of a reply can show how relations stand before any number does.
+* **The Crisis:** when the Sea Peoples arrive, the letters change: "My father, behold, the enemy's ships came; my cities were burned. Does not my father know that all my troops and chariots are in the land of Hatti?" Pleas for help that cannot come are how the player learns that the Collapse has begun, and that rival states are falling.
+
+A message is a formula, two names and a few slots (titles, goods, places), so
+it costs little memory on the MEGA65.
 
 ---
 

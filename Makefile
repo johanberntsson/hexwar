@@ -31,10 +31,17 @@ CFLAGS   = $(TARGET) -O2 --speed -I src \
 
 # Keys for a headless run to "press", since nothing headless can: each entry
 # is {frame, arrow x, arrow y, key}, in frame order -- see src/input.c.
-#     make FAKE_KEYS='{30,0,0,98}'                 found a city on frame 30
-#     make FAKE_KEYS='{30,200,96,KEY_CLICK}'       click at (200,96)
+#     make NO_TITLE=1 FAKE_KEYS='{30,0,0,98}'        found a city on frame 30
+#     make NO_TITLE=1 FAKE_KEYS='{30,200,96,KEY_CLICK}'  click at (200,96)
 ifneq ($(FAKE_KEYS),)
 CFLAGS  += '-DFAKE_KEYS=$(FAKE_KEYS)'
+endif
+# Straight to the map, without the title screen: what a headless screenshot
+# of the view wants. With the title, FAKE_KEYS has to start with three
+# Returns, {10,0,0,13},{12,0,0,13},{14,0,0,13}: Start Game, the first people
+# and the first difficulty level.
+ifneq ($(NO_TITLE),)
+CFLAGS  += -DNO_TITLE
 endif
 ASFLAGS  = $(TARGET)
 LDFLAGS  = $(TARGET) --output-format=prg
@@ -61,7 +68,9 @@ SRCS     = src/hexwar.c \
            src/input.c \
            src/unit.c \
            src/city.c \
-           src/game.c
+           src/game.c \
+           src/civ.c \
+           src/title.c
 
 OBJS     = $(patsubst src/%.c,$(BUILD)/%.o,$(SRCS))
 

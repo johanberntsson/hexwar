@@ -23,14 +23,6 @@
 #define TEXT_COLOUR COLOR_WHITE
 #define BORDER_COLOUR COLOR_YELLOW
 
-// Box-drawing screen codes, the same in the upper and the lower case sets.
-#define BOX_TOP_LEFT 112
-#define BOX_TOP_RIGHT 110
-#define BOX_BOTTOM_LEFT 109
-#define BOX_BOTTOM_RIGHT 125
-#define BOX_ACROSS 64
-#define BOX_DOWN 93
-
 // In LOW_FREE, out of the 32 KB. That memory does not survive a disk call,
 // but a popup's text is put together and shown with none in between.
 LOW_FREE static char text[TEXT_SIZE + 1];
@@ -97,20 +89,10 @@ void popup_show(void)
     x0 = VIEW_LEFT + (VIEW_COLUMNS - w) / 2;
     y0 = VIEW_TOP + (VIEW_ROWS - h) / 2;
 
-    for (y = y0 + 1; y < y0 + h - 1; ++y) {
-        screen_putcodexy(x0, y, BOX_DOWN, BORDER_COLOUR);
+    for (y = y0 + 1; y < y0 + h - 1; ++y)
         for (x = x0 + 1; x < x0 + w - 1; ++x)
             screen_putcxy(x, y, ' ', TEXT_COLOUR);
-        screen_putcodexy(x0 + w - 1, y, BOX_DOWN, BORDER_COLOUR);
-    }
-    for (x = x0 + 1; x < x0 + w - 1; ++x) {
-        screen_putcodexy(x, y0, BOX_ACROSS, BORDER_COLOUR);
-        screen_putcodexy(x, y0 + h - 1, BOX_ACROSS, BORDER_COLOUR);
-    }
-    screen_putcodexy(x0, y0, BOX_TOP_LEFT, BORDER_COLOUR);
-    screen_putcodexy(x0 + w - 1, y0, BOX_TOP_RIGHT, BORDER_COLOUR);
-    screen_putcodexy(x0, y0 + h - 1, BOX_BOTTOM_LEFT, BORDER_COLOUR);
-    screen_putcodexy(x0 + w - 1, y0 + h - 1, BOX_BOTTOM_RIGHT, BORDER_COLOUR);
+    screen_box(x0, y0, x0 + w - 1, y0 + h - 1, BORDER_COLOUR);
 
     wrap(1, x0 + 2, y0 + 1, &widest);
     screen_putsxy(x0 + (w - 6) / 2, y0 + h - 2, "[ OK ]", COLOR_YELLOW);

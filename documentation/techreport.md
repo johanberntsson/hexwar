@@ -74,6 +74,10 @@ most important routines included in each source file.
 | &nbsp;&nbsp;&nbsp;_map\_cell\_at_ | which hexagon is under a character of the map |
 | &nbsp;&nbsp;&nbsp;_map\_neighbour_ | one step in one of the six directions |
 |  |  |
+| minimap.c | the whole map in miniature, with the view's outline |
+| &nbsp;&nbsp;&nbsp;_minimap\_plot_ | redraws one hexagon of it |
+| &nbsp;&nbsp;&nbsp;_minimap\_frame_ | moves the outline sprites to the view |
+|  |  |
 | view.c | the map window |
 | &nbsp;&nbsp;&nbsp;_view\_redraw_ | draws every tile that touches the window |
 | &nbsp;&nbsp;&nbsp;_view\_wait\_for\_redraw_ | waits for the beam to leave the window |
@@ -177,7 +181,8 @@ MAP-banked regions.
 | \$20000-\$3ffff | 128 | The C65 ROM, left in place |
 | \$40000-\$56fff | 92 | The tile store: the map window's character definitions |
 | \$57000-\$5cfff | 24 | The expanded tile sheet |
-| \$5d000-\$5ffff | 12 | free |
+| \$5d000-\$5dfff | 4 | free, for two more tiles |
+| \$5e000-\$5ffff | 8 | The minimap's character definitions |
 | \$08000000- | 8192 | Attic RAM, free |
 | \$0ff81000-\$0ff81f9f | 4 | Colour RAM |
 
@@ -206,8 +211,14 @@ window would need the ROM banked out, with everything that brings with it;
 characters, 2 KB each. It is in bank 5 rather than in Attic RAM because the
 redraw copies about 160 KB out of it, and DMA reading Attic RAM is about seven
 times slower than reading chip RAM on the real machine. All of it lies in one
-bank, so a source address is 16 bits. There is room for 18 tiles before the
-bank is full.
+bank, so a source address is 16 bits. There is room for 14 tiles before it
+reaches the minimap.
+
+**The minimap** is the same trick at a smaller scale: 16x8 full-colour
+characters at \$5e000, each with a definition of its own, making a 128x64
+framebuffer with a two-pixel hexagon per position. It is drawn in full once
+and then a hexagon at a time as the map is explored or units move; the
+outline of the view on it is two sprites, so scrolling never touches it.
 
 **Colour RAM** is moved from its default \$0ff80000 to \$0ff81000, because the
 disk operating system keeps buffers at the default address and corrupts the

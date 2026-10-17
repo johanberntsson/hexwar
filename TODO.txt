@@ -1,14 +1,5 @@
 --- OPEN ---
 
-Move game view to right side of screen, and add minimap in top left, with an outline of the
-current view. It should be possible to click directly in the minimap to move the view quickly
-(compare with civ1-reference/civ1-pic01.png)
-  Note: this changes the layout that CLAUDE.md treats as the specification
-  (basic/civ-basic.png, a 60x23 window). Update that and VIEW_COLUMNS in
-  src/view.h together; a narrower window shrinks the tile store, so memory is
-  not a problem. The map is 64x64 hexagons, so a minimap at one pixel per
-  hexagon is 8x8 full-colour characters (4 KB of the screen buffer).
-
 --- MILESTONES ---
 
 Milestone 2: build new units
@@ -17,6 +8,15 @@ Milestone 2: build new units
 - Handle orders and create new units when ready
 
 --- DONE ---
+
+Move game view to right side of screen, and add minimap in top left, with an outline of the
+current view. It should be possible to click directly in the minimap to move the view quickly
+(compare with civ1-reference/civ1-pic01.png)
+  Note: this changes the layout that CLAUDE.md treats as the specification
+  (basic/civ-basic.png, a 60x23 window). Update that and VIEW_COLUMNS in
+  src/view.h together; a narrower window shrinks the tile store, so memory is
+  not a problem. The map is 64x64 hexagons, so a minimap at one pixel per
+  hexagon is 8x8 full-colour characters (4 KB of the screen buffer).
 
 We should hide unknown tiles. We only uncover tiles next to one of our units. The other
 tiles are black until we come close. This applies to minimap too

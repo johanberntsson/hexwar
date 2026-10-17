@@ -14,6 +14,7 @@
 #include "hexwar.h"
 #include "input.h"
 #include "map.h"
+#include "minimap.h"
 #include "popup.h"
 #include "screen.h"
 #include "sheet.h"
@@ -78,18 +79,25 @@ static void panel_text(byte row, const char *s, byte colour)
     while (x < PANEL_WIDTH) screen_putcxy(x++, row, ' ', colour);
 }
 
-#define ROW_CIV 2
-#define ROW_YEAR 3
-#define ROW_TURN 4
-#define ROW_UNIT 7
-#define ROW_MOVES 8
-#define ROW_PROMPT 11           // four rows
-#define ROW_MESSAGE 17          // two rows
+// Below the minimap and its frame, which take rows 1-10.
+#define ROW_CIV 12
+#define ROW_YEAR 13
+#define ROW_TURN 14
+#define ROW_UNIT 16
+#define ROW_MOVES 17
+#define ROW_PROMPT 19           // four rows
+#define ROW_MESSAGE 23
 
+// A message in the panel, `first` and `second` on one line: "Cannot swim".
 static void message(const char *first, const char *second)
 {
-    panel_text(ROW_MESSAGE, first, COLOR_YELLOW);
-    panel_text(ROW_MESSAGE + 1, second, COLOR_YELLOW);
+    line_clear();
+    line_add(first);
+    if (*second) {
+        line_add(" ");
+        line_add(second);
+    }
+    panel_text(ROW_MESSAGE, line, COLOR_YELLOW);
 }
 
 static void draw_frame(void)
@@ -97,10 +105,12 @@ static void draw_frame(void)
     screen_putsxy(0, 0, "Game Orders Advisors World Civilopedia",
                   TEXT_COLOUR);
     panel_text(ROW_CIV, civ_adjective[player_civ[PLAYER_HUMAN]], TEXT_COLOUR);
-    screen_putsxy(VIEW_LEFT + 1, SCREEN_ROWS - 1,
-                  "qe/ad/zc move  b found city  space skip  w wait  "
-                  "f fortify  esc quit",
-                  TEXT_COLOUR);
+    // Wider than the window, so it ends where the window ends rather than
+    // starting where it starts.
+    static const char keys[] = "qe/ad/zc move  b found city  space skip  "
+                               "w wait  f fortify  esc quit";
+    screen_putsxy(VIEW_LEFT + VIEW_COLUMNS - (sizeof keys - 1),
+                  SCREEN_ROWS - 1, keys, TEXT_COLOUR);
 }
 
 static void draw_status(void)
@@ -165,13 +175,14 @@ static byte pointer_hex(byte *ax, byte *ay)
 }
 
 // What is under the arrow, right-aligned at the end of the top row: a city's
-// name, the terrain (or "Unexplored", which hides both), and the cell. Blank when the arrow is off the map.
+// name, the terrain (or "Unexplored", which hides both), and the cell -- on
+// the map window or on the minimap. Blank when the arrow is on neither.
 static void draw_hover(void)
 {
     byte ax, ay, c, x;
 
     line_clear();
-    if (pointer_hex(&ax, &ay)) {
+    if (pointer_hex(&ax, &ay) || minimap_hex(input_x, input_y, &ax, &ay)) {
         if (!MAP_IS_EXPLORED(ax, ay)) {
             line_add("Unexplored");
         } else {
@@ -326,12 +337,17 @@ static void unit_key(byte key)
 
 // A click on a hexagon next to the unit with orders moves it there. A click
 // on one of the player's own units that still has moves gives it the orders
-// instead, waking it if it was fortified. Anywhere else on the map centres
-// the view there; off the map, with the turn over, it ends the turn.
+// instead, waking it if it was fortified. Anywhere else on the map, or on
+// the minimap, centres the view there; elsewhere, with the turn over, it
+// ends the turn.
 static void click(void)
 {
     byte ax, ay, u, dir;
 
+    if (minimap_hex(input_x, input_y, &ax, &ay)) {
+        centre_on(ax, ay);
+        return;
+    }
     if (!pointer_hex(&ax, &ay)) {
         if (unit_active == UNIT_NONE && !game_over) end_turn();
         return;
@@ -433,6 +449,7 @@ void game_run(void)
     byte key;
 
     draw_frame();
+    minimap_init();
     draw_status();
     select_unit(UNIT_NONE);
 
@@ -442,6 +459,7 @@ void game_run(void)
 #ifndef NO_TITLE
     view_wait_for_redraw();
     view_redraw(off_x, off_y);
+    minimap_frame(off_x, off_y);
     dirty = 0;
     intro();
 #endif
@@ -456,6 +474,7 @@ void game_run(void)
         view_wait_for_redraw();
         if (dirty) {
             view_redraw(off_x, off_y);
+            minimap_frame(off_x, off_y);
             dirty = 0;
             hover_dirty = 1;
         }

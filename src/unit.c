@@ -1,6 +1,7 @@
 #include "unit.h"
 #include "city.h"
 #include "map.h"
+#include "minimap.h"
 #include "sheet.h"
 
 byte unit_kind[MAX_UNITS];
@@ -106,6 +107,7 @@ void unit_mark(byte ax, byte ay)
         map_tile[ay][ax] |= MAP_OCCUPIED;
     else
         map_tile[ay][ax] &= (byte)~MAP_OCCUPIED;
+    minimap_plot(ax, ay);
 }
 
 byte unit_overlay(byte ax, byte ay, byte *tiles)

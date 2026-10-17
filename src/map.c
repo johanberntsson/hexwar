@@ -3,6 +3,7 @@
 #include <calypsi/stubs.h>
 
 #include "map.h"
+#include "minimap.h"
 
 byte map_tile[MAP_ROWS][MAP_COLUMNS];
 
@@ -46,13 +47,19 @@ byte map_direction(byte ax, byte ay, byte bx, byte by)
     return DIR_NONE;
 }
 
+static void explore(byte ax, byte ay)
+{
+    if (map_tile[ay][ax] & MAP_EXPLORED) return;
+    map_tile[ay][ax] |= MAP_EXPLORED;
+    minimap_plot(ax, ay);
+}
+
 void map_explore(byte ax, byte ay)
 {
     byte dir, nx, ny;
-    map_tile[ay][ax] |= MAP_EXPLORED;
+    explore(ax, ay);
     for (dir = 0; dir < 6; ++dir) {
-        if (map_neighbour(ax, ay, dir, &nx, &ny))
-            map_tile[ny][nx] |= MAP_EXPLORED;
+        if (map_neighbour(ax, ay, dir, &nx, &ny)) explore(nx, ny);
     }
 }
 

@@ -76,6 +76,17 @@ void screen_putsxy(byte x, byte y, const char *s, byte color);
 // A screen code as it is, for the glyphs ASCII has no letter for.
 void screen_putcodexy(byte x, byte y, byte code, byte color);
 
+// Box-drawing screen codes, the same in the upper and the lower case sets.
+#define BOX_TOP_LEFT 112
+#define BOX_TOP_RIGHT 110
+#define BOX_BOTTOM_LEFT 109
+#define BOX_BOTTOM_RIGHT 125
+#define BOX_ACROSS 64
+#define BOX_DOWN 93
+
+// A frame of box glyphs whose outside corners are (x0, y0) and (x1, y1).
+void screen_box(byte x0, byte y0, byte x1, byte y1, byte color);
+
 // A whole palette entry. `red`, `green` and `blue` are the FCI file's byte
 // values; the nibble swap the VIC-IV wants is done here.
 void screen_set_palette_entry(byte index, byte red, byte green, byte blue);

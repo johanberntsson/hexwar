@@ -107,15 +107,18 @@ static const byte arrow_outline[ARROW_BYTES] = {
 // the pointer list included.** hexgame learnt the second half of that the
 // hard way: given a list at $1703 the VIC-IV reads one at $1700. There is no
 // way to ask C for alignment, so this is one buffer with a block of slack and
-// the three things are placed inside it by hand:
+// the things are placed inside it by hand:
 //
 //      +0     the pointer list SPRPTRADR is given
-//      +64    the arrow
-//      +128   its outline
+//      +64    sprite 0, the arrow
+//      +128   sprite 1, its outline
+//      +192   sprite 2, free for sprite_shape() -- the minimap's view frame
+//      +256   sprite 3, likewise
 //
 // It is ordinary BSS rather than LOW_FREE, because $1600-$1EFF is where the
 // ROM keeps disk buffers and a later load or save would scribble on it.
-static byte sprite_ram[64 + 192];
+static byte sprite_ram[64 + 64 + 4 * 64];
+static word sprite_list;         // the aligned start inside it
 
 static byte saved_ptr[3];       // SPRPTRADR as the ROM left it
 static byte prev_potx, prev_poty;
@@ -213,22 +216,22 @@ void input_init(void)
 {
     word list = ((word)sprite_ram + 63) & 0xffc0;
     word body = list + 64;
-    word ptr = body / 64;
+    word ptr;
     byte i;
 
-    for (i = 0; i < 128; ++i) POKE(body + i, 0);
+    sprite_list = list;
+    for (ptr = 0; ptr < 4 * 64; ++ptr) POKE(body + ptr, 0);
     for (i = 0; i < ARROW_BYTES; ++i) {
         POKE(body + i, arrow_body[i]);
         POKE(body + 64 + i, arrow_outline[i]);
     }
-    // Every sprite points at the arrow, so the six never turned on point
-    // somewhere valid; sprite 1, the outline, at the block after it.
+    // Sprites 0-3 each point at their own block; the four never turned on
+    // point at the arrow, so that they point somewhere valid.
     for (i = 0; i < 8; ++i) {
+        ptr = body / 64 + (i < 4 ? i : 0);
         POKE(list + 2 * i, (byte)ptr);
         POKE(list + 2 * i + 1, (byte)(ptr >> 8));
     }
-    POKE(list + 2, (byte)(ptr + 1));
-    POKE(list + 3, (byte)((ptr + 1) >> 8));
 
     for (i = 0; i < 3; ++i) saved_ptr[i] = PEEK(SPRPTRADR + i);
     POKE(SPRPTRADR, (byte)list);
@@ -237,10 +240,12 @@ void input_init(void)
 
     POKE(SPR0_COLOUR, 1);               // white
     POKE(SPR0_COLOUR + 1, 0);           // black
-    POKE(SPR_MULTICOLOUR, PEEK(SPR_MULTICOLOUR) & 0xfc);
-    POKE(SPR_PRIORITY, PEEK(SPR_PRIORITY) & 0xfc);
-    POKE(SPR_XEXPAND, PEEK(SPR_XEXPAND) & 0xfc);
-    POKE(SPR_YEXPAND, PEEK(SPR_YEXPAND) & 0xfc);
+    POKE(SPR0_COLOUR + 2, 1);           // white, both
+    POKE(SPR0_COLOUR + 3, 1);
+    POKE(SPR_MULTICOLOUR, PEEK(SPR_MULTICOLOUR) & 0xf0);
+    POKE(SPR_PRIORITY, PEEK(SPR_PRIORITY) & 0xf0);
+    POKE(SPR_XEXPAND, PEEK(SPR_XEXPAND) & 0xf0);
+    POKE(SPR_YEXPAND, PEEK(SPR_YEXPAND) & 0xf0);
 
     // Seed the counters with what they read now, so the first poll sees no
     // movement rather than the difference from zero.
@@ -258,8 +263,29 @@ void input_init(void)
 void input_shutdown(void)
 {
     byte i;
-    POKE(SPR_ENABLE, PEEK(SPR_ENABLE) & 0xfc);
+    POKE(SPR_ENABLE, PEEK(SPR_ENABLE) & 0xf0);
     for (i = 0; i < 3; ++i) POKE(SPRPTRADR + i, saved_ptr[i]);
+}
+
+byte *sprite_shape(byte n)
+{
+    return (byte *)(sprite_list + 64 * (word)(n + 1));
+}
+
+void sprite_place(byte n, word x, word y)
+{
+    byte bit = (byte)(1 << n);
+    x += SPR_X_OFFSET;
+    POKE(SPR0_X + 2 * n, (byte)x);
+    POKE(SPR0_Y + 2 * n, (byte)(y + SPR_Y_OFFSET));
+    if (x >> 8) POKE(SPR_XMSB, PEEK(SPR_XMSB) | bit);
+    else POKE(SPR_XMSB, PEEK(SPR_XMSB) & (byte)~bit);
+    POKE(SPR_ENABLE, PEEK(SPR_ENABLE) | bit);
+}
+
+void sprite_hide(byte n)
+{
+    POKE(SPR_ENABLE, PEEK(SPR_ENABLE) & (byte)~(1 << n));
 }
 
 byte input_moved(void)

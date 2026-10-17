@@ -215,8 +215,8 @@ Planned layers, and where each belongs:
   which already exists. Its bit 7 already says "a city or unit is here", which
   is all the redraw needs, so a unit-id layer does not have to be hot.
 * **Warm** (`__far`, bank 5): resource, feature/improvement, owner, city id,
-  unit id. **Only three 4 KB layers fit** in bank 5 above the expanded tile
-  sheet (`$5D000-$5FFFF`), so the rest of these go to attic RAM with the cold
+  unit id. Bank 5 is full now -- the expanded tile sheet, then the
+  minimap at `$5E000` -- so these go to attic RAM with the cold
   ones — fine for anything not read during a redraw.
 * **Cold** (attic, paged in per turn): AI influence maps, supply/trade
   reachability, fog-of-war per civ.
@@ -264,8 +264,9 @@ typedef struct {
   smooth pixel scrolling will arrive**; a cursor step is two characters
   (16 pixels) across and one row down — the same distance on screen — and that
   is the granularity the game gets.
-* **UI budget:** the map window is 60x23 of an 80x25 screen. The remaining
-  20-column strip and the two bottom rows are the panel, and it is drawn with
+* **UI budget:** the map window is 60x23 of an 80x25 screen, from column
+  18. The 18-column strip to its left (with the minimap at its top) and the
+  two bottom rows are the panel, and it is drawn with
   ordinary ROM glyphs, so panel text is cheap. Anything the design wants to
   show that does not fit there needs a full-screen mode that reuses the tile
   store, not extra screen area.

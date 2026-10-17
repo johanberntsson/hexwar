@@ -10,9 +10,11 @@ version is still on disk under `old-cc65/` and will be deleted once this one
 has everything it had.
 
 `basic/civ.bas` is a more complete XC=BASIC 3 version of the same idea and
-`basic/civ-basic.png` is the layout it reached — **that screenshot is the
-specification for the display**, and the geometry in `src/view.h` comes
-straight from its `fc_setMergeTileMode(10, 1, 60, 23, true)`. Neither the
+`basic/civ-basic.png` is the layout it reached. The map window's size in
+`src/view.h` comes straight from its `fc_setMergeTileMode(10, 1, 60, 23,
+true)`, but **the window now starts at column 18, not 10**, as in
+`civ1-reference/civ1-pic01.png`: the panel on the left is 18 columns wide so
+that a minimap can go at its top. Neither the
 BASIC nor the cc65 version ever scrolled correctly; see **Scrolling** below.
 `design.md` holds the hex-grid and Civ-1 map-generator research, and
 `documentation/techreport.md` is the technical report for readers rather
@@ -165,6 +167,8 @@ buffers at the default `$FF80000` and corrupts the display.
 | `$12000` | 4000 | screen RAM, 80x25 cells of 2 bytes |
 | `$40000-$56EFF` | 94208 | the view's tile store, 23 rows of 4096 |
 | `$57000-$5CFFF` | 24576 | the x-expanded tile sheet, 96x4 characters |
+| `$5D000-$5DFFF` | 4096 | free: room for two more tiles of sheet |
+| `$5E000-$5FFFF` | 8192 | the minimap's 16x8 full-colour characters |
 | `$FF81000` | 4000 | colour RAM |
 
 **The store's rows are padded to 4096 bytes, and the padding is load bearing.**
@@ -182,9 +186,9 @@ back two-thirds of the drawing time; see **Tearing**.
 **The 32 KB is what to watch.** `map_tile` is 4096 of it before any game
 code; the tile sheet used to be linked in too (6.5 KB, and growing a KB a
 tile) and now comes off the disk. At the last measurement `build/hexwar.lst`
-reported the region 75.5% full (about 8 KB free) with milestone 1 in it:
+reported the region 81.7% full (about 6 KB free) with milestone 1 in it:
 the display engine, the loaders, input and the pointer, units, cities, the
-turn loop, the title and new-game screens, and popups.
+turn loop, the title and new-game screens, popups, and the minimap.
 
 **Naming `zdata` in `hexwar.scm`'s `freeSpace` would move the whole BSS to
 `$1600-$1EFF`** — which is what hexgame does — but `map_tile` alone does not
@@ -221,7 +225,8 @@ not. Take these in order and stop as soon as it fits:
    in `linker-rules/`, and it already declares `bank1` and `bank45` far
    memories. **Do not use `bank45` as shipped** — `(#x40000 . #x5ffff)` sits
    straight on top of the tile store and the expanded sheet. Trim it to
-   `#x5d000 . #x5ffff` (12288 bytes) and leave bank 1 alone: screen RAM is at `$12000` and BASIC 65 owns
+   nothing: bank 5 is now the sheet, 4 KB kept for its next two tiles, and the
+   minimap at `$5E000`. Leave bank 1 alone too: screen RAM is at `$12000` and BASIC 65 owns
    most of the rest. Attic RAM (`$8000000` up, all of it free now that the
    expanded sheet has moved to bank 5) is the real reservoir, reached by DMA or `__huge`.
 2. **Bank BASIC out and put BSS at `$A000-$BFFF`.** Search And Rescue does
@@ -253,7 +258,7 @@ banked region, where a dispatch call costs nothing that matters. Second,
 **give every new subsystem its own `.c` file now**, because that is what makes
 the eventual split a one-line pragma per file instead of a rewrite.
 
-**Do none of this yet.** As of the last check there were about 8 KB free in
+**Do none of this yet.** As of the last check there were about 6 KB free in
 the program region. Revisit when `hexwar.lst` shows the region past ~26 KB.
 `~/commodore/mega65/hexgame/tools/mkprg.py` (exomizer, one file) is the other
 known trick if the *loaded* size rather than the addressable size is what gets
@@ -514,6 +519,22 @@ the terrain tiles', but the intersection of all seven outlines still tiles
 the plane (checked by simulation), so any mixture covers the window. The
 hover readout says "Unexplored" there and hides city and terrain.
 
+**The minimap** (`src/minimap.c`) is the whole world in a frame at the top
+of the panel: 16x8 full-colour characters with definitions of their own at
+`$5E000`, a 128x64-pixel framebuffer in which hexagon `(hx, hy)` is pixels
+`hx` and `hx + 1` of line `hy` — two pixels by one line, square on the
+glass, and the odd rows offset by a pixel as the tiles are. Pixels are
+system palette entries 0-15 (black for unexplored, white a city, red a
+unit). It is drawn in full once, by `minimap_init()`, and after that one
+hexagon at a time by `minimap_plot()`, which `map_explore()` calls for each
+newly explored hexagon and `unit_mark()` for every hexagon it looks at.
+**The outline of the view is sprites 2 and 3, not pixels**, so scrolling
+costs nothing but `minimap_frame()` rebuilding 54 bytes of sprite shape after
+each redraw; sprite 3 carries the part of the outline that has wrapped round
+the seam. A click on it centres the view, and the hover readout works over
+it. `sprite_shape()`/`sprite_place()` in `src/input.c` hand sprites 2 and 3
+out; 0 and 1 stay the arrow and are drawn in front.
+
 **Overlays are drawn one hexagon row behind the terrain.** A unit's feet are
 in its tile's bottom character row, which is also the top row of the
 hexagons below, which are drawn later and are opaque in the middle. So the
@@ -744,6 +765,9 @@ A new tile needs all of these, and nothing checks that they agree:
    taught to place it, and `terrain_name[]` in `src/game.c`. Terrain values
    are still tile numbers, so a new terrain has to come before the
    non-terrain tiles or the map layer grows a lookup table (see `map_tile`).
-5. room: each tile is 2 KB expanded, and the sheet must stay inside bank 5's
-   one 64 KB bank (an `#error` in `src/sheet.h`): from `$57000`, 18 tiles.
-   The tile store's own `#error` in `src/view.c` keeps the two apart.
+5. room: each tile is 2 KB expanded, and the sheet must stop below the
+   minimap at `$5E000` (an `#error` in `src/minimap.c`): from `$57000`,
+   **14 tiles, of which 12 are used**. The tile store's own `#error` in
+   `src/view.c` keeps the store and the sheet apart. Past 14 something has
+   to move — the minimap could take 92 of its 128 characters from the
+   tile store's row padding, or bank 1 could be looked into properly.

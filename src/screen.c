@@ -126,6 +126,23 @@ void screen_putcodexy(byte x, byte y, byte code, byte color)
     lpoke(col + 1, color);
 }
 
+void screen_box(byte x0, byte y0, byte x1, byte y1, byte color)
+{
+    byte i;
+    for (i = y0 + 1; i < y1; ++i) {
+        screen_putcodexy(x0, i, BOX_DOWN, color);
+        screen_putcodexy(x1, i, BOX_DOWN, color);
+    }
+    for (i = x0 + 1; i < x1; ++i) {
+        screen_putcodexy(i, y0, BOX_ACROSS, color);
+        screen_putcodexy(i, y1, BOX_ACROSS, color);
+    }
+    screen_putcodexy(x0, y0, BOX_TOP_LEFT, color);
+    screen_putcodexy(x1, y0, BOX_TOP_RIGHT, color);
+    screen_putcodexy(x0, y1, BOX_BOTTOM_LEFT, color);
+    screen_putcodexy(x1, y1, BOX_BOTTOM_RIGHT, color);
+}
+
 void screen_putsxy(byte x, byte y, const char *s, byte color)
 {
     while (*s && x < SCREEN_COLUMNS) {

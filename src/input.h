@@ -55,4 +55,13 @@ byte input_poll(void);
 // True if the arrow moved since the last time this was asked.
 byte input_moved(void);
 
+// **Sprites 2 and 3 are free for the game**; 0 and 1 are the arrow, and are
+// drawn in front of them. Each is monochrome, white, unexpanded, with a
+// 64-byte block of its own (63 bytes of shape, 3 a row, 24x21) that
+// sprite_shape() returns -- ordinary RAM, written directly.
+byte *sprite_shape(byte n);
+// Show sprite n with its top left at (x, y) in the arrow's coordinates.
+void sprite_place(byte n, word x, word y);
+void sprite_hide(byte n);
+
 #endif // HEXWAR_INPUT_H

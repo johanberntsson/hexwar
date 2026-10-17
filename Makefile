@@ -65,6 +65,7 @@ SRCS     = src/hexwar.c \
            src/sheet.c \
            src/view.c \
            src/map.c \
+           src/minimap.c \
            src/input.c \
            src/unit.c \
            src/city.c \

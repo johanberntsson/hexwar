@@ -5,11 +5,13 @@
 
 #include "mega65.h"
 
-// The window, in screen characters. These are the numbers the XC=BASIC version
-// used -- fc_setMergeTileMode(10, 1, 60, 23, true) in basic/civ.bas -- and what
-// basic/civ-basic.png shows: ten columns of panel down the left, the map in the
-// rest, one row of margin top and bottom.
-#define VIEW_LEFT 10
+// The window, in screen characters. The size is what the XC=BASIC version
+// used -- fc_setMergeTileMode(10, 1, 60, 23, true) in basic/civ.bas, shown in
+// basic/civ-basic.png -- but it sits eight columns further right, as in
+// civ1-reference/civ1-pic01.png: eighteen columns of panel down the left,
+// wide enough for a minimap at the top, the map up to two columns from the
+// right edge, one row of margin top and bottom.
+#define VIEW_LEFT 18
 #define VIEW_TOP 1
 #define VIEW_COLUMNS 60
 #define VIEW_ROWS 23

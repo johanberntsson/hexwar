@@ -36,9 +36,10 @@ make NO_TITLE=1           # straight to the map, no title screen
 make clean
 ```
 
-Needs `cc6502`/`as6502`/`ln6502` (Calypsi 5.18+), Python 3, `c1541` and
-`xemu-xmega65`. Pillow only if the tile art changes, since `res/tiles.fci` is
-checked in.
+Needs `cc6502`/`as6502`/`ln6502` (Calypsi 5.18+), Python 3, Ruby (for
+`tools/diskutil.rb`, which builds the d81 with an interleave that reads
+faster from a real floppy) and `xemu-xmega65`. Pillow only if the tile art
+changes, since `res/tiles.fci` is checked in.
 
 **The program reads its tile sheet and its map from drive 8**, so it needs
 the d81 mounted: `make run` does that, and a bare `-prg` boot stops at

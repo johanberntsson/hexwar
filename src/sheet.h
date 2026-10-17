@@ -54,8 +54,8 @@
 #define TILE_WARRIOR 9
 #define TILE_BUILDER 10
 
-// The FCI on the disk. Capitals, because that is how c1541 writes the host
-// name tiles.fci -- see MAP_FILE_NAME.
+// The FCI on the disk. Capitals, because that is how diskutil.rb writes the
+// host name tiles.fci -- see MAP_FILE_NAME.
 #define SHEET_FILE_NAME "TILES.FCI"
 
 #if SHEET_EXPANDED_ADDR + 64UL * SHEET_EXPANDED_COLUMNS * SHEET_ROWS > 0x10000UL

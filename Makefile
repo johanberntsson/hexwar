@@ -147,15 +147,26 @@ $(PRG): $(ELF)
 # finds its map and its tile sheet (res/tiles.fci, which tiles/Makefile
 # makes and which is checked in). The name autoboot.c65 is what makes the ROM boot it: a C65-mode
 # PRG at $2001 needs no wrapper, which is what old-cc65/c65bin/c65toc64wrapper.prg
-# used to supply. c1541 writes host names as unshifted PETSCII, so hexwar.map
-# here is "HEXWAR.MAP" to the program; see MAP_FILE_NAME in src/map.h.
+# used to supply.
+#
+# tools/diskutil.rb (Fredrik Ramsberg's, copied from Search And Rescue) rather
+# than c1541, for its sector interleave: copied to a real floppy, the disk
+# reads about five times faster on a MEGA65 than with the 1581's default.
+# It names a file on the disk after the host file's basename, which is why the
+# PRG is copied to autoboot.c65 first, and writes that name as unshifted
+# PETSCII, so hexwar.map here is "HEXWAR.MAP" to the program; see
+# MAP_FILE_NAME in src/map.h. It refuses to overwrite a file already on the
+# image, so the image is always built from scratch. The data files go on as
+# SEQ, as Search And Rescue's do: they have no load address, and the program
+# opens them by name whatever their type.
 d81: $(D81)
 
-$(D81): $(PRG) $(MAP) $(RES)/tiles.fci
+$(D81): $(PRG) $(MAP) $(RES)/tiles.fci tools/diskutil.rb
 	rm -f $@
 	cp $(PRG) $(BUILD)/autoboot.c65
-	c1541 -format hexwar,hw d81 $@ -write $(BUILD)/autoboot.c65 autoboot.c65 \
-	    -write $(MAP) hexwar.map -write $(RES)/tiles.fci tiles.fci
+	ruby tools/diskutil.rb $@ -name hexwar -id hw \
+	    -writeprg -copyf1 $(BUILD)/autoboot.c65 \
+	    -writeseq -copyf1 $(MAP) $(RES)/tiles.fci
 
 clean:
 	rm -rf $(BUILD)

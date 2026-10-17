@@ -7,8 +7,8 @@ A Civilization-style hex-grid game for the **MEGA65**, in C.
 ## Building
 
 Needs the [Calypsi 6502 tool chain](https://www.calypsi.cc/) (5.18 or later —
-`cc6502`, `as6502`, `ln6502`), Python 3, `c1541` (from VICE), and
-`xemu-xmega65` to run it. Pillow only if the tile art changes.
+`cc6502`, `as6502`, `ln6502`), Python 3, Ruby (for the bundled
+`tools/diskutil.rb`), and `xemu-xmega65` to run it. Pillow only if the tile art changes.
 
 ```sh
 make            # build/hexwar.prg, build/hexwar.map and build/hexwar.d81
@@ -67,6 +67,10 @@ shared 240-colour palette, and widened at run time for the MEGA65's 640×200
 display.
 
 Additional graphics and tiles were created by myself for this game.
+
+`tools/diskutil.rb`, which builds the disk image, was written by Fredrik
+Ramsberg. Its sector interleave makes the disk load about five times faster
+from a real floppy on a MEGA65.
 
 ## Licensing
 

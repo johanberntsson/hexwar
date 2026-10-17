@@ -87,9 +87,11 @@ most important routines included in each source file.
 | &nbsp;&nbsp;&nbsp;_blit_ | the transparent copy the map is drawn with |
 |  |  |
 
-The tools directory holds the build-time programs written in Python:
-`mapgen.py` generates the map and `mktiles.py` turns the tile PNGs in the tiles
-directory into the tile sheet, `res/tiles.fci`.
+The tools directory holds the build-time programs: `mapgen.py` generates the
+map, `mktiles.py` turns the tile PNGs in the tiles directory into the tile
+sheet, `res/tiles.fci`, and `diskutil.rb` (in Ruby, by Fredrik Ramsberg)
+writes the disk image with a sector interleave suited to the MEGA65's floppy
+drive.
 
 ## Startup
 

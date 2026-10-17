@@ -90,8 +90,9 @@ byte map_direction(byte ax, byte ay, byte bx, byte by);
 // on the disk next to the program by `make d81`.
 //
 // **The name is spelled in capitals because the disk spells it that way.**
-// c1541 turns the host name hexwar.map into unshifted PETSCII, which is the
-// bytes of ASCII "HEXWAR.MAP", and Calypsi passes literals through unchanged.
+// tools/diskutil.rb turns the host name hexwar.map into unshifted PETSCII,
+// which is the bytes of ASCII "HEXWAR.MAP", and Calypsi passes literals
+// through unchanged.
 #define MAP_FILE_NAME "HEXWAR.MAP"
 #define MAP_VERSION 1
 

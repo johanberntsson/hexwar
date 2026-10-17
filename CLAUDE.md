@@ -164,7 +164,7 @@ buffers at the default `$FF80000` and corrupts the display.
 | `$1600-$1EFF` | 2304 | `zpsave`: the popup's 400-byte text, the rest free — `LOW_FREE` in `src/mega65.h` moves a variable there |
 | `$12000` | 4000 | screen RAM, 80x25 cells of 2 bytes |
 | `$40000-$56EFF` | 94208 | the view's tile store, 23 rows of 4096 |
-| `$57000-$5C7FF` | 22528 | the x-expanded tile sheet, 88x4 characters |
+| `$57000-$5CFFF` | 24576 | the x-expanded tile sheet, 96x4 characters |
 | `$FF81000` | 4000 | colour RAM |
 
 **The store's rows are padded to 4096 bytes, and the padding is load bearing.**
@@ -221,7 +221,7 @@ not. Take these in order and stop as soon as it fits:
    in `linker-rules/`, and it already declares `bank1` and `bank45` far
    memories. **Do not use `bank45` as shipped** — `(#x40000 . #x5ffff)` sits
    straight on top of the tile store and the expanded sheet. Trim it to
-   `#x5c800 . #x5ffff` (14336 bytes) and leave bank 1 alone: screen RAM is at `$12000` and BASIC 65 owns
+   `#x5d000 . #x5ffff` (12288 bytes) and leave bank 1 alone: screen RAM is at `$12000` and BASIC 65 owns
    most of the rest. Attic RAM (`$8000000` up, all of it free now that the
    expanded sheet has moved to bank 5) is the real reservoir, reached by DMA or `__huge`.
 2. **Bank BASIC out and put BSS at `$A000-$BFFF`.** Search And Rescue does
@@ -503,6 +503,17 @@ cells that need anything drawn on them without another 4 KB layer or a search
 of the unit list for every tile. `unit_mark()` keeps it right, and everything
 that puts a unit or city on a hexagon or takes one off calls it.
 
+**Bit 6 means "the player has seen this hexagon"** (`MAP_EXPLORED`;
+terrain is the low six bits, `MAP_TERRAIN_MASK`). `map_explore()` sets it on
+a hexagon and its six neighbours whenever a human unit is created or moves,
+and nothing clears it. An unexplored hexagon is **drawn** as
+`TILE_UNDISCOVERED`, a solid black hexagon, never skipped — the redraw does
+not clear, so a skipped one would show the previous frame through — and
+anything on it is not drawn. The black tile's outline is a little inside
+the terrain tiles', but the intersection of all seven outlines still tiles
+the plane (checked by simulation), so any mixture covers the window. The
+hover readout says "Unexplored" there and hides city and terrain.
+
 **Overlays are drawn one hexagon row behind the terrain.** A unit's feet are
 in its tile's bottom character row, which is also the top row of the
 hexagons below, which are drawn later and are opaque in the middle. So the
@@ -688,10 +699,11 @@ suspect when something behaves oddly:
 
 ## Assets
 
-`res/tiles.fci` is 44x4 characters — eleven 4x4 tiles side by side, in the
+`res/tiles.fci` is 48x4 characters — twelve 4x4 tiles side by side, in the
 order `tiles/Makefile` lists the PNGs: six terrains (desert hill, grass,
-mountain, ocean, shallow ocean, tundra), then the city, the selection ring
-and three units (settler, warrior, builder); `TILE_*` in `src/sheet.h`. The
+mountain, ocean, shallow ocean, tundra), then the city, the selection ring,
+three units (settler, warrior, builder) and the black hexagon of unexplored
+land; `TILE_*` in `src/sheet.h`. The
 terrain, city and unit art is OpenCiv's, under CC BY 4.0
 (`tiles/README.txt`, and **Credits** in `README.md`, which must stay in
 step); `tile_select.png` is a placeholder drawn from the grass tile's

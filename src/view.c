@@ -200,16 +200,19 @@ void view_redraw(word off_x, word off_y)
         tx = (int)(4 * vx) - (int)(off_x + MAP_WIDTH_CHARS);
         for (; vx <= vx_last; vx += 2, tx += 8) {
             byte t = map_tile[ay][ax];
-            if (t & MAP_OCCUPIED) {
+            // An unexplored hexagon is drawn black, not skipped -- the
+            // store is never cleared -- and whatever is on it stays hidden.
+            if (!(t & MAP_EXPLORED)) {
+                t = TILE_UNDISCOVERED;
+            } else if (t & MAP_OCCUPIED) {
                 byte n = pending_n[list];
                 if (n < MAX_PENDING) {
                     pending_ax[list][n] = ax;
                     pending_tx[list][n] = tx;
                     pending_n[list] = n + 1;
                 }
-                t &= (byte)~MAP_OCCUPIED;
             }
-            view_draw_tile(tx, ty, t);
+            view_draw_tile(tx, ty, t & MAP_TERRAIN_MASK);
             ax += 2;
             if (ax >= MAP_COLUMNS) ax -= MAP_COLUMNS;
         }

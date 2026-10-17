@@ -64,9 +64,16 @@
 // it is what lets view_redraw() find the few cells that need anything drawn
 // over them without a second 4 KB layer or a search of the unit list per
 // tile. unit_mark() keeps it right; read terrain through MAP_TERRAIN.
+//
+// **Bit 6 says the human player has seen the hexagon.** Until then it is
+// drawn as TILE_UNDISCOVERED and anything on it stays hidden. map_explore()
+// sets it; nothing clears it. The map file has it clear everywhere.
 extern byte map_tile[MAP_ROWS][MAP_COLUMNS];
 #define MAP_OCCUPIED 0x80
-#define MAP_TERRAIN(AX, AY) (map_tile[AY][AX] & 0x7f)
+#define MAP_EXPLORED 0x40
+#define MAP_TERRAIN_MASK 0x3f
+#define MAP_TERRAIN(AX, AY) (map_tile[AY][AX] & MAP_TERRAIN_MASK)
+#define MAP_IS_EXPLORED(AX, AY) (map_tile[AY][AX] & MAP_EXPLORED)
 
 // The six neighbours of a hexagon, clockwise from east. In doubled
 // coordinates east and west are hx +/- 2 and the four diagonals hx +/- 1,
@@ -85,6 +92,10 @@ byte map_neighbour(byte ax, byte ay, byte dir, byte *nax, byte *nay);
 
 // Which way (bx, by) is from (ax, ay), or DIR_NONE if not a neighbour.
 byte map_direction(byte ax, byte ay, byte bx, byte by);
+
+// Mark (ax, ay) and its six neighbours seen, which is what one of the human
+// player's units sees from where it stands.
+void map_explore(byte ax, byte ay);
 
 // The map file, made by tools/mapgen.py (which documents the layout) and put
 // on the disk next to the program by `make d81`.

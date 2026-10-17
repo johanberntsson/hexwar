@@ -100,7 +100,7 @@ The build produces a disk image, `hexwar.d81`, holding three files:
 | **File** |  **Contents** |
 | -- |  ---- |
 | AUTOBOOT.C65 | the program, a C65-mode PRG loaded at \$2001 |
-| TILES.FCI | the tile sheet: a palette and 11 tiles of 4x4 full colour characters |
+| TILES.FCI | the tile sheet: a palette and 12 tiles of 4x4 full colour characters |
 | HEXWAR.MAP | the map: a 16-byte header and one 4096-byte layer of terrain |
 
 The C65 ROM boots AUTOBOOT.C65 automatically. `main()` then:
@@ -176,8 +176,8 @@ MAP-banked regions.
 | \$12000-\$12f9f | 4 | Screen RAM, 80x25 cells of two bytes |
 | \$20000-\$3ffff | 128 | The C65 ROM, left in place |
 | \$40000-\$56fff | 92 | The tile store: the map window's character definitions |
-| \$57000-\$5c7ff | 22 | The expanded tile sheet |
-| \$5c800-\$5ffff | 14 | free |
+| \$57000-\$5cfff | 24 | The expanded tile sheet |
+| \$5d000-\$5ffff | 12 | free |
 | \$08000000- | 8192 | Attic RAM, free |
 | \$0ff81000-\$0ff81f9f | 4 | Colour RAM |
 
@@ -202,7 +202,7 @@ the store is 94208 bytes, which leaves banks 2 and 3, the ROM, alone. A larger
 window would need the ROM banked out, with everything that brings with it;
 `src/view.h` stops the build if the store outgrows \$60000.
 
-**The expanded sheet** is the tile art as it is drawn: 11 tiles of 8x4
+**The expanded sheet** is the tile art as it is drawn: 12 tiles of 8x4
 characters, 2 KB each. It is in bank 5 rather than in Attic RAM because the
 redraw copies about 160 KB out of it, and DMA reading Attic RAM is about seven
 times slower than reading chip RAM on the real machine. All of it lies in one
@@ -226,7 +226,9 @@ The map is 128 columns by 32 rows of array cells, one byte each. In the
 (ax, 2·ay + (ax and 1)): odd columns are half a hexagon lower than even ones.
 That packs 4096 hexagons, 64 across by 64 down, into a 4 KB rectangle.
 
-Bits 0-6 of each byte are the terrain, which is also its tile number. **Bit 7
+Bits 0-5 of each byte are the terrain, which is also its tile number. **Bit 6
+says that the player has seen the hexagon**; until then the redraw draws a
+black hexagon there instead, and nothing on it. **Bit 7
 says that a city or a unit is on the hexagon.** The redraw checks that bit to
 find the few hexagons that need something drawn over the terrain, which
 avoids both a second 4 KB layer and a search of the unit list for every tile.

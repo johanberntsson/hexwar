@@ -4,7 +4,7 @@
 // **FCI** (Full Colour Image) is the format tools/png2fci.py writes. A header
 // of nine bytes, a palette of RGB triples, the marker "IMG", and then the
 // pixels as a row-major grid of 8x8 characters, 64 bytes each, one byte of
-// palette index per pixel. res/tiles.fci is 44x4 characters: eleven
+// palette index per pixel. res/tiles.fci is 48x4 characters: twelve
 // 4x4-character tiles side by side, in the order tiles/Makefile lists them.
 // tools/mktiles.py writes it.
 //
@@ -17,7 +17,7 @@
 #include "mega65.h"
 
 // Where the x-expanded sheet is built: bank 5, just above the view's tile
-// store. 88 * 4 * 64 = 22528 bytes, $57000-$5C7FF.
+// store. 96 * 4 * 64 = 24576 bytes, $57000-$5CFFF.
 //
 // **Not attic RAM, where it used to be.** Search And Rescue measured DMA *out
 // of* attic RAM on a real MEGA65 at 16.1 cycles a byte against 2.2 chip to
@@ -30,7 +30,7 @@
 #define SHEET_EXPANDED_ADDR 0x7000u
 
 // The sheet as it is in the file, and as it is once expanded.
-#define SHEET_COLUMNS 44
+#define SHEET_COLUMNS 48
 #define SHEET_ROWS 4
 #define SHEET_EXPANDED_COLUMNS (SHEET_COLUMNS * 2)
 
@@ -53,6 +53,13 @@
 #define TILE_SETTLER 8
 #define TILE_WARRIOR 9
 #define TILE_BUILDER 10
+// Drawn *instead of* the terrain of a hexagon the player has not seen yet
+// (MAP_EXPLORED in src/map.h): a solid black hexagon, never skipped, because
+// the redraw does not clear and relies on every byte of the window being
+// written. Its outline is a little inside the terrain tiles', but even the
+// intersection of all the outlines tiles the plane, so any mixture of
+// explored and unexplored hexagons still covers the window.
+#define TILE_UNDISCOVERED 11
 
 // The FCI on the disk. Capitals, because that is how diskutil.rb writes the
 // host name tiles.fci -- see MAP_FILE_NAME.

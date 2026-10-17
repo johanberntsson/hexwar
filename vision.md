@@ -216,7 +216,7 @@ Planned layers, and where each belongs:
   is all the redraw needs, so a unit-id layer does not have to be hot.
 * **Warm** (`__far`, bank 5): resource, feature/improvement, owner, city id,
   unit id. **Only three 4 KB layers fit** in bank 5 above the expanded tile
-  sheet (`$5C800-$5FFFF`), so the rest of these go to attic RAM with the cold
+  sheet (`$5D000-$5FFFF`), so the rest of these go to attic RAM with the cold
   ones — fine for anything not read during a redraw.
 * **Cold** (attic, paged in per turn): AI influence maps, supply/trade
   reachability, fog-of-war per civ.

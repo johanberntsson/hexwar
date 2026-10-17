@@ -6,7 +6,7 @@
 # the matching constants in tools/mapgen.py. Append; do not reorder.
 TILES = tile_desert_hill.png tile_grass.png tile_mountain.png tile_ocean.png \
         tile_shallow_ocean.png tile_tundra.png tile_city.png tile_select.png \
-        unit_settler.png unit_warrior.png unit_builder.png
+        unit_settler.png unit_warrior.png unit_builder.png tile_undiscovered.png
 
 all: ../res/tiles.fci
 

@@ -46,6 +46,16 @@ byte map_direction(byte ax, byte ay, byte bx, byte by)
     return DIR_NONE;
 }
 
+void map_explore(byte ax, byte ay)
+{
+    byte dir, nx, ny;
+    map_tile[ay][ax] |= MAP_EXPLORED;
+    for (dir = 0; dir < 6; ++dir) {
+        if (map_neighbour(ax, ay, dir, &nx, &ny))
+            map_tile[ny][nx] |= MAP_EXPLORED;
+    }
+}
+
 void map_cell_at(word cx, word cy, byte *ax, byte *ay)
 {
     // Work in half characters, so that the point is the middle of the

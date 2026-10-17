@@ -165,19 +165,23 @@ static byte pointer_hex(byte *ax, byte *ay)
 }
 
 // What is under the arrow, right-aligned at the end of the top row: a city's
-// name, the terrain, and the cell. Blank when the arrow is off the map.
+// name, the terrain (or "Unexplored", which hides both), and the cell. Blank when the arrow is off the map.
 static void draw_hover(void)
 {
     byte ax, ay, c, x;
 
     line_clear();
     if (pointer_hex(&ax, &ay)) {
-        c = city_at(ax, ay);
-        if (c != CITY_NONE) {
-            line_add(city_name_of(c));
-            line_add("  ");
+        if (!MAP_IS_EXPLORED(ax, ay)) {
+            line_add("Unexplored");
+        } else {
+            c = city_at(ax, ay);
+            if (c != CITY_NONE) {
+                line_add(city_name_of(c));
+                line_add("  ");
+            }
+            line_add(terrain_name[MAP_TERRAIN(ax, ay)]);
         }
-        line_add(terrain_name[MAP_TERRAIN(ax, ay)]);
         line_add(" ");
         line_add_num(ax);
         line_add(",");

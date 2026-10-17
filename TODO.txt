@@ -1,14 +1,5 @@
 --- OPEN ---
 
-We should already prepare for different civilizations, and should problaby already now
-implement a start screen with "New Game", "Load Save", "Quit". New Game will then ask
-which civilization and difficulty level. Then the game starts.
-  Note: "Load Save" means writing to disk, so anything in LOW_FREE has to be
-  set up again after a save, as it already is after map_load().
-
-Each civ has a name and a leader, and later properties that guide the AI and make the civs
-distinct.
-
 Move game view to right side of screen, and add minimap in top left, with an outline of the
 current view. It should be possible to click directly in the minimap to move the view quickly
 (compare with civ1-reference/civ1-pic01.png)
@@ -18,14 +9,6 @@ current view. It should be possible to click directly in the minimap to move the
   not a problem. The map is 64x64 hexagons, so a minimap at one pixel per
   hexagon is 8x8 full-colour characters (4 KB of the screen buffer).
 
-We should hide unknown tiles. We only uncover tiles next to one of our units. The other
-tiles are black until we come close. This applies to minimap too
-  Note: unexplored hexagons have to be drawn as a solid black tile, not
-  skipped. The redraw never clears, so it relies on every byte being
-  covered, and a skipped hexagon would show the previous frame through when
-  scrolling. The "explored" flag can be bit 6 of map_tile (terrain values are
-  small), so no extra 4 KB layer is needed.
-
 --- MILESTONES ---
 
 Milestone 2: build new units
@@ -34,6 +17,23 @@ Milestone 2: build new units
 - Handle orders and create new units when ready
 
 --- DONE ---
+
+We should hide unknown tiles. We only uncover tiles next to one of our units. The other
+tiles are black until we come close. This applies to minimap too
+  Note: unexplored hexagons have to be drawn as a solid black tile, not
+  skipped. The redraw never clears, so it relies on every byte being
+  covered, and a skipped hexagon would show the previous frame through when
+  scrolling. The "explored" flag can be bit 6 of map_tile (terrain values are
+  small), so no extra 4 KB layer is needed.
+
+We should already prepare for different civilizations, and should problaby already now
+implement a start screen with "New Game", "Load Save", "Quit". New Game will then ask
+which civilization and difficulty level. Then the game starts.
+  Note: "Load Save" means writing to disk, so anything in LOW_FREE has to be
+  set up again after a save, as it already is after map_load().
+
+Each civ has a name and a leader, and later properties that guide the AI and make the civs
+distinct.
 
 Milestone 1: found a city
 - add a mouse pointer (sprite) and control it with mouse or joystick

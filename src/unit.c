@@ -29,6 +29,7 @@ byte unit_create(byte kind, byte owner, byte ax, byte ay)
             unit_moves[u] = unit_kind_moves[kind];
             unit_orders[u] = ORDERS_NONE;
             unit_mark(ax, ay);
+            if (owner == PLAYER_HUMAN) map_explore(ax, ay);
             return u;
         }
     }
@@ -49,6 +50,7 @@ void unit_move_to(byte u, byte ax, byte ay)
     unit_ay[u] = ay;
     unit_mark(old_x, old_y);
     unit_mark(ax, ay);
+    if (unit_owner[u] == PLAYER_HUMAN) map_explore(ax, ay);
 }
 
 void unit_begin_turn(byte owner)

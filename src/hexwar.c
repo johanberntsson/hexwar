@@ -31,6 +31,27 @@ static void draw_panel(void)
                   COLOR_LIGHTGREEN);
 }
 
+// Which map cell is under the window's top left corner, as "ax,ay" right-
+// aligned at the end of the top row. The window is 60 characters across and a
+// map column is 4, so this changes every other step left or right; a hexagon
+// row is 3 character rows, so up and down change ay every six steps.
+static void draw_position(void)
+{
+    static char text[8];
+    byte ax, ay;
+    byte i = sizeof text - 1;
+
+    map_cell_at(off_x, off_y, &ax, &ay);
+    // Built backwards from the end, so no printf is linked for two numbers.
+    // Padded on the left, so a shorter number overwrites a longer one.
+    text[i] = 0;
+    do { text[--i] = '0' + ay % 10; ay /= 10; } while (ay);
+    text[--i] = ',';
+    do { text[--i] = '0' + ax % 10; ax /= 10; } while (ax);
+    while (i) text[--i] = ' ';
+    screen_putsxy(SCREEN_COLUMNS - (sizeof text - 1), 0, text, COLOR_WHITE);
+}
+
 // A message on an otherwise empty 8-bit screen, for the things that stop the
 // program before it has a display of its own.
 static void fatal(const char *message)
@@ -49,13 +70,15 @@ int main(void)
     mega65_io_enable();
     screen_init();
 
-    // **Nothing here opens a file.** The tile sheet is linked in (build/tiles.s
-    // from res/tiles.fci), so there is no ordering rule about doing disk I/O
-    // before touching the memory map -- which is what shaped main() in the
-    // cc65 build and in both of the other MEGA65 projects in this tree.
+    // The tile sheet is linked in (build/tiles.s from res/tiles.fci); the map
+    // comes off the disk. The ROM is never banked out, so there is no ordering
+    // rule about doing disk I/O before touching the memory map -- which is
+    // what shaped main() in the cc65 build and in both of the other MEGA65
+    // projects in this tree. Colour RAM was moved out of CBDOS's way in
+    // screen_init(), so the display survives the read.
     if (!sheet_init()) fatal("tiles.fci is not the sheet this build expects");
+    if (!map_load()) fatal("cannot read " MAP_FILE_NAME);
 
-    map_init();
     view_init();
     draw_panel();
 
@@ -84,24 +107,33 @@ int main(void)
             // map tears while a cursor key is held.
             view_wait_for_redraw();
             view_redraw(off_x, off_y);
+            draw_position();
             dirty = 0;
         }
 
         key = screen_getkey();
         if (!key) continue;
 
-        // One character a step: eight pixels across, and one character row
-        // down. A hexagon is 8 characters wide and 3 rows apart, so that is
-        // eight sub-steps per column and three per row -- which is the
-        // smoothness the vx/vy pair in the cc65 build was reaching for.
+        // Two characters a step across and one row down, because that is the
+        // same distance on the glass: at H640/V200 a character is twice as
+        // tall as it is wide. One character across moved the view at half the
+        // speed of a step down. A hexagon is 8 characters wide and 3 rows
+        // apart, so that is four sub-steps per column and three per row.
+        //
+        // Across there is no limit: the map wraps east-west, so off_x runs
+        // round 0..MAP_WIDTH_CHARS-1 and view_redraw() draws across the seam.
         switch (key) {
         case 157:                                   // cursor left
         case 'a':
-            if (off_x > VIEW_MIN_OFF_X) { --off_x; dirty = 1; }
+            if (off_x < 2) off_x += MAP_WIDTH_CHARS;
+            off_x -= 2;
+            dirty = 1;
             break;
         case 29:                                    // cursor right
         case 'd':
-            if (off_x < VIEW_MAX_OFF_X) { ++off_x; dirty = 1; }
+            off_x += 2;
+            if (off_x >= MAP_WIDTH_CHARS) off_x -= MAP_WIDTH_CHARS;
+            dirty = 1;
             break;
         case 145:                                   // cursor up
         case 'w':

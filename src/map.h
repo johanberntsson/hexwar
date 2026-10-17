@@ -10,15 +10,21 @@
 //         1,3     3,3
 //
 // That halves neatly into a rectangular array: array cell (ax, ay) is the
-// hexagon (ax, 2*ay + (ax & 1)). 80x50 is the Civilization 1 standard map size,
-// and 4000 bytes is what one of its ten layers costs.
+// hexagon (ax, 2*ay + (ax & 1)).
+//
+// **128x32, not Civilization 1's 80x50**, because in this layout a visual row
+// of hexagons is every *other* column and an array row is *two* hexagon rows.
+// 80x50 looked like 40 hexagons across by 100 down -- about 1:1.9 on the
+// glass, portrait. 128x32 is 64 across by 64 down, 512 characters by 193 rows,
+// which a character's 1:2 aspect makes about 1.33:1, landscape. One layer is
+// 4096 bytes, near enough what 80x50 cost.
 #ifndef HEXWAR_MAP_H
 #define HEXWAR_MAP_H
 
 #include "mega65.h"
 
-#define MAP_COLUMNS 80
-#define MAP_ROWS 50
+#define MAP_COLUMNS 128
+#define MAP_ROWS 32
 
 // Where a map cell is drawn, in screen characters, relative to the map's own
 // top left. **These are the two numbers the whole view geometry rests on.**
@@ -36,10 +42,42 @@
 #define MAP_CELL_X(AX) (4 * (word)(AX))
 #define MAP_CELL_Y(AX, AY) (6 * (word)(AY) + 3 * ((AX) & 1))
 
+// **The map wraps east to west**, so it repeats every MAP_WIDTH_CHARS
+// characters across: column MAP_COLUMNS - 1 is followed by column 0, and its
+// tile's right half overlaps column 0's left half exactly as any other pair of
+// neighbours do. North and south do not wrap.
+//
+// That only works with an even number of columns. Column parity decides which
+// hexagon row a cell is in, and an odd count would put column 0 in the wrong
+// one each time round.
+#define MAP_WIDTH_CHARS MAP_CELL_X(MAP_COLUMNS)                       // 512
+#if MAP_COLUMNS & 1
+#error "the east-west wrap needs an even MAP_COLUMNS"
+#endif
+
+// Terrain, one byte a hexagon. **The values are tile numbers** (TILE_* in
+// src/sheet.h), because for now every terrain has exactly one tile; when that
+// stops being true this layer keeps meaning terrain and the drawing grows a
+// lookup table.
 extern byte map_tile[MAP_ROWS][MAP_COLUMNS];
 
-// Fill the map with placeholder terrain. Stands in for the Civ 1 generator
-// described in design.md.
-void map_init(void);
+// The map file, made by tools/mapgen.py (which documents the layout) and put
+// on the disk next to the program by `make d81`.
+//
+// **The name is spelled in capitals because the disk spells it that way.**
+// c1541 turns the host name hexwar.map into unshifted PETSCII, which is the
+// bytes of ASCII "HEXWAR.MAP", and Calypsi passes literals through unchanged.
+#define MAP_FILE_NAME "HEXWAR.MAP"
+#define MAP_VERSION 1
+
+// The cell whose hexagon is under map-space character (cx, cy), cx below
+// MAP_WIDTH_CHARS. Tiles overlap, so a character can lie inside two tiles'
+// rectangles; this picks the hexagon whose centre is nearest, measured on the
+// glass, where a character is half as wide as it is tall.
+void map_cell_at(word cx, word cy, byte *ax, byte *ay);
+
+// Read the terrain layer of MAP_FILE_NAME into map_tile. Returns 0 if the
+// file cannot be opened or is not a map of this size and version.
+byte map_load(void);
 
 #endif // HEXWAR_MAP_H

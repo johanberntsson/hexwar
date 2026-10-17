@@ -70,7 +70,9 @@ void view_draw_tile(int x, int y, byte tile);
 
 // Draw the map into the window. (off_x, off_y) is the map-space character
 // coordinate that lands on the window's top left corner, so incrementing off_x
-// scrolls the map one character -- eight pixels -- to the left.
+// scrolls the map one character -- eight pixels -- to the left. off_x must be
+// below MAP_WIDTH_CHARS; the map wraps east-west, and a window that straddles
+// the seam simply carries on into column 0.
 //
 // **It does not clear first, and it draws strictly top to bottom.** Both are
 // deliberate; see the tearing note in view.c. Call view_wait_for_redraw()
@@ -98,14 +100,14 @@ void view_wait_for_redraw(void);
 // there is nothing to draw, so those bytes keep whatever the previous frame
 // left in them.
 //
-// Holding the view one hexagon inside the map on every side makes every
-// contributing row and column exist, and costs nothing at run time. The
-// bounds come from asking which cells cover the window's outermost characters:
-// a tile spans 8 characters from 4*ax and 4 rows from 3*hy, so window column 0
-// needs cells from ax >= (off_x-7)/4 and window row 0 needs hy >= (off_y-3)/3.
-#define VIEW_MIN_OFF_X 8
+// Holding the view one hexagon inside the map at the top and bottom makes
+// every contributing row exist, and costs nothing at run time. The bounds come
+// from asking which cells cover the window's outermost rows: a tile spans 4
+// rows from 3*hy, so window row 0 needs hy >= (off_y-3)/3.
+//
+// **There is no such limit across**, because the map wraps east-west and every
+// column has both its neighbours. off_x runs freely round 0..MAP_WIDTH_CHARS-1.
 #define VIEW_MIN_OFF_Y 4
-#define VIEW_MAX_OFF_X (4 * (MAP_COLUMNS - 1) - VIEW_COLUMNS)      // 256
-#define VIEW_MAX_OFF_Y (3 * (2 * MAP_ROWS - 1) - VIEW_ROWS)        // 274
+#define VIEW_MAX_OFF_Y (3 * (2 * MAP_ROWS - 1) - VIEW_ROWS)        // 166
 
 #endif // HEXWAR_VIEW_H

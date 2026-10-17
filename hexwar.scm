@@ -24,7 +24,7 @@
 ;;;
 ;;; **$2001-$9FFF is 32 KB for everything**: code, data, BSS, C stack and heap.
 ;;; The tile sheet is linked in rather than loaded (build/tiles.s, 6573 bytes)
-;;; and map.tile is another 4000, so about 10.5 KB is spoken for before any
+;;; and map_tile is another 4096, so about 10.5 KB is spoken for before any
 ;;; game code. build/hexwar.lst is the only place the real figure is written
 ;;; down and is worth reading after anything that might have grown it.
 ;;;

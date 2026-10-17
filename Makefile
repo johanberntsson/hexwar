@@ -60,12 +60,22 @@ OBJS     += $(BUILD)/tiles.o
 ELF      = $(BUILD)/hexwar.elf
 PRG      = $(BUILD)/hexwar.prg
 
-all: $(PRG)
+# The map, made by tools/mapgen.py and read off the disk at start-up. Same seed,
+# same map: `make MAP_SEED=7` is how to look at another one, and MAP_LAND is the
+# percentage of it that is land.
+MAP_SEED ?= 1
+MAP_LAND ?= 35
+MAP      = $(BUILD)/hexwar.map
+D81      = $(BUILD)/hexwar.d81
+
+all: $(PRG) $(D81)
 
 # xemu-xmega65 blocks until the window is closed. For an automated check run it
 # headless and screenshot on exit -- see the Verification section of CLAUDE.md.
-run: $(PRG)
-	xemu-xmega65 -besure -prg $(PRG)
+# **The disk has to be mounted**: the program reads its map from drive 8, and
+# without the image it stops at "cannot read HEXWAR.MAP".
+run: $(PRG) $(D81)
+	xemu-xmega65 -besure -8 $(D81) -prg $(PRG)
 
 $(BUILD):
 	mkdir -p $(BUILD)
@@ -86,6 +96,18 @@ STAMP = $(BUILD)/config.stamp
 .PHONY: force
 $(STAMP): force | $(BUILD)
 	@echo '$(CFLAGS)' | cmp -s - $@ || echo '$(CFLAGS)' > $@
+
+# The same trick for the map's arguments, kept separate so that a new seed
+# remakes the map and the disk but not every object.
+MAP_STAMP = $(BUILD)/map.stamp
+$(MAP_STAMP): force | $(BUILD)
+	@echo '$(MAP_SEED) $(MAP_LAND)' | cmp -s - $@ || echo '$(MAP_SEED) $(MAP_LAND)' > $@
+
+# --png leaves a preview beside it, which is much the quickest way to judge a
+# change to the generator.
+$(MAP): tools/mapgen.py $(MAP_STAMP) | $(BUILD)
+	python3 tools/mapgen.py --seed $(MAP_SEED) --land $(MAP_LAND) \
+	    --png $(BUILD)/hexwar-map.png $@
 
 $(BUILD)/%.o: src/%.c $(HDRS) Makefile $(STAMP) | $(BUILD)
 	cc6502 $(CFLAGS) -c -o $@ $<
@@ -109,16 +131,18 @@ $(ELF): $(OBJS) $(LINKFILE)
 # MEGA65 then tries to RUN as BASIC.
 $(PRG): $(ELF)
 
-# The disk image, which is how the program gets onto a real MEGA65. The name
-# autoboot.c65 is what makes the ROM boot it: a C65-mode PRG at $2001 needs no
-# wrapper, which is what old-cc65/c65bin/c65toc64wrapper.prg used to supply.
-D81 = $(BUILD)/hexwar.d81
+# The disk image, which is how the program gets onto a real MEGA65 and where it
+# finds its map. The name autoboot.c65 is what makes the ROM boot it: a C65-mode
+# PRG at $2001 needs no wrapper, which is what old-cc65/c65bin/c65toc64wrapper.prg
+# used to supply. c1541 writes host names as unshifted PETSCII, so hexwar.map
+# here is "HEXWAR.MAP" to the program; see MAP_FILE_NAME in src/map.h.
 d81: $(D81)
 
-$(D81): $(PRG)
+$(D81): $(PRG) $(MAP)
 	rm -f $@
 	cp $(PRG) $(BUILD)/autoboot.c65
-	c1541 -format hexwar,hw d81 $@ -write $(BUILD)/autoboot.c65 autoboot.c65
+	c1541 -format hexwar,hw d81 $@ -write $(BUILD)/autoboot.c65 autoboot.c65 \
+	    -write $(MAP) hexwar.map
 
 clean:
 	rm -rf $(BUILD)

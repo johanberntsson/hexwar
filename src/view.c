@@ -107,7 +107,8 @@ void view_redraw(word off_x, word off_y)
 {
     byte hy;
     word hy_first, hy_last;
-    word ax_first, ax_last;
+    word vx_first, vx_last;
+    byte ax_first;
 
     // Source megabyte $80 (the expanded sheet in attic RAM), bank 0 within it;
     // destination megabyte 0 (chip RAM); palette index 0 transparent.
@@ -116,9 +117,14 @@ void view_redraw(word off_x, word off_y)
     // Which map cells can touch the window. A tile is 8 characters wide and
     // starts at 4*ax, and 4 rows tall starting at 3*hy, so anything beyond
     // these bounds is entirely outside and would only be clipped away.
-    ax_first = (off_x < 8) ? 0 : (off_x - 8) / 4;
-    ax_last = (off_x + VIEW_COLUMNS) / 4;
-    if (ax_last >= MAP_COLUMNS) ax_last = MAP_COLUMNS - 1;
+    //
+    // **Across, the map wraps**, so columns are counted in an unwrapped space
+    // shifted one map width to the right -- vx = ax + MAP_COLUMNS -- which keeps
+    // everything unsigned when the window starts within a tile of the seam.
+    // Only the array index is wrapped, in the loop below.
+    vx_first = (off_x + MAP_WIDTH_CHARS - 8) / 4;
+    vx_last = (off_x + VIEW_COLUMNS) / 4 + MAP_COLUMNS;
+    ax_first = (byte)(vx_first % MAP_COLUMNS);
 
     hy_first = (off_y < 4) ? 0 : (off_y - 4) / 3;
     hy_last = (off_y + VIEW_ROWS) / 3;
@@ -132,14 +138,22 @@ void view_redraw(word off_x, word off_y)
     for (hy = (byte)hy_first; hy <= (byte)hy_last; ++hy) {
         byte ay = hy >> 1;
         byte parity = hy & 1;
-        word ax = ax_first;
+        word vx = vx_first;
+        byte ax = ax_first;
+        int tx;
         int ty = (int)(3 * (word)hy) - (int)off_y;
 
         // Only cells whose column parity matches this hexagon row exist.
-        if ((ax & 1) != parity) ++ax;
-        for (; ax <= ax_last; ax += 2) {
-            view_draw_tile((int)(4 * ax) - (int)off_x, ty,
-                           map_tile[ay][ax]);
+        // MAP_COLUMNS is even, so vx and ax always have the same parity.
+        if ((vx & 1) != parity) {
+            ++vx;
+            if (++ax == MAP_COLUMNS) ax = 0;
+        }
+        tx = (int)(4 * vx) - (int)(off_x + MAP_WIDTH_CHARS);
+        for (; vx <= vx_last; vx += 2, tx += 8) {
+            view_draw_tile(tx, ty, map_tile[ay][ax]);
+            ax += 2;
+            if (ax >= MAP_COLUMNS) ax -= MAP_COLUMNS;
         }
     }
 }

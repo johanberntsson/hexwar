@@ -140,11 +140,73 @@ Players compete across three victory pathways.
 
 ## 6. Technical Architecture (MEGA65)
 
-### Memory & Data Structures
-Map hex attributes (terrain, features, resources) are packed into single-byte arrays to conserve Fast RAM:
+The engine this design sits on already exists — `src/view.c`, `src/sheet.c`,
+`src/mega65.c` — and `CLAUDE.md` is the authority on how it works. This section
+records only the constraints the *game* design has to respect.
+
+### The binding constraint is address space, not RAM
+
+The machine has 384 KB of chip RAM and 8 MB of attic RAM, which is far more
+than this game will ever need. What it does **not** have is more than **32 KB
+of 16-bit addressable space** — `$2001-$9FFF`, which holds all code, all
+initialised data, the BSS and the C stack. That single region is the budget
+everything competes for, and it is currently 62.4% full with nothing but the
+display engine in it (`build/hexwar.lst` is where the real figure is written
+down).
+
+| Where | Size | What can live there | Cost to reach |
+|---|---|---|---|
+| `$2001-$9FFF` | 32 KB | code, hot data, C stack | free (normal C) |
+| `$1600-$1EFF` | 2304 B | one or two hot tables (`LOW_FREE`) | free |
+| `$56F00-$5FFFF` | ~36 KB | warm tables, `__far` | far pointer, a few cycles |
+| `$8003000-$87FFFFF` | ~8 MB | cold data, save state, per-turn scratch | DMA block, or `__huge` |
+
+`$10000-$1FFFF` is not usable — screen RAM sits at `$12000` and BASIC 65 owns
+most of the rest — and `$20000-$3FFFF` is the C65 ROM, which this program
+deliberately never banks out (see `hexwar.scm`).
+
+**Consequence for the design:** cheap to add, in this order — more map layers,
+more unit records, more tables of any kind, since data goes far or attic almost
+for free. Expensive to add: more *code*. Every new subsystem (map generator,
+A* pathfinder, trade-route solver, diplomacy, the Crisis phase, save/load, the
+city screen) spends the scarce 32 KB. When that region approaches ~26 KB the
+project has to adopt Calypsi's MAP-register regions and a dispatch stub
+(Dan Sanderson, *Calypsi part 3*): code is then split into 24 KB windows with
+`#pragma clang section`, called through a resident trampoline. It works, but it
+costs `--no-cross-call`, forces shared data into a common section, and breaks
+string literals across regions — so subsystems should each get their own `.c`
+file from the start, which is what makes that split a one-line change per file
+later.
+
+**The redraw path must never be dispatched.** `view_redraw` runs in 12.8 ms
+against a 19.97 ms frame and stays ahead of the raster beam by about 100 lines;
+that slack is what stops the map tearing. View, sheet, screen and DMA code stay
+resident. Only per-turn code — AI, generation, pathfinding — goes in a banked
+region, where a trampoline call is free.
+
+### Map & data structures
+
+The map is 128x32 hexagons in doubled coordinates (`src/map.h`), wrapping
+east-west, so **one per-hex layer costs exactly 4096 bytes**. (Not Civ 1's
+80x50: in this layout that looks like 40 hexagons across by 100 down, portrait;
+128x32 is 64 by 64, about 1.33:1 landscape on screen.) Layers are separate single-byte
+arrays rather than an array of structs, so that a layer can be moved far or
+attic on its own and so that a scan over one attribute is a linear byte walk.
+
+Planned layers, and where each belongs:
+
+* **Hot** (needed by the redraw, so near or `LOW_FREE`): terrain — `map_tile`,
+  which already exists.
+* **Warm** (`__far`, bank 5): resource, feature/improvement, owner, city id,
+  unit id.
+* **Cold** (attic, paged in per turn): AI influence maps, supply/trade
+  reachability, fog-of-war per civ.
+
+Ten layers is 40 KB, which is why they cannot all be near, and also why they
+comfortably fit once they are not.
 
 ```c
-// Hex Resource ID Enum (1 byte per hex)
+// Hex resource id, one byte per hex (one 4096-byte layer)
 typedef enum {
     RES_NONE        = 0,
     RES_FISH        = 1, // Coastal fishing
@@ -156,16 +218,44 @@ typedef enum {
     RES_PURPLE_DYE  = 7  // Phoenician coast
 } ResourceType;
 
+// Per-civ state. There are at most a handful of civs, so this one stays near.
 typedef struct {
     uint8_t  civ_id;
-    uint16_t legacy_points;      // Accumulated through Monuments & Tech
-    uint16_t trade_dominance;    // Active trade route weight
-    uint8_t  is_alive;           // 1 = Active, 0 = Collapsed
+    uint16_t legacy_points;         // Accumulated through Monuments & Tech
+    uint16_t trade_dominance;       // Active trade route weight
+    uint8_t  is_alive;              // 1 = Active, 0 = Collapsed
     uint16_t crisis_survival_turns; // Counter during Collapse phase
 } CivVictoryState;
 ```
 
-### Visuals & Hardware Specs
-* **Hex Engine on VIC-IV:** Staggered odd/even hex rows rendered using 16-color Full-Color Mode (FCM) or custom character matrices. X/Y hardware pixel scrolling handles map navigation smoothly.
-* **CPU Utilization (40.5 MHz GS4510):** Ample processing overhead for A* hex pathfinding, AI trade route logic, and supply line state updates.
-* **Memory Footprint (128 KB Fast RAM + Expansion):** Map arrays, unit state tables, trade vectors, and diplomacy matrices fit easily within base fast RAM.
+### Visuals
+
+* **Hex engine on the VIC-IV:** 16-bit text mode with **256-colour**
+  full-colour characters — each cell is 64 bytes of palette indices, one per
+  pixel. Staggered odd/even hexagon rows fall out of the doubled coordinates
+  without a special case. Palette index 0 is transparent, which is what lets a
+  hexagon be blitted over its neighbour.
+* **Navigation is a full redraw, not hardware scrolling.** Every cell of the
+  60x23 map window owns 64 bytes of its own in a 92 KB tile store at `$40000`,
+  and the screen words never change after boot; moving the view redraws every
+  tile that intersects it at the new character offset, in raster-synchronised
+  painter's order. Two earlier attempts to shift the store with DMA and repair
+  the exposed edge — the cc65 build and the XC=BASIC library — never came out
+  correct. **This design does not assume
+  smooth pixel scrolling will arrive**; a cursor step is two characters
+  (16 pixels) across and one row down — the same distance on screen — and that
+  is the granularity the game gets.
+* **UI budget:** the map window is 60x23 of an 80x25 screen. The remaining
+  20-column strip and the two bottom rows are the panel, and it is drawn with
+  ordinary ROM glyphs, so panel text is cheap. Anything the design wants to
+  show that does not fit there needs a full-screen mode that reuses the tile
+  store, not extra screen area.
+
+### CPU
+
+The GS4510 at 40.5 MHz has real headroom for A* hex pathfinding, trade-route
+evaluation and supply-line updates, and — unlike the display path — per-turn
+work has a whole human-scale pause to run in rather than a 20 ms frame. The
+budget that is genuinely tight is the redraw, and it is DMA-bound rather than
+CPU-bound. Turn processing should be allowed to take a visible moment; the
+frame budget should not be spent on it.

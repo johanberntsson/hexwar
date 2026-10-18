@@ -6,7 +6,8 @@
 
 Hexwar is a turn-based strategy game on a hexagonal map for the MEGA65, written
 in C for the Calypsi 6502 tool chain. It runs in the MEGA65's native C65 mode,
-with the C65 ROM left in place, and returns to BASIC when the player quits. Its
+with the C65 KERNAL left in place (only BASIC is banked out, for the RAM
+under it), and returns to BASIC when the player quits. Its
 main parts are:
 
 - The display engine
@@ -19,15 +20,18 @@ the raster beam.
 - The map
 A 128x32 hexagon map, wrapping east to west, made at build time by a Python
 generator and read from disk at start-up. One byte per hexagon holds the
-terrain.
+terrain, whether the player has explored it, and whether anything is on it.
+A minimap in the panel shows all of it that has been explored.
 
 - Input
 The keyboard, a 1351 mouse and a joystick in either port. The mouse and the
 joystick both move a pointer drawn with two hardware sprites.
 
 - The game
-Units, cities and the turn loop: each of the player's units is asked for
-orders in turn, then the computer player moves, then the year advances.
+Units, cities, their production and the turn loop: each of the player's
+units is asked for orders in turn, then the three computer players move,
+then every city produces, then the year advances. A city screen and a menu
+bar run their own loops over the same screen.
 
 The design document, `vision.md`, describes the game the program is aiming
 at. This report describes the program as it is. Where the two differ, this

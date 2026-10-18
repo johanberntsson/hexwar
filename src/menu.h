@@ -9,6 +9,7 @@
 // What a dropdown item asks for.
 #define MENU_NONE 0
 #define MENU_RETIRE 1
+#define MENU_SHOW_MAP 2
 
 // Write the bar into row 0.
 void menu_draw(void);

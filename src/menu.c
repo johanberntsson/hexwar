@@ -21,9 +21,17 @@ static const byte menu_x[MENUS] = { 0, 5, 12, 21, 27 };
 static const char *const game_items[] = { "Retire" };
 static const byte game_commands[] = { MENU_RETIRE };
 
-static const char *const *const menu_items[MENUS] = { game_items, 0, 0, 0, 0 };
-static const byte *const menu_commands[MENUS] = { game_commands, 0, 0, 0, 0 };
-static const byte menu_count[MENUS] = { 1, 0, 0, 0, 0 };
+// Show Map is for debugging: it lifts the fog of war, and again puts it back.
+static const char *const orders_items[] = { "Show Map" };
+static const byte orders_commands[] = { MENU_SHOW_MAP };
+
+static const char *const *const menu_items[MENUS] = {
+    game_items, orders_items, 0, 0, 0
+};
+static const byte *const menu_commands[MENUS] = {
+    game_commands, orders_commands, 0, 0, 0
+};
+static const byte menu_count[MENUS] = { 1, 1, 0, 0, 0 };
 
 static byte length(const char *s)
 {

@@ -59,7 +59,7 @@ static byte cell[64];
 
 static byte colour(byte ax, byte ay)
 {
-    byte t = map_tile[ay][ax];
+    byte t = map_tile[ay][ax] | map_show;
     byte c;
 
     if (!(t & MAP_EXPLORED)) return PAL_UNEXPLORED;

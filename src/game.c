@@ -393,10 +393,21 @@ static void click(void)
     // The menu bar. Whatever it does, the view is redrawn afterwards, which
     // puts back the minimap's outline the dropdown hid.
     if ((byte)(input_y >> 3) == 0) {
-        if (menu_click() == MENU_RETIRE
-            && popup_ask("Do you want to quit this game?")) {
-            retired = 1;
-            quit = 1;
+        switch (menu_click()) {
+        case MENU_RETIRE:
+            if (popup_ask("Do you want to quit this game?")) {
+                retired = 1;
+                quit = 1;
+            }
+            break;
+        case MENU_SHOW_MAP:
+            // The whole minimap changes, so it is drawn again; the view is
+            // redrawn below anyway.
+            map_show ^= MAP_EXPLORED;
+            minimap_init();
+            message(map_show ? "Map shown" : "Map hidden", "");
+            hover_dirty = 1;
+            break;
         }
         dirty = 1;
         return;

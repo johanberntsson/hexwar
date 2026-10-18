@@ -519,10 +519,9 @@ this. And note `$D012` is 8 bits of a 0-311 raster, so it repeats for lines
 
 ## The game
 
-TODO.txt's milestones are the plan. Milestone 1 (pointer, turn loop, a
-settler, founding a city) is in; milestone 2 is the city screen and building
-units, and it is in: the city screen, changing what a city builds, and
-production.
+TODO.txt's milestones are the plan. Milestones 1 (pointer, turn loop, a
+settler, founding a city), 2 (the city screen and building units) and 3
+(computer players) are in, as of 18 Oct 2026.
 
 **The title screen comes first** (`src/title.c`): `title_show()` puts the
 title up before the disk is read, and `title_run()` runs the menu — Start
@@ -550,9 +549,15 @@ state has to be reset there too. The map is the same one each time.
 **The menu bar** (`src/menu.c`) is row 0: Game, Orders, Advisors, World,
 Civilopedia. A click on a title opens its dropdown, picked by hover and
 click or the cursor keys and Return; a click elsewhere or Esc closes it.
-Only Game has an item, **Retire**, which asks "Do you want to quit this
-game?" with `popup_ask()` (Yes/No buttons, `y`/Return, `n`/Esc) and on Yes
-goes back to the title screen. A title with no items does not open. The
+Game has **Retire**, which asks "Do you want to quit this game?" with
+`popup_ask()` (Yes/No buttons, `y`/Return, `n`/Esc) and on Yes goes back
+to the title screen. Orders has **Show Map**, a debugging toggle that
+lifts the fog of war: `map_show` (`src/map.h`) is `MAP_EXPLORED` or 0, and
+everything that draws ORs it into the map byte before testing the bit —
+`view_redraw()` (hoisted into a local outside the loop), the city patch,
+the minimap and the hover readout — so the real explored bits are never
+changed and turning it off puts the fog back as it was. Toggling redraws
+the whole minimap; a new game turns it off. A title with no items does not open. The
 dropdown is drawn over the minimap and puts it back with
 `minimap_show()` (and the map window's cells with `view_restore()` if it
 reaches them); it hides the minimap's outline sprites, and the caller's
@@ -717,12 +722,16 @@ space skips the unit this turn, `w` asks again after the others, `f`
 fortifies; Return ends the turn; the cursor keys scroll; ESC or RUN/STOP
 quits. **`w a s d` no longer scroll**, since `a d` and `w` are orders now.
 
-**Not tried on the machine yet** (as of 17 Oct 2026; the user is testing
-next): the mouse and joystick reads are hexgame's, which came from Ozmoo's
-tested code, but nothing in this build has run on a real MEGA65 — nor has
-loading the sheet off the disk, nor the sheet in bank 5, nor BASIC banked
-out with `map_tile` under it (Search And Rescue's arrangement, which has). Things to look at
-there, roughly in order of suspicion: that `TILES.FCI` loads at all (the
+**Not tried on the machine yet** (as of 18 Oct 2026, with milestones 1-3
+in; the user is testing next): the mouse and joystick reads are hexgame's,
+which came from Ozmoo's tested code, but nothing in this build has run on a
+real MEGA65 — nor has loading the sheet off the disk, nor the sheet in bank
+5, nor BASIC banked out with `map_tile`, the unit and city lists and **the
+sprite blocks** under it (Search And Rescue's arrangement, which has, though
+not with sprites up there), nor the minimap's characters at `$5E000`, nor
+the reverse-video buttons on the city screen (colour RAM attribute bits,
+which xemu is known to be loose about). Things to look at there, roughly
+in order of suspicion: that `TILES.FCI` loads at all (the
 hot-register note below applies to it as much as to the map); which port the
 mouse turns up on (Ozmoo saw port 1 on hardware, port 2 in xemu — the button
 is read from both, the pots are the same registers either way); whether the
@@ -840,7 +849,8 @@ and a screenshot shows the result. Menu item *i* is at sprite y `92 + 16i`
 has hovered over stays selected after it leaves**, so a script that clicks
 somewhere and then comes back to a menu has to select with the cursor keys
 before pressing Return. The Game menu's title is at `{…,4,4,KEY_CLICK}`
-and Retire at `{…,8,20,KEY_CLICK}`; `make NO_TITLE=1` skips all
+and Retire at `{…,8,20,KEY_CLICK}`; Orders at `{…,26,4,KEY_CLICK}` and
+Show Map at `{…,30,20,KEY_CLICK}`; `make NO_TITLE=1` skips all
 three screens and the popup. Frames are counted in both loops, so a `-sleepless`
 run is as deterministic as a real one. The script stops rather than wrapping, or the
 presses would replay. End xemu with `SIGTERM` (a background job from a script

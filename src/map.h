@@ -75,7 +75,14 @@ extern byte map_tile[MAP_ROWS][MAP_COLUMNS];
 #define MAP_EXPLORED 0x40
 #define MAP_TERRAIN_MASK 0x3f
 #define MAP_TERRAIN(AX, AY) (map_tile[AY][AX] & MAP_TERRAIN_MASK)
-#define MAP_IS_EXPLORED(AX, AY) (map_tile[AY][AX] & MAP_EXPLORED)
+#define MAP_IS_EXPLORED(AX, AY) ((map_tile[AY][AX] | map_show) & MAP_EXPLORED)
+
+// **Orders/Show Map, for debugging the computer players**: MAP_EXPLORED to
+// draw every hexagon as if explored, 0 for the fog of war. Everything that
+// draws ORs it into the map byte before looking at the bit, so the real
+// explored bits are never touched and turning it off puts the fog back as
+// it was. A new game turns it off.
+extern byte map_show;
 
 // The six neighbours of a hexagon, clockwise from east. In doubled
 // coordinates east and west are hx +/- 2 and the four diagonals hx +/- 1,

@@ -46,12 +46,14 @@ tool chain and is selected by `--target=mega65`. There is nothing to clone.
 
 ## Status
 
-Milestone 1 of `TODO.txt`: a generated, east-west wrapping map that scrolls;
-a mouse or joystick pointer; a turn loop; one settler, which can move and
-found a city. Controls are listed along the bottom of the screen. Verified
-in xemu; not yet on a real MEGA65.
-
-Next is milestone 2: a city screen, and building warriors and builders.
+Milestones 1-3 of `TODO.txt`: a generated, east-west wrapping map that
+scrolls, under a fog of war; a minimap; a mouse or joystick pointer; a turn
+loop; a settler that founds a city; a city screen (double-click a city)
+where it is told to build warriors or builders, which it then produces; a
+menu bar with Game/Retire and Orders/Show Map; and three computer players
+that found cities, guard them, build and explore. There is no combat yet.
+Controls are listed along the bottom of the screen. Verified in xemu; not
+yet on a real MEGA65.
 
 ## Credits
 

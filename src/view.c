@@ -179,7 +179,7 @@ void view_draw_patch(byte col, byte row, byte ax, byte ay)
         }
         cell_x[i] = nx;
         cell_y[i] = ny;
-        t = map_tile[ny][nx];
+        t = map_tile[ny][nx] | map_show;
         view_draw_tile(col + patch_x[i], row + patch_y[i],
                        (t & MAP_EXPLORED) ? (t & MAP_TERRAIN_MASK)
                                           : TILE_UNDISCOVERED);
@@ -188,7 +188,7 @@ void view_draw_patch(byte col, byte row, byte ax, byte ay)
     // behind it -- but without the selection ring, which means nothing here.
     for (i = 0; i < 7; ++i) {
         if (cell_x[i] == 0xff) continue;
-        t = map_tile[cell_y[i]][cell_x[i]];
+        t = map_tile[cell_y[i]][cell_x[i]] | map_show;
         if ((t & (MAP_EXPLORED | MAP_OCCUPIED)) != (MAP_EXPLORED | MAP_OCCUPIED))
             continue;
         n = unit_overlay(cell_x[i], cell_y[i], tiles);
@@ -204,6 +204,7 @@ void view_redraw(word off_x, word off_y)
     word hy_first, hy_last;
     word vx_first, vx_last;
     byte ax_first;
+    byte show = map_show;       // Orders/Show Map; a local for the loop
 
     // Source: chip RAM, bank 5 (the expanded sheet); destination megabyte 0
     // (chip RAM); palette index 0 transparent.
@@ -249,7 +250,7 @@ void view_redraw(word off_x, word off_y)
         }
         tx = (int)(4 * vx) - (int)(off_x + MAP_WIDTH_CHARS);
         for (; vx <= vx_last; vx += 2, tx += 8) {
-            byte t = map_tile[ay][ax];
+            byte t = map_tile[ay][ax] | show;
             // An unexplored hexagon is drawn black, not skipped -- the
             // store is never cleared -- and whatever is on it stays hidden.
             if (!(t & MAP_EXPLORED)) {

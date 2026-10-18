@@ -33,17 +33,10 @@ tool chain and is selected by `--target=mega65`. There is nothing to clone.
 - `src/` — the game. documentation/techreport.md describes the layers and the display.
 - `res/tiles.fci` — the tile sheet, built from `tiles/*.png` by running
   `make` in `tiles/` (`tools/mktiles.py`). Checked in.
-- `alltiles/` — the full OpenCiv tile collection the art is picked from.
-- `TODO.txt` — the milestones.
-- `basic/` — an earlier, more complete XC=BASIC 3 version, and the screenshot
-  above. Not built by anything here; kept because it is the layout this is
-  aiming at.
 - `documentation/techreport.md` — the technical report: program structure,
   memory allocation and the main loop.
-- `design.md` — notes on hex grids and on how the original Civilization's map
+- `documentation/design.md` — notes on hex grids and on how the original Civilization's map
   generator worked.
-- `old-cc65/` — the 2022 cc65 version this replaced. Kept until the rewrite has
-  everything it had.
 
 ## Status
 

@@ -1,6 +1,10 @@
 #include "civ.h"
 #include "unit.h"
 
+#if PLAYERS != CIVS
+#error "every people is a player: player_civ[] and civ_choose() assume it"
+#endif
+
 const char *const civ_people[CIVS] = {
     "Mycenaeans", "Hittites", "Egyptians", "Canaanites",
 };
@@ -39,7 +43,9 @@ const char *const level_note[LEVELS] = {
 };
 
 byte game_level;
-byte player_civ[2] = { CIV_MYCENAEANS, CIV_HITTITES };
+byte player_civ[CIVS] = {
+    CIV_MYCENAEANS, CIV_HITTITES, CIV_EGYPTIANS, CIV_CANAANITES
+};
 
 // Each people's palace centres and towns, roughly in order of importance.
 // No name is over ten characters, which is the width of the panel.
@@ -65,8 +71,8 @@ static const char *const city_names[CIVS][CITY_NAMES] = {
 
 void civ_choose(byte civ)
 {
-    player_civ[PLAYER_HUMAN] = civ;
-    player_civ[PLAYER_AI] = (byte)((civ + 1) % CIVS);
+    byte p;
+    for (p = 0; p < CIVS; ++p) player_civ[p] = (byte)((civ + p) % CIVS);
 }
 
 const char *civ_city_name(byte civ, byte n)

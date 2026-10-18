@@ -32,7 +32,9 @@ typedef uint32_t dword;
 // called `highbss`. Ordinary 16-bit addresses, so it costs nothing per access
 // either. **Uninitialised data only**: the PRG is loaded with BASIC still
 // mapped, so nothing that has to arrive from the disk can live up there, and
-// the linker script is what keeps it out.
+// the linker script is what keeps it out. **Nor is it cleared by the
+// startup**: whatever is put there must be set before it is read, as
+// unit_reset() and city_reset() do for a new game.
 #define HIGH_BSS __attribute__((section("highbss")))
 
 // BASIC back over $A000-$BFFF, as the ROM had it. The last thing before

@@ -9,6 +9,7 @@
 // UNIT_NONE and the end-of-turn prompt in the panel.
 
 #include "game.h"
+#include "ai.h"
 #include "city.h"
 #include "cityscreen.h"
 #include "civ.h"
@@ -176,20 +177,27 @@ static byte pointer_hex(byte *ax, byte *ay)
 }
 
 // What is under the arrow, right-aligned at the end of the top row: a city's
-// name, the terrain (or "Unexplored", which hides both), and the cell -- on
+// name or whose unit it is, the terrain (or "Unexplored", which hides both), and the cell -- on
 // the map window or on the minimap. Blank when the arrow is on neither.
 static void draw_hover(void)
 {
-    byte ax, ay, c, x;
+    byte ax, ay, c, u, x;
 
     line_clear();
     if (pointer_hex(&ax, &ay) || minimap_hex(input_x, input_y, &ax, &ay)) {
         if (!MAP_IS_EXPLORED(ax, ay)) {
             line_add("Unexplored");
         } else {
+            // A city's name says whose it is; a unit needs telling.
             c = city_at(ax, ay);
+            u = unit_at(ax, ay);
             if (c != CITY_NONE) {
                 line_add(city_name_of(c));
+                line_add("  ");
+            } else if (u != UNIT_NONE) {
+                line_add(civ_adjective[player_civ[unit_owner[u]]]);
+                line_add(" ");
+                line_add(unit_kind_name[unit_kind[u]]);
                 line_add("  ");
             }
             line_add(terrain_name[MAP_TERRAIN(ax, ay)]);
@@ -245,13 +253,6 @@ static void select_unit(byte after)
     draw_orders();
 }
 
-// **The computer player, which does nothing yet.** It is here so that the
-// loop has the shape it will keep: the human moves, then every other player,
-// then the year turns over.
-static void ai_turn(void)
-{
-    unit_begin_turn(PLAYER_AI);
-}
 
 // Then every city's production, the computer's included, so that a unit
 // finished now is ready for the turn about to begin. With more than one
@@ -261,7 +262,7 @@ static void end_turn(void)
     byte c, kind;
 
     message("", "");
-    ai_turn();
+    for (c = PLAYER_FIRST_AI; c < PLAYERS; ++c) ai_turn(c);
     for (c = 0; c < city_count; ++c) {
         kind = city_produce(c);
         if (kind != KIND_NONE && city_owner[c] == PLAYER_HUMAN) {
@@ -287,9 +288,16 @@ static void move_active(byte dir)
     byte nx, ny, t;
 
     if (!map_neighbour(unit_ax[u], unit_ay[u], dir, &nx, &ny)) return;
-    t = MAP_TERRAIN(nx, ny);
-    if (t == TILE_OCEAN || t == TILE_SHALLOW_OCEAN) {
+    t = unit_can_enter(PLAYER_HUMAN, nx, ny);
+    if (t == ENTER_WATER) {
         message("Cannot swim", "");
+        return;
+    }
+    if (t == ENTER_FOREIGN) {
+        // Whose: a city's owner if there is one, otherwise the unit's.
+        t = city_at(nx, ny);
+        t = (t != CITY_NONE) ? city_owner[t] : unit_owner[unit_at(nx, ny)];
+        message("Blocked by the", civ_people[player_civ[t]]);
         return;
     }
     message("", "");
@@ -492,6 +500,7 @@ void game_init(void)
         ay = cy;
     }
     unit_create(KIND_SETTLER, PLAYER_HUMAN, ax, ay);
+    ai_place();
 
     turn = 1;
     year = START_YEAR;

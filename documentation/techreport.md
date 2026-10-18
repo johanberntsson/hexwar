@@ -72,6 +72,10 @@ most important routines included in each source file.
 | menu.c | the menu bar along the top, and its dropdowns |
 | &nbsp;&nbsp;&nbsp;_menu\_click_ | opens the dropdown under the arrow and returns what was picked |
 |  |  |
+| ai.c | the computer players |
+| &nbsp;&nbsp;&nbsp;_ai\_place_ | puts each one's settler on good land, well away from the others |
+| &nbsp;&nbsp;&nbsp;_ai\_turn_ | one computer player's turn |
+|  |  |
 | popup.c | boxes of text over the map, closed with a click or a key |
 | &nbsp;&nbsp;&nbsp;_popup\_show_ | word-wraps and shows the text, waits, and puts the map back |
 |  |  |
@@ -162,23 +166,25 @@ BASIC ROM and is the program's once `src/bank.s` has banked BASIC out, before
 | \$0002-\$0039 | 0.1 | Calypsi's pseudo registers, in zero page |
 | \$1600-\$1790 | 0.4 | the popup's text (the `zpsave` section, `LOW_FREE`) |
 | \$1791-\$1eff | 1.9 | free |
-| \$2001-\$2a60 | 2.6 | BASIC stub, startup code, constant data and text |
-| \$2a61-\$7a68 | 20.0 | code |
-| \$7a69-\$7c68 | 0.5 | C stack |
-| \$7c69-\$83f9 | 1.9 | BSS: units, cities, buffers |
-| \$83fa-\$9fff | 7.0 | free |
-| \$a000-\$afff | 4.0 | the map's terrain layer, `map_tile` (`highbss`, `HIGH_BSS`) |
-| \$b000-\$bfff | 4.0 | free |
+| \$2001-\$2aef | 2.7 | BASIC stub, startup code, constant data and text |
+| \$2af0-\$8a4a | 23.8 | code |
+| \$8a4b-\$8c4a | 0.5 | C stack |
+| \$8c4b-\$8ffe | 0.9 | BSS: buffers and small state |
+| \$8fff-\$9fff | 4.0 | free |
+| \$a000-\$b41f | 5.0 | `highbss` (`HIGH_BSS`): the map's terrain layer `map_tile`, the unit and city arrays, the sprite blocks |
+| \$b420-\$bfff | 3.0 | free |
 
-The PRG is everything up to \$7a68; the C stack and the BSS are not stored in
+The PRG is everything up to \$8a4a; the C stack and the BSS are not stored in
 the file, only reserved after it. Nothing initialised may go above \$9fff,
 because the PRG is loaded while BASIC is still mapped there, so only BSS
 marked `HIGH_BSS` is put in the window. BASIC is banked back in as the last
 thing `main()` does before it returns.
 
 The largest item in the BSS is the terrain layer, `map_tile`, at 4096 bytes,
-which is why it was the first to move up. The units take 384 bytes (six one-byte fields for each of 64 units) and the
-cities 128 (four fields for each of 32). Both are stored as one array per
+which is why it was the first to move up. The units take 384 bytes (six
+one-byte fields for each of 64 units) and the cities 224 (five byte fields
+and a word for each of 32), and they followed it. The startup does not
+clear the window, so a new game empties both lists itself. Both are stored as one array per
 field rather than as an array of structs, because the 6502 reads `unit_ax[u]`
 with a single indexed instruction.
 
@@ -327,7 +333,7 @@ terrain is drawn, and their overlays are drawn after the next row's terrain.
 | -- |  ---- |
 | Orders | each of the player's units that has moves left and no standing orders is selected in turn (`unit_next`) and brought into view |
 | End of turn | with no unit left, the panel shows "End of turn"; Return, or a click on the panel, goes on |
-| Computer player | `ai_turn`, which for now only gives the computer's units their moves back |
+| Computer players | `ai_turn` for each of the three: what each city builds, and every unit's move |
 | Production | every city adds its shields (its own hexagon's, at least 1, plus its best neighbour's); one that reaches the cost of what it is building puts the unit on its hexagon and keeps the surplus |
 | New turn | the turn number goes up, the year moves on ten years from 1600 BC, and every unit gets its moves back |
 

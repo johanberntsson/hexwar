@@ -15,20 +15,23 @@ static const byte terrain_shields[] = {
 };
 
 byte city_count;
-byte city_owner[MAX_CITIES];
-byte city_ax[MAX_CITIES];
-byte city_ay[MAX_CITIES];
-byte city_name[MAX_CITIES];
-byte city_build[MAX_CITIES];
-word city_shields[MAX_CITIES];
+// In HIGH_BSS, out of the 32 KB; city_count says which entries mean
+// anything, and city_reset() sets it for every game.
+HIGH_BSS byte city_owner[MAX_CITIES];
+HIGH_BSS byte city_ax[MAX_CITIES];
+HIGH_BSS byte city_ay[MAX_CITIES];
+HIGH_BSS byte city_name[MAX_CITIES];
+HIGH_BSS byte city_build[MAX_CITIES];
+HIGH_BSS word city_shields[MAX_CITIES];
 
 // How many cities each player has named, so the next gets the next name.
-static byte named[2];
+static byte named[PLAYERS];
 
 void city_reset(void)
 {
+    byte p;
     city_count = 0;
-    named[0] = named[1] = 0;
+    for (p = 0; p < PLAYERS; ++p) named[p] = 0;
 }
 
 byte city_at(byte ax, byte ay)
@@ -91,6 +94,7 @@ byte city_produce(byte c)
     byte kind = city_build[c];
     word cost = unit_kind_cost[kind];
 
+    if (kind == KIND_NONE) return KIND_NONE;    // told to build nothing
     city_shields[c] += city_production(c);
     if (city_shields[c] < cost) return KIND_NONE;
     if (unit_create(kind, city_owner[c], city_ax[c], city_ay[c])

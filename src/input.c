@@ -115,9 +115,11 @@ static const byte arrow_outline[ARROW_BYTES] = {
 //      +192   sprite 2, free for sprite_shape() -- the minimap's view frame
 //      +256   sprite 3, likewise
 //
-// It is ordinary BSS rather than LOW_FREE, because $1600-$1EFF is where the
-// ROM keeps disk buffers and a later load or save would scribble on it.
-static byte sprite_ram[64 + 64 + 4 * 64];
+// It is HIGH_BSS rather than LOW_FREE, because $1600-$1EFF is where the
+// ROM keeps disk buffers and a later load or save would scribble on it. The
+// VIC-IV reads sprites from RAM whatever the CPU has mapped, so the BASIC
+// ROM's being over $A000 at times makes no difference to it.
+HIGH_BSS static byte sprite_ram[64 + 64 + 4 * 64];
 static word sprite_list;         // the aligned start inside it
 
 static byte saved_ptr[3];       // SPRPTRADR as the ROM left it

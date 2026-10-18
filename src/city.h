@@ -12,7 +12,8 @@ extern byte city_owner[MAX_CITIES];
 extern byte city_ax[MAX_CITIES];
 extern byte city_ay[MAX_CITIES];
 extern byte city_name[MAX_CITIES];      // index into the owner's name list
-extern byte city_build[MAX_CITIES];     // the KIND_* it is building
+extern byte city_build[MAX_CITIES];     // the KIND_* it is building, or
+                                        // KIND_NONE for nothing (the AI's)
 extern word city_shields[MAX_CITIES];   // towards it, of unit_kind_cost[]
 
 // No cities, and every player's names unused, for a new game.

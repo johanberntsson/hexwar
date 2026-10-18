@@ -23,9 +23,11 @@
 #define ORDERS_NONE 0
 #define ORDERS_FORTIFY 1
 
-// The players. There is one human and, for now, one AI that does nothing.
+// The players: the human, and a computer player for each of the other
+// peoples (src/ai.c). Player p leads people player_civ[p] (civ.h).
 #define PLAYER_HUMAN 0
-#define PLAYER_AI 1
+#define PLAYER_FIRST_AI 1
+#define PLAYERS 4
 
 extern byte unit_kind[MAX_UNITS];
 extern byte unit_owner[MAX_UNITS];
@@ -62,6 +64,20 @@ byte unit_next(byte owner, byte after);
 
 // How many units and cities `owner` has, for deciding the game is over.
 byte unit_count(byte owner);
+
+// How many units of `kind` `owner` has; KIND_NONE counts all of them.
+byte unit_count_kind(byte owner, byte kind);
+
+// The unit drawn on (ax, ay) -- the active one if it is there, otherwise the
+// last in the list -- or UNIT_NONE.
+byte unit_at(byte ax, byte ay);
+
+// Whether a unit of `owner` may step onto (ax, ay): not into water, and not
+// onto another player's unit or city, since there is no combat yet.
+#define ENTER_OK 0
+#define ENTER_WATER 1
+#define ENTER_FOREIGN 2
+byte unit_can_enter(byte owner, byte ax, byte ay);
 
 // Set or clear MAP_OCCUPIED on (ax, ay) from what is there now. Anything that
 // puts a unit or a city on a hexagon, or takes one off, calls this.

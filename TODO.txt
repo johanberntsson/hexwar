@@ -2,16 +2,20 @@
 
 --- MILESTONES ---
 
+--- DONE ---
+
 Milestone 3: basic AI players
-- Pick statring positions for AI players. Something on a plain, not too close to other AI or the player
+- Pick starting positions for AI players. Something on a plain, not too close to other AI (and
+  player) units and cities
+  (this should be a general routine for finding good city spots that can be used both for the
+  player (to find a suitable initial start position) and to place AI player. It can also be used
+  later for AI to decide where to build additional cities)
 - Some basic strategies (to be improved on later on):
   1. If no city, found one
   2. If no military, build the best available (warrior)
   3. If no builder, make one
   4. Warriors without orders explore
   5. builder without orders to to unimproved tiles around their city
-
---- DONE ---
 
 Milestone 2: build new units
 - Implement a city screen

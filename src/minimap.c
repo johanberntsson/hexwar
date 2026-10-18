@@ -4,6 +4,7 @@
 #include "screen.h"
 #include "sheet.h"
 #include "input.h"
+#include "unit.h"
 
 #if MINIMAP_COLUMNS * 8 != MAP_COLUMNS || MINIMAP_ROWS * 8 != 2 * MAP_ROWS
 #error "the minimap is a pixel a hexagon column and a line a hexagon row"
@@ -27,9 +28,15 @@
 #define PAL_LIGHTBLUE 14
 #define PAL_LIGHTGREY 15
 
+#define PAL_PURPLE 4
+#define PAL_ORANGE 8
+
 #define PAL_UNEXPLORED PAL_BLACK
-#define PAL_CITY PAL_WHITE
-#define PAL_UNIT PAL_RED
+
+// Cities and units in their player's colour, the human's white.
+static const byte player_colour[PLAYERS] = {
+    PAL_WHITE, PAL_RED, PAL_PURPLE, PAL_ORANGE,
+};
 
 // By terrain value, which is a TILE_* number.
 static const byte terrain_colour[] = {
@@ -53,9 +60,14 @@ static byte cell[64];
 static byte colour(byte ax, byte ay)
 {
     byte t = map_tile[ay][ax];
+    byte c;
+
     if (!(t & MAP_EXPLORED)) return PAL_UNEXPLORED;
-    if (t & MAP_OCCUPIED)
-        return city_at(ax, ay) != CITY_NONE ? PAL_CITY : PAL_UNIT;
+    if (t & MAP_OCCUPIED) {
+        c = city_at(ax, ay);
+        return player_colour[c != CITY_NONE ? city_owner[c]
+                                            : unit_owner[unit_at(ax, ay)]];
+    }
     return terrain_colour[t & MAP_TERRAIN_MASK];
 }
 

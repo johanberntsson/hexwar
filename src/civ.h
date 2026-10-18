@@ -29,12 +29,12 @@ extern const char *const level_name[LEVELS];
 extern const char *const level_note[LEVELS];
 extern byte game_level;
 
-// Which people each player (PLAYER_HUMAN, PLAYER_AI) is. Mycenaeans against
-// Hittites unless civ_choose() says otherwise, which is what a build without
-// the title screen plays.
-extern byte player_civ[2];
+// Which people each player is, PLAYER_HUMAN first: every people plays, so
+// PLAYERS is CIVS. The human leads the Mycenaeans unless civ_choose() says
+// otherwise, which is what a build without the title screen plays.
+extern byte player_civ[CIVS];
 
-// The human leads `civ`, and the AI the next people in the list.
+// The human leads `civ`, and the computer players the others in list order.
 void civ_choose(byte civ);
 
 // The nth city name of a people, at most ten characters; past the end of

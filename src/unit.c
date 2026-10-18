@@ -4,12 +4,14 @@
 #include "minimap.h"
 #include "sheet.h"
 
-byte unit_kind[MAX_UNITS];
-byte unit_owner[MAX_UNITS];
-byte unit_ax[MAX_UNITS];
-byte unit_ay[MAX_UNITS];
-byte unit_moves[MAX_UNITS];
-byte unit_orders[MAX_UNITS];
+// In HIGH_BSS, out of the 32 KB -- and so not cleared by the startup:
+// unit_reset() empties the list for every game.
+HIGH_BSS byte unit_kind[MAX_UNITS];
+HIGH_BSS byte unit_owner[MAX_UNITS];
+HIGH_BSS byte unit_ax[MAX_UNITS];
+HIGH_BSS byte unit_ay[MAX_UNITS];
+HIGH_BSS byte unit_moves[MAX_UNITS];
+HIGH_BSS byte unit_orders[MAX_UNITS];
 byte unit_active = UNIT_NONE;
 
 const char *const unit_kind_name[] = { "", "Settler", "Warrior", "Builder" };
@@ -94,9 +96,35 @@ byte unit_count(byte owner)
     return n;
 }
 
-// The unit drawn on (ax, ay): the active one if it is there, otherwise the
-// last in the list, or UNIT_NONE.
-static byte unit_on(byte ax, byte ay)
+byte unit_count_kind(byte owner, byte kind)
+{
+    byte u, n = 0;
+    for (u = 0; u < MAX_UNITS; ++u)
+        if (unit_kind[u] != KIND_NONE && unit_owner[u] == owner
+            && (kind == KIND_NONE || unit_kind[u] == kind))
+            ++n;
+    return n;
+}
+
+byte unit_can_enter(byte owner, byte ax, byte ay)
+{
+    byte t = map_tile[ay][ax];
+    byte terrain = t & MAP_TERRAIN_MASK;
+    byte c, u;
+
+    if (terrain == TILE_OCEAN || terrain == TILE_SHALLOW_OCEAN)
+        return ENTER_WATER;
+    if (!(t & MAP_OCCUPIED)) return ENTER_OK;
+    c = city_at(ax, ay);
+    if (c != CITY_NONE && city_owner[c] != owner) return ENTER_FOREIGN;
+    for (u = 0; u < MAX_UNITS; ++u)
+        if (unit_kind[u] != KIND_NONE && unit_ax[u] == ax && unit_ay[u] == ay
+            && unit_owner[u] != owner)
+            return ENTER_FOREIGN;
+    return ENTER_OK;
+}
+
+byte unit_at(byte ax, byte ay)
 {
     byte u, top = UNIT_NONE;
     if (unit_active != UNIT_NONE && unit_ax[unit_active] == ax
@@ -111,7 +139,7 @@ static byte unit_on(byte ax, byte ay)
 
 void unit_mark(byte ax, byte ay)
 {
-    if (unit_on(ax, ay) != UNIT_NONE || city_at(ax, ay) != CITY_NONE)
+    if (unit_at(ax, ay) != UNIT_NONE || city_at(ax, ay) != CITY_NONE)
         map_tile[ay][ax] |= MAP_OCCUPIED;
     else
         map_tile[ay][ax] &= (byte)~MAP_OCCUPIED;
@@ -121,7 +149,7 @@ void unit_mark(byte ax, byte ay)
 byte unit_overlay(byte ax, byte ay, byte *tiles)
 {
     byte n = 0;
-    byte u = unit_on(ax, ay);
+    byte u = unit_at(ax, ay);
     if (city_at(ax, ay) != CITY_NONE) tiles[n++] = TILE_CITY;
     if (u != UNIT_NONE) {
         if (u == unit_active) tiles[n++] = TILE_SELECT;

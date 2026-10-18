@@ -173,7 +173,7 @@ buffers at the default `$FF80000` and corrupts the display.
 | Address | Size | Contents |
 |---|---|---|
 | `$2001-$9FFF` | 32 KB | program, data, BSS, C stack. About 25 KB used |
-| `$A000-$BFFF` | 8 KB | `highram`, under the BASIC ROM, banked out by `src/bank.s`: `map_tile`, the rest free — `HIGH_BSS` in `src/mega65.h` moves a variable there |
+| `$A000-$BFFF` | 8 KB | `highram`, under the BASIC ROM, banked out by `src/bank.s`: `map_tile`, the unit and city arrays, the sprite blocks, the AI's headings; about 3 KB free — `HIGH_BSS` in `src/mega65.h` moves a variable there, and **the startup does not clear it** |
 | `$1600-$1EFF` | 2304 | `zpsave`: the popup's 400-byte text, the rest free — `LOW_FREE` in `src/mega65.h` moves a variable there |
 | `$12000` | 4000 | screen RAM, 80x25 cells of 2 bytes |
 | `$40000-$56EFF` | 94208 | the view's tile store, 23 rows of 4096 |
@@ -232,9 +232,14 @@ when a 15th tile or another full-colour surface needs room:
 **The 32 KB is what to watch.** The tile sheet used to be linked in
 (6.5 KB, and growing a KB a tile) and now comes off the disk, and
 `map_tile`'s 4 KB has moved to `$A000`. At the last measurement (18 Oct
-2026) `build/hexwar.lst` reported the region **84.5% full (about 5 KB
-free)** with milestones 1 and 2, the minimap, the city screen and the menu
-bar in it; it was 89.9% before `map_tile` moved. A `NO_TITLE` build is about 11 points
+2026) `build/hexwar.lst` reported the region **87.5% full (about 4 KB
+free)** with milestones 1-3, the minimap, the city screen and the menu
+bar in it, and `highram` 62.9% full; the region was 89.9% before
+`map_tile` moved, and 90.7% before the unit and city arrays and the sprite
+blocks followed it. **Anything moved to `HIGH_BSS` must be set before it is
+read**, since the startup clears only the ordinary BSS: `unit_reset()` and
+`city_reset()` do it for the lists, `input_init()` for the sprites, and
+the AI's `heading[]` is taken modulo 6. A `NO_TITLE` build is about 11 points
 smaller, so measure the default build.
 
 **BASIC is banked out for the whole run** (18 Oct 2026, Search And
@@ -558,10 +563,31 @@ end above row 11**, where the panel starts.
 Canaanites (vision.md §3), each a name for the menu, an adjective for the
 panel, a line about them, a leader and the title the diplomatic letters will
 use (kept apart for that reason), and a dozen city names. `player_civ[]` says which
-people each player is — the AI takes the one after the human's — and
+people each player is — **every people plays**, `PLAYERS` = `CIVS` = 4,
+the human first and the computer players the others in list order — and
 `city_name_of()` goes through it. The five difficulty levels (Scribe to
 Great King) are there too, in `game_level`, which nothing reads yet.
-`NO_TITLE` builds play Mycenaeans against Hittites, as before.
+`NO_TITLE` builds play the Mycenaeans.
+
+**The computer players are `src/ai.c`** (milestone 3). `ai_place()`, from
+`game_init()`, puts each one's settler on grassland with at least four land
+neighbours, at least 16 hexagons from every other settler (12, 8 and 4 if
+200 random tries each find nothing). `ai_turn(p)` then plays TODO.txt's
+five rules: a settler founds a city where it stands; the first warrior in
+an unguarded city fortifies there and the rest explore (on along a heading
+kept in `heading[]`, turning now and then); a builder goes to a hexagon
+next to its nearest city and stays — **there are no improvements yet**, so
+that is where rule 5 stops. Each city builds a warrior if the player has
+none, then a builder if it has none, then warriors, until the player has
+`AI_UNIT_CAP` (6) units, when it builds nothing (`city_build` =
+`KIND_NONE`), so that three computer players cannot fill the 64 unit slots
+everyone shares. Its random numbers are a xorshift with a fixed seed, so a
+headless run is deterministic. **There is no combat**: `unit_can_enter()`
+keeps every unit, the human's included, off water and off another player's
+units and cities ("Blocked by the Hittites"). Other players' units and
+cities are drawn like the human's — only on explored hexagons — and told
+apart by the hover readout ("Hittite Warrior") and on the minimap by
+colour: the human white, then red, purple and orange.
 
 **The city screen** (`src/cityscreen.c`, after
 `civ1-reference/civ1-pic02.png`) takes over the whole screen: the city's
@@ -614,7 +640,8 @@ advance in this program**. What the game is waiting for is only
 `unit_active`: a unit wanting orders, or `UNIT_NONE` and the end-of-turn
 prompt in the panel. A turn is: every human unit with moves and no standing
 orders gets asked, in list order (`unit_next()`); then the prompt; then
-`ai_turn()`, which does nothing yet; then the year moves on. The game is over
+`ai_turn()` for each computer player; then every city's production; then
+the year moves on. The game is over
 when the human has neither units nor cities.
 
 **Units and cities are arrays per field** (`unit_kind[]`, `unit_ax[]`, …),

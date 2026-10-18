@@ -242,9 +242,9 @@ when a 15th tile or another full-colour surface needs room:
 
 **The 32 KB is what to watch.** The tile sheet used to be linked in
 (6.5 KB, and growing a KB a tile) and now comes off the disk, and
-`map_tile`'s 4 KB has moved to `$A000`. At the last measurement (18 Oct
-2026) `build/sevenships.lst` reported the region **92.8% full (about 2.3 KB
-free)** with milestones 1-4, the minimap, the city and help screens, the menu
+`map_tile`'s 4 KB has moved to `$A000`. At the last measurement (19 Oct
+2026, after the rename and the blinking unit) `build/sevenships.lst`
+reported the region **93.0% full (about 2.2 KB free)** with milestones 1-4, the minimap, the city and help screens, the menu
 bar and the quit-time register restore in it, and `highram` 63.3% full.
 Milestone 4 alone was about 2 KB, paid for in part by taking `puts` out of
 `fatal()` (1.1 KB). The region was 89.9% before
@@ -744,9 +744,20 @@ out; 0 and 1 stay the arrow and are drawn in front.
 in its tile's bottom character row, which is also the top row of the
 hexagons below, which are drawn later and are opaque in the middle. So the
 occupied cells of row `hy` are noted while its terrain goes down, and their
-city, selection ring and unit are drawn once row `hy + 1`'s terrain is in.
+city and unit are drawn once row `hy + 1`'s terrain is in.
 Still top to bottom, at most three character rows behind, so the beam race
 is unaffected.
+
+**The active unit blinks**, half a second drawn and half a second not
+(`unit_hidden`, flipped by `game_run()` every `BLINK_FRAMES`), and each
+change is a whole `view_redraw()`. Redrawing only its hexagon was
+considered and is not worth it: a tile overlaps five neighbours, so putting
+the terrain back under the unit means redrawing parts of all of them in
+painter's order, clipped, or keeping a snapshot — and the full redraw
+already runs every frame while a cursor key is held. Anything else that
+dirties the view shows the unit at once and restarts the blink, so a unit
+is visible the moment it moves or is selected. The city screen's patch
+always shows it.
 
 **The pointer** is sprite 0 (white body) over sprite 1 (black outline), as
 in hexgame, but 11 sprite pixels tall rather than 18. At H640/V200 a
@@ -978,7 +989,9 @@ suspect when something behaves oddly:
 
 `res/tiles.fci` is 48x4 characters — twelve 4x4 tiles side by side, in the
 order `tiles/Makefile` lists the PNGs: six terrains (desert hill, grass,
-mountain, ocean, shallow ocean, tundra), then the city, the selection ring,
+mountain, ocean, shallow ocean, tundra), then the city, a selection ring
+that nothing draws any more (the active unit blinks instead; it keeps its
+place because the order is the numbering),
 three units (settler, warrior, builder) and the black hexagon of unexplored
 land; `TILE_*` in `src/sheet.h`. The
 terrain, city and unit art is OpenCiv's, under CC BY 4.0

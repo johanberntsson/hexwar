@@ -138,7 +138,7 @@ static void draw_overlays(byte hy, int ty)
     byte list = hy & 1;
     byte i, k, n;
     byte ay = hy >> 1;
-    byte tiles[3];
+    byte tiles[2];
 
     for (i = 0; i < pending_n[list]; ++i) {
         n = unit_overlay(pending_ax[list][i], ay, tiles);
@@ -161,7 +161,7 @@ void view_draw_patch(byte col, byte row, byte ax, byte ay)
 {
     byte i, k, n, t, nx, ny;
     byte cell_x[7], cell_y[7];
-    byte tiles[3];
+    byte tiles[2];
 
     for (i = 0; i < VIEW_PATCH_ROWS; ++i)
         lfill(TILE_STORE + VIEW_ROW_STRIDE * (row + i) + 64UL * col, 0,
@@ -185,7 +185,8 @@ void view_draw_patch(byte col, byte row, byte ax, byte ay)
                                           : TILE_UNDISCOVERED);
     }
     // The overlays after all the terrain, as view_redraw() does a row
-    // behind it -- but without the selection ring, which means nothing here.
+    // behind it. The active unit does not blink here, so it is always shown.
+    unit_hidden = 0;
     for (i = 0; i < 7; ++i) {
         if (cell_x[i] == 0xff) continue;
         t = map_tile[cell_y[i]][cell_x[i]] | map_show;
@@ -193,8 +194,7 @@ void view_draw_patch(byte col, byte row, byte ax, byte ay)
             continue;
         n = unit_overlay(cell_x[i], cell_y[i], tiles);
         for (k = 0; k < n; ++k)
-            if (tiles[k] != TILE_SELECT)
-                view_draw_tile(col + patch_x[i], row + patch_y[i], tiles[k]);
+            view_draw_tile(col + patch_x[i], row + patch_y[i], tiles[k]);
     }
 }
 

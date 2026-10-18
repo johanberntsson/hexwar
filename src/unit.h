@@ -40,9 +40,14 @@ extern byte unit_ay[MAX_UNITS];
 extern byte unit_moves[MAX_UNITS];      // left this turn
 extern byte unit_orders[MAX_UNITS];
 
-// The unit waiting for orders, which view_redraw() rings and draws on top of
-// anything else on its hexagon. UNIT_NONE between units and between turns.
+// The unit waiting for orders, which view_redraw() draws on top of anything
+// else on its hexagon. UNIT_NONE between units and between turns.
 extern byte unit_active;
+
+// Set for the half of the blink in which the active unit is not drawn: its
+// hexagon shows the terrain and any city. game_run() flips it twice a second
+// and clears it whenever anything else redraws the view.
+extern byte unit_hidden;
 
 // Per kind, indexed by KIND_*.
 extern const char *const unit_kind_name[];
@@ -87,8 +92,9 @@ byte unit_can_enter(byte owner, byte ax, byte ay);
 void unit_mark(byte ax, byte ay);
 
 // What view_redraw() draws over the terrain of an occupied hexagon, bottom
-// first: the city, the selection ring, then the unit on top. Writes up to
-// three tile numbers into `tiles` and returns how many.
+// first: the city, then the unit on top -- the active one if it is here,
+// unless unit_hidden. Writes up to two tile numbers into `tiles` and returns
+// how many.
 byte unit_overlay(byte ax, byte ay, byte *tiles);
 
 #endif // SEVENSHIPS_UNIT_H

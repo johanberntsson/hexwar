@@ -307,7 +307,7 @@ acceleration and the click debounce count frames, that is, trips round this
 loop.
 
 What the game is waiting for is held in one variable, `unit_active`. It is
-either the unit that wants orders, which is drawn with a yellow ring, or none,
+either the unit that wants orders, which blinks twice a second, or none,
 in which case the panel asks the player to end the turn.
 
 ## Redrawing in step with the beam
@@ -333,7 +333,7 @@ Measured, the redraw ends at about line 143 of the next frame. The beam needs
 row *r* of the window at line 128 + 8*r*, so the redraw keeps about 100
 lines ahead of it.
 
-Cities, the selection ring and units are drawn over the terrain, **one
+Cities and units are drawn over the terrain, **one
 hexagon row behind it**. A unit's feet are in the bottom character row of its
 tile, which is also the top row of the hexagons below, and those are opaque in
 the middle. So the occupied hexagons of a row are noted while the row's

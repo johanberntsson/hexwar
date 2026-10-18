@@ -53,6 +53,14 @@ static word frame;
 static word click_frame;
 static byte click_ax = 0xff, click_ay;
 
+// The active unit blinks: BLINK_FRAMES drawn, BLINK_FRAMES not, half a
+// second each at 50 Hz. Each change is a whole redraw, which is what a held
+// cursor key already does every frame, rather than a redraw of one hexagon:
+// a unit's tile overlaps five neighbours, so putting the terrain back under
+// it would mean redrawing parts of all of them in painter's order.
+#define BLINK_FRAMES 25
+static byte blink;
+
 static const char *const terrain_name[] = {
     "Hills", "Grassland", "Mountains", "Ocean", "Shallows", "Tundra",
 };
@@ -260,7 +268,7 @@ static void select_unit(byte after)
         u = UNIT_NONE;
     }
     unit_active = u;
-    if (was != u) dirty = 1;   // the ring moves
+    if (was != u) dirty = 1;   // another unit blinks
     if (u != UNIT_NONE && !in_view(unit_ax[u], unit_ay[u]))
         centre_on(unit_ax[u], unit_ay[u]);
     draw_orders();
@@ -647,6 +655,17 @@ byte game_run(void)
         // input_poll() counts on.
         view_wait_for_redraw();
         ++frame;
+        // Anything that changed the view shows the active unit at once and
+        // starts its blink again, so that it is there to see as soon as it
+        // has moved or been selected, and while the view is scrolled.
+        if (dirty) {
+            unit_hidden = 0;
+            blink = 0;
+        } else if (unit_active != UNIT_NONE && ++blink == BLINK_FRAMES) {
+            unit_hidden ^= 1;
+            blink = 0;
+            dirty = 1;
+        }
         if (dirty) {
             view_redraw(off_x, off_y);
             minimap_frame(off_x, off_y);

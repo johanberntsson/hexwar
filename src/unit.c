@@ -13,6 +13,7 @@ HIGH_BSS byte unit_ay[MAX_UNITS];
 HIGH_BSS byte unit_moves[MAX_UNITS];
 HIGH_BSS byte unit_orders[MAX_UNITS];
 byte unit_active = UNIT_NONE;
+byte unit_hidden;
 
 const char *const unit_kind_name[] = { "", "Settler", "Warrior", "Builder" };
 const byte unit_kind_moves[] = { 0, 1, 1, 1 };
@@ -143,9 +144,7 @@ byte unit_overlay(byte ax, byte ay, byte *tiles)
     byte n = 0;
     byte u = unit_at(ax, ay);
     if (city_at(ax, ay) != CITY_NONE) tiles[n++] = TILE_CITY;
-    if (u != UNIT_NONE) {
-        if (u == unit_active) tiles[n++] = TILE_SELECT;
+    if (u != UNIT_NONE && !(u == unit_active && unit_hidden))
         tiles[n++] = unit_kind_tile[unit_kind[u]];
-    }
     return n;
 }

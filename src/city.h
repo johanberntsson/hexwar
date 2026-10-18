@@ -15,6 +15,9 @@ extern byte city_name[MAX_CITIES];      // index into the owner's name list
 extern byte city_build[MAX_CITIES];     // the KIND_* it is building
 extern word city_shields[MAX_CITIES];   // towards it, of unit_kind_cost[]
 
+// No cities, and every player's names unused, for a new game.
+void city_reset(void);
+
 // The city on (ax, ay), or CITY_NONE.
 byte city_at(byte ax, byte ay);
 

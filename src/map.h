@@ -95,6 +95,9 @@ byte map_neighbour(byte ax, byte ay, byte dir, byte *nax, byte *nay);
 // Which way (bx, by) is from (ax, ay), or DIR_NONE if not a neighbour.
 byte map_direction(byte ax, byte ay, byte bx, byte by);
 
+// Back to the map as it was loaded: nothing explored, nothing on it.
+void map_reset(void);
+
 // Mark (ax, ay) and its six neighbours seen, which is what one of the human
 // player's units sees from where it stands.
 void map_explore(byte ax, byte ay);

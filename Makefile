@@ -73,6 +73,7 @@ SRCS     = src/hexwar.c \
            src/game.c \
            src/civ.c \
            src/popup.c \
+           src/menu.c \
            src/title.c
 
 # Assembly: only src/bank.s, which banks BASIC out before main().
@@ -116,16 +117,24 @@ HDRS = $(wildcard src/*.h)
 # take, and it wasted a verification run here before the stamp went in. The
 # stamp holds the flag values, is rewritten only when they actually differ, and
 # every object depends on it.
+#
+# **Written by make's own $(file), never through the shell.** It used to be
+# `echo '$(CFLAGS)'`, and FAKE_KEYS brings its own single quotes into CFLAGS,
+# which left its braces unquoted: bash brace-expanded {10,0,0,13},{12,0,0,13},
+# ... into 4^n words -- 268 million for a 14-entry script -- until the kernel
+# killed it, having made the whole desktop crawl and left the binary stale.
 STAMP = $(BUILD)/config.stamp
-.PHONY: force
-$(STAMP): force | $(BUILD)
-	@echo '$(CFLAGS)' | cmp -s - $@ || echo '$(CFLAGS)' > $@
-
-# The same trick for the map's arguments, kept separate so that a new seed
-# remakes the map and the disk but not every object.
 MAP_STAMP = $(BUILD)/map.stamp
-$(MAP_STAMP): force | $(BUILD)
-	@echo '$(MAP_SEED) $(MAP_LAND)' | cmp -s - $@ || echo '$(MAP_SEED) $(MAP_LAND)' > $@
+$(shell mkdir -p $(BUILD))
+ifneq ($(file <$(STAMP)),$(CFLAGS))
+$(file >$(STAMP),$(CFLAGS))
+endif
+
+# The same for the map's arguments, kept separate so that a new seed remakes
+# the map and the disk but not every object.
+ifneq ($(file <$(MAP_STAMP)),$(MAP_SEED) $(MAP_LAND))
+$(file >$(MAP_STAMP),$(MAP_SEED) $(MAP_LAND))
+endif
 
 # --png leaves a preview beside it, which is much the quickest way to judge a
 # change to the generator.

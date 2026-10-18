@@ -25,6 +25,12 @@ word city_shields[MAX_CITIES];
 // How many cities each player has named, so the next gets the next name.
 static byte named[2];
 
+void city_reset(void)
+{
+    city_count = 0;
+    named[0] = named[1] = 0;
+}
+
 byte city_at(byte ax, byte ay)
 {
     byte c;

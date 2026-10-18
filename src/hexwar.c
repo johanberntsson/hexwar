@@ -44,28 +44,29 @@ int main(void)
 
     input_init();
 
-    // The title's menu is on the plain text screen, so it has to be done
-    // with before view_init() takes the map window's cells for good.
-    // `make NO_TITLE=1` goes straight to the map, which is what a headless
-    // check of the view wants.
+    // Round again for every game retired from, back to the title screen.
+    for (;;) {
+        // The title's menu is on the plain text screen, so it has to be done
+        // with before view_init() takes the map window's cells -- which it
+        // does again for every game. `make NO_TITLE=1` goes straight to the
+        // map, which is what a headless check of the view wants, and
+        // straight into a new game after a retire.
 #ifndef NO_TITLE
-    if (title_run() == TITLE_QUIT) {
-        input_shutdown();
-        screen_go8bit();
-        bank_basic_in();
-        return 0;
-    }
-    screen_clear();
+        title_show();
+        if (title_run() == TITLE_QUIT) break;
+        screen_clear();
 #endif
 
-    view_init();
-    game_init();
+        view_init();
+        game_init();
 
-    // The store starts blank; after that view_redraw() covers every byte of it
-    // and deliberately does not clear, so that it can stay ahead of the beam.
-    view_clear();
+        // The store starts blank; after that view_redraw() covers every byte
+        // of it and deliberately does not clear, so that it can stay ahead of
+        // the beam.
+        view_clear();
 
-    game_run();
+        if (game_run() == GAME_QUIT) break;
+    }
 
     input_shutdown();
     screen_go8bit();

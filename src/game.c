@@ -15,6 +15,7 @@
 #include "hexwar.h"
 #include "input.h"
 #include "map.h"
+#include "menu.h"
 #include "minimap.h"
 #include "popup.h"
 #include "screen.h"
@@ -37,6 +38,7 @@ static byte dirty;              // the view wants redrawing
 static byte hover_dirty;        // the readout of what is under the arrow
 static byte game_over;
 static byte quit;
+static byte retired;            // quit by Game/Retire, for the title screen
 static word turn;
 static word year;
 
@@ -106,8 +108,7 @@ static void message(const char *first, const char *second)
 
 static void draw_frame(void)
 {
-    screen_putsxy(0, 0, "Game Orders Advisors World Civilopedia",
-                  TEXT_COLOUR);
+    menu_draw();
     panel_text(ROW_CIV, civ_adjective[player_civ[PLAYER_HUMAN]], TEXT_COLOUR);
     // Wider than the window, so it ends where the window ends rather than
     // starting where it starts.
@@ -381,6 +382,17 @@ static void click(void)
 {
     byte ax, ay, u, dir, c, own;
 
+    // The menu bar. Whatever it does, the view is redrawn afterwards, which
+    // puts back the minimap's outline the dropdown hid.
+    if ((byte)(input_y >> 3) == 0) {
+        if (menu_click() == MENU_RETIRE
+            && popup_ask("Do you want to quit this game?")) {
+            retired = 1;
+            quit = 1;
+        }
+        dirty = 1;
+        return;
+    }
     if (minimap_hex(input_x, input_y, &ax, &ay)) {
         centre_on(ax, ay);
         return;
@@ -459,6 +471,13 @@ void game_init(void)
 {
     byte cx, cy, ax, ay;
 
+    // Nothing left over from a game before this one.
+    map_reset();
+    unit_reset();
+    city_reset();
+    game_over = quit = retired = 0;
+    click_ax = 0xff;
+
     // START_OFF_X / START_OFF_Y are what let a headless run check
     // scrolling: `make START_OFF_X=41` against a plain build must shift the
     // map exactly eight pixels and leave the panel alone. The settler goes
@@ -497,7 +516,7 @@ static void intro(void)
     popup_show();
 }
 
-void game_run(void)
+byte game_run(void)
 {
     byte key;
 
@@ -584,4 +603,9 @@ void game_run(void)
             break;
         }
     }
+
+    // The arrow stays for the title screen; the minimap's outline does not.
+    sprite_hide(2);
+    sprite_hide(3);
+    return retired ? GAME_RETIRE : GAME_QUIT;
 }

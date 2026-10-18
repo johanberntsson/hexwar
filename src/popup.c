@@ -78,35 +78,93 @@ static byte wrap(byte draw, byte x, byte y, byte *widest)
     return lines;
 }
 
-void popup_show(void)
+// The buttons along the bottom of the box: one OK, or Yes and No.
+#define OK_TEXT "[ OK ]"
+#define YES_TEXT "[ Yes ]"
+#define NO_TEXT "[ No ]"
+#define BUTTON_GAP 4
+#define ASK_WIDTH (sizeof YES_TEXT - 1 + BUTTON_GAP + sizeof NO_TEXT - 1)
+
+// Whether the arrow is on row `row`, from column `x` for `w` columns.
+static byte pointer_on(byte row, byte x, byte w)
 {
-    byte lines, widest, w, h, x0, y0, x, y, key;
+    byte col = (byte)(input_x >> 2);
+    return (byte)(input_y >> 3) == row && col >= x && col < x + w;
+}
+
+// Show the text with OK, or with Yes and No if `ask`, and return 1 for OK or
+// Yes, 0 for No.
+static byte show(byte ask)
+{
+    byte lines, widest, w, h, x0, y0, y, key, bx, by, answer;
 
     lines = wrap(0, 0, 0, &widest);
-    if (widest < 6) widest = 6;
+    if (widest < ASK_WIDTH) widest = ASK_WIDTH;
     w = widest + 4;
     h = lines + 5;
     x0 = VIEW_LEFT + (VIEW_COLUMNS - w) / 2;
     y0 = VIEW_TOP + (VIEW_ROWS - h) / 2;
 
     for (y = y0 + 1; y < y0 + h - 1; ++y)
-        for (x = x0 + 1; x < x0 + w - 1; ++x)
-            screen_putcxy(x, y, ' ', TEXT_COLOUR);
+        screen_fill(x0 + 1, y, w - 2, TEXT_COLOUR);
     screen_box(x0, y0, x0 + w - 1, y0 + h - 1, BORDER_COLOUR);
 
     wrap(1, x0 + 2, y0 + 1, &widest);
-    screen_putsxy(x0 + (w - 6) / 2, y0 + h - 2, "[ OK ]", COLOR_YELLOW);
+    by = y0 + h - 2;
+    if (ask) {
+        bx = x0 + (w - ASK_WIDTH) / 2;
+        screen_putsxy(bx, by, YES_TEXT, COLOR_YELLOW);
+        screen_putsxy(bx + ASK_WIDTH - (sizeof NO_TEXT - 1), by, NO_TEXT,
+                      COLOR_YELLOW);
+    } else {
+        screen_putsxy(x0 + (w - (sizeof OK_TEXT - 1)) / 2, by, OK_TEXT,
+                      COLOR_YELLOW);
+    }
 
-    // Anywhere is OK: a click need not be on the button.
     for (;;) {
         screen_wait_raster(SCREEN_ROW_LINE(SCREEN_ROWS - 1));
         key = input_poll();
-        if (key == KEY_CLICK || key == KEY_RETURN || key == KEY_SPACE
-            || key == KEY_ESC || key == KEY_RUNSTOP)
+        if (key >= 'A' && key <= 'Z') key += 'a' - 'A';
+        if (!ask) {
+            // Anywhere is OK: a click need not be on the button.
+            if (key == KEY_CLICK || key == KEY_RETURN || key == KEY_SPACE
+                || key == KEY_ESC || key == KEY_RUNSTOP) {
+                answer = 1;
+                break;
+            }
+            continue;
+        }
+        // A question needs the click on a button, since either answer
+        // matters. Return is Yes and Esc is No, as on the title screens.
+        if (key == 'y' || key == KEY_RETURN
+            || (key == KEY_CLICK
+                && pointer_on(by, bx, sizeof YES_TEXT - 1))) {
+            answer = 1;
             break;
+        }
+        if (key == 'n' || key == KEY_ESC || key == KEY_RUNSTOP
+            || (key == KEY_CLICK
+                && pointer_on(by, bx + ASK_WIDTH - (sizeof NO_TEXT - 1),
+                              sizeof NO_TEXT - 1))) {
+            answer = 0;
+            break;
+        }
     }
 
     view_restore(x0 - VIEW_LEFT, y0 - VIEW_TOP, w, h);
+    return answer;
+}
+
+void popup_show(void)
+{
+    show(0);
+}
+
+byte popup_ask(const char *s)
+{
+    popup_begin();
+    popup_add(s);
+    return show(1);
 }
 
 void popup(const char *s)

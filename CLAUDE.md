@@ -102,6 +102,16 @@ second build finds every object up to date and hands back the *previous*
 binary, which looks exactly like a change that did not take. It cost a
 verification run before it went in.
 
+**The stamp is written with make's `$(file)`, never through the shell**,
+and must stay that way. It used to be `echo '$(CFLAGS)'`, and `FAKE_KEYS`
+brings its own single quotes into `CFLAGS`, leaving its braces unquoted:
+bash brace-expanded `{10,0,0,13},{12,0,0,13},…` into 4^n words — 268
+million for a 14-entry script — which ate the machine's memory until the
+kernel killed it, made the desktop crawl, and left the binary from the
+*previous* script in place (18 Oct 2026). A headless run that ignores the
+end of its script is the symptom; `build/config.stamp` should be a few
+hundred bytes.
+
 ## The display
 
 **There is no bitmap mode.** The screen is VIC-IV **16-bit text mode with
@@ -222,9 +232,9 @@ when a 15th tile or another full-colour surface needs room:
 **The 32 KB is what to watch.** The tile sheet used to be linked in
 (6.5 KB, and growing a KB a tile) and now comes off the disk, and
 `map_tile`'s 4 KB has moved to `$A000`. At the last measurement (18 Oct
-2026) `build/hexwar.lst` reported the region **77.5% full (about 7.2 KB
-free)** with milestone 1, the minimap and the city screen in it; it was
-89.9% before `map_tile` moved. A `NO_TITLE` build is about 11 points
+2026) `build/hexwar.lst` reported the region **84.5% full (about 5 KB
+free)** with milestones 1 and 2, the minimap, the city screen and the menu
+bar in it; it was 89.9% before `map_tile` moved. A `NO_TITLE` build is about 11 points
 smaller, so measure the default build.
 
 **BASIC is banked out for the whole run** (18 Oct 2026, Search And
@@ -522,6 +532,28 @@ before `view_init()` claims the map window's cells; `main()` clears the
 screen in between. Quit returns from `main()` without the map view ever
 having been set up.
 
+**`main()` goes round for every game.** `game_run()` returns `GAME_QUIT`
+(Esc, or the game was over) or `GAME_RETIRE`, and on a retire `main()`
+puts the title back up and runs it again, then `view_init()`,
+`game_init()` and `view_clear()` as for the first game. **`game_init()`
+therefore resets everything a game leaves behind** — `map_reset()` (the
+explored and occupied bits; the terrain is as loaded), `unit_reset()`,
+`city_reset()` and `game.c`'s own state — and anything added to a game's
+state has to be reset there too. The map is the same one each time.
+`NO_TITLE` builds go straight into a new game after a retire.
+
+**The menu bar** (`src/menu.c`) is row 0: Game, Orders, Advisors, World,
+Civilopedia. A click on a title opens its dropdown, picked by hover and
+click or the cursor keys and Return; a click elsewhere or Esc closes it.
+Only Game has an item, **Retire**, which asks "Do you want to quit this
+game?" with `popup_ask()` (Yes/No buttons, `y`/Return, `n`/Esc) and on Yes
+goes back to the title screen. A title with no items does not open. The
+dropdown is drawn over the minimap and puts it back with
+`minimap_show()` (and the map window's cells with `view_restore()` if it
+reaches them); it hides the minimap's outline sprites, and the caller's
+redraw puts them back. Nothing restores panel text, so **a dropdown must
+end above row 11**, where the panel starts.
+
 **The peoples are `src/civ.c`**: Mycenaeans, Hittites, Egyptians and
 Canaanites (vision.md §3), each a name for the menu, an adjective for the
 panel, a line about them, a leader and the title the diplomatic letters will
@@ -777,7 +809,11 @@ Returns — Start Game, Mycenaeans, Scribe, and closing the popup: `make
 FAKE_KEYS='{10,0,0,13},{12,0,0,13},{14,0,0,13},{16,0,0,13},{30,0,0,100},{60,0,0,13},{90,0,0,98}'`
 starts the game, moves the settler east, ends the turn and founds a city,
 and a screenshot shows the result. Menu item *i* is at sprite y `92 + 16i`
-(`{40,160,108,KEY_CLICK}` clicks the second); `make NO_TITLE=1` skips all
+(`{40,160,108,KEY_CLICK}` clicks the second), and **an item the arrow
+has hovered over stays selected after it leaves**, so a script that clicks
+somewhere and then comes back to a menu has to select with the cursor keys
+before pressing Return. The Game menu's title is at `{…,4,4,KEY_CLICK}`
+and Retire at `{…,8,20,KEY_CLICK}`; `make NO_TITLE=1` skips all
 three screens and the popup. Frames are counted in both loops, so a `-sleepless`
 run is as deterministic as a real one. The script stops rather than wrapping, or the
 presses would replay. End xemu with `SIGTERM` (a background job from a script

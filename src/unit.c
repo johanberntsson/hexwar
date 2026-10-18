@@ -19,6 +19,13 @@ static const byte unit_kind_tile[] = {
     0, TILE_SETTLER, TILE_WARRIOR, TILE_BUILDER
 };
 
+void unit_reset(void)
+{
+    byte u;
+    for (u = 0; u < MAX_UNITS; ++u) unit_kind[u] = KIND_NONE;
+    unit_active = UNIT_NONE;
+}
+
 byte unit_create(byte kind, byte owner, byte ax, byte ay)
 {
     byte u;

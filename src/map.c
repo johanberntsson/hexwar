@@ -47,6 +47,14 @@ byte map_direction(byte ax, byte ay, byte bx, byte by)
     return DIR_NONE;
 }
 
+void map_reset(void)
+{
+    byte ax, ay;
+    for (ay = 0; ay < MAP_ROWS; ++ay)
+        for (ax = 0; ax < MAP_COLUMNS; ++ax)
+            map_tile[ay][ax] &= MAP_TERRAIN_MASK;
+}
+
 static void explore(byte ax, byte ay)
 {
     if (map_tile[ay][ax] & MAP_EXPLORED) return;

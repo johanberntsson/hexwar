@@ -43,6 +43,9 @@ extern const char *const unit_kind_name[];
 extern const byte unit_kind_moves[];
 extern const byte unit_kind_cost[];     // shields to build one
 
+// No units at all, for a new game.
+void unit_reset(void);
+
 // A new unit, with a full turn's moves. UNIT_NONE if the list is full.
 byte unit_create(byte kind, byte owner, byte ax, byte ay);
 void unit_remove(byte u);

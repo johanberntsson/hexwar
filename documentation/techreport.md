@@ -69,6 +69,9 @@ most important routines included in each source file.
 | cityscreen.c | the city screen: the city and its neighbours, and its production |
 | &nbsp;&nbsp;&nbsp;_city\_screen_ | shows a city until the player leaves it |
 |  |  |
+| menu.c | the menu bar along the top, and its dropdowns |
+| &nbsp;&nbsp;&nbsp;_menu\_click_ | opens the dropdown under the arrow and returns what was picked |
+|  |  |
 | popup.c | boxes of text over the map, closed with a click or a key |
 | &nbsp;&nbsp;&nbsp;_popup\_show_ | word-wraps and shows the text, waits, and puts the map back |
 |  |  |
@@ -135,7 +138,10 @@ All disk access is finished by the end of step 3. The KERNAL stays available
 throughout, because the only part of the ROM the program banks out is BASIC,
 at \$a000-\$bfff, and that before `main()` starts.
 
-When the player quits, from the title menu or from the game, `main()` turns
+Game/Retire on the menu bar asks for confirmation and then goes back to
+step 4 for a new game; `game_init` clears everything the old one left on the
+map and in the unit and city lists. When the player quits, from the title
+menu or from the game, `main()` turns
 the sprites off, puts the screen back
 into the 40-column text mode, banks BASIC back in, and returns to it.
 

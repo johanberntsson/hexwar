@@ -26,4 +26,8 @@ void popup_show(void);
 
 void popup(const char *text);
 
+// A question with Yes and No buttons: 1 for Yes (the button, y or Return),
+// 0 for No (the button, n or Esc). A click anywhere else is ignored.
+byte popup_ask(const char *text);
+
 #endif // HEXWAR_POPUP_H

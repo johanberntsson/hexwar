@@ -57,10 +57,11 @@
 // run.
 void screen_init(void);
 
-// Put the machine back into the 40-column 8-bit text mode the ROM expects, so
-// that returning from main() lands on a usable BASIC screen. Cheap because
-// this program never banked the ROM out in the first place -- see hexwar.scm.
-void screen_go8bit(void);
+// Keep the display as BASIC left it, before screen_init() changes it, and put
+// it back before returning to BASIC. Cheap because this program never banked
+// the ROM out in the first place -- see hexwar.scm.
+void screen_save(void);
+void screen_restore(void);
 
 // Address of a cell in screen RAM. Handy for anything writing screen words
 // directly, which view_init() does.

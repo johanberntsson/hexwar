@@ -13,6 +13,7 @@ Needs the [Calypsi 6502 tool chain](https://www.calypsi.cc/) (5.18 or later —
 ```sh
 make            # build/hexwar.prg, build/hexwar.map and build/hexwar.d81
 make run        # build them and boot the disk in xemu
+make release    # build the disk and copy it into release/
 make clean
 ```
 
@@ -52,8 +53,10 @@ loop; a settler that founds a city; a city screen (double-click a city)
 where it is told to build warriors or builders, which it then produces; a
 menu bar with Game/Retire and Orders/Show Map; and three computer players
 that found cities, guard them, build and explore. There is no combat yet.
-Controls are listed along the bottom of the screen. Verified in xemu; not
-yet on a real MEGA65.
+Controls are listed along the bottom of the screen: `0 -` / `p *` / `: =`
+move a unit north-west and north-east, west and east, south-west and
+south-east, and the cursor keys scroll. Runs in xemu and on a real MEGA65,
+with the mouse and the joystick, and quits back to BASIC's own screen.
 
 ## Credits
 

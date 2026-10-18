@@ -19,7 +19,7 @@
 // program before it has a display of its own.
 static void fatal(const char *message)
 {
-    screen_go8bit();
+    screen_restore();
     puts("hexwar: ");
     puts(message);
     while (1) continue;
@@ -28,6 +28,7 @@ static void fatal(const char *message)
 int main(void)
 {
     mega65_io_enable();
+    screen_save();
     screen_init();
 #ifndef NO_TITLE
     title_show();
@@ -69,7 +70,7 @@ int main(void)
     }
 
     input_shutdown();
-    screen_go8bit();
+    screen_restore();
     bank_basic_in();
     return 0;
 }

@@ -35,6 +35,7 @@ make START_OFF_X=41       # start the view one character further right; see belo
 make MAP_SEED=7           # another map; MAP_LAND=45 for more land
 make FAKE_KEYS='{10,0,0,13},{12,0,0,13},{14,0,0,13},{16,0,0,13},{30,0,0,98}'  # see below
 make NO_TITLE=1           # straight to the map, no title screen
+make release              # build the d81 and copy it into release/
 make clean
 ```
 
@@ -232,9 +233,9 @@ when a 15th tile or another full-colour surface needs room:
 **The 32 KB is what to watch.** The tile sheet used to be linked in
 (6.5 KB, and growing a KB a tile) and now comes off the disk, and
 `map_tile`'s 4 KB has moved to `$A000`. At the last measurement (18 Oct
-2026) `build/hexwar.lst` reported the region **87.5% full (about 4 KB
-free)** with milestones 1-3, the minimap, the city screen and the menu
-bar in it, and `highram` 62.9% full; the region was 89.9% before
+2026) `build/hexwar.lst` reported the region **88.2% full (about 3.8 KB
+free)** with milestones 1-3, the minimap, the city screen, the menu
+bar and the quit-time register restore in it, and `highram` 62.9% full; the region was 89.9% before
 `map_tile` moved, and 90.7% before the unit and city arrays and the sprite
 blocks followed it. **Anything moved to `HIGH_BSS` must be set before it is
 read**, since the startup clears only the ordinary BSS: `unit_reset()` and
@@ -253,9 +254,9 @@ second content area as soon as anything initialised lands there
 (*multiple program areas not allowed in prg output*), and `(type ram)`
 does not work. Mark a variable `HIGH_BSS` to move it; **uninitialised data
 only**, since the PRG is loaded with BASIC still mapped. `map_load()`
-reads straight into it through the KERNAL. Seen in xemu: the map loads,
-the game plays, and quitting reaches READY. **Not yet tried on the
-machine** in this program.
+reads straight into it through the KERNAL. Seen in xemu and on a real
+MEGA65 (18 Oct 2026): the map loads, the game plays, and quitting
+reaches READY.
 
 **Naming `zdata` in `hexwar.scm`'s `freeSpace` or `highram` would move the
 whole BSS there** — which is what hexgame does — so use `LOW_FREE` and
@@ -716,31 +717,35 @@ click lands on it too), on the minimap centres the view there, and on the
 panel at the end of a turn ends it. **A double click on one of the
 player's cities opens the city screen** — two clicks on the same hexagon
 within `DOUBLE_CLICK` (25) frames, counted by `game_run()`. Keys:
-`q e a d z c` move the active unit NW, NE, W, E, SW, SE (the tiles are
-pointy-topped, so there is no N or S); `b` founds a city with a settler;
-space skips the unit this turn, `w` asks again after the others, `f`
-fortifies; Return ends the turn; the cursor keys scroll; ESC or RUN/STOP
-quits. **`w a s d` no longer scroll**, since `a d` and `w` are orders now.
+`0 - p * : =` move the active unit NW, NE, W, E, SW, SE — the `q e a d z c`
+pattern on the right of the keyboard, by the cursor keys, so that those
+letters are free for other orders (`:` is also taken as `[`, its shifted
+form); the tiles are pointy-topped, so there is no N or S; `b` founds a
+city with a settler; space skips the unit this turn, `w` asks again
+after the others, `f` fortifies; Return ends the turn; the cursor keys
+scroll; ESC or RUN/STOP quits. `w a s d` do not scroll.
 
-**Not tried on the machine yet** (as of 18 Oct 2026, with milestones 1-3
-in; the user is testing next): the mouse and joystick reads are hexgame's,
-which came from Ozmoo's tested code, but nothing in this build has run on a
-real MEGA65 — nor has loading the sheet off the disk, nor the sheet in bank
-5, nor BASIC banked out with `map_tile`, the unit and city lists and **the
-sprite blocks** under it (Search And Rescue's arrangement, which has, though
-not with sprites up there), nor the minimap's characters at `$5E000`, nor
-the reverse-video buttons on the city screen (colour RAM attribute bits,
-which xemu is known to be loose about). Things to look at there, roughly
-in order of suspicion: that `TILES.FCI` loads at all (the
-hot-register note below applies to it as much as to the map); which port the
-mouse turns up on (Ozmoo saw port 1 on hardware, port 2 in xemu — the button
-is read from both, the pots are the same registers either way); whether the
-arrow's tip lands where `pointer_hex()` thinks it is (`SPR_X_OFFSET`/
-`SPR_Y_OFFSET` in `src/input.c` were taken from hexgame, not measured here —
-the hover readout makes an error visible); and whether the redraw still keeps
-ahead of the beam. Also seen in xemu and not yet looked into: after quitting,
-the BASIC banner wraps oddly on the 40-column screen, which is
-`screen_go8bit()` and predates milestone 1.
+**Tried on a real MEGA65 and it works** (18 Oct 2026, milestones 1-3):
+the sheet and map load off the disk with the hot registers off, BASIC
+banked out with `map_tile`, the unit and city lists and the sprite blocks
+under it, the sheet and minimap in bank 5, the mouse and the joystick, and
+the redraw, with nothing seen that differs from xemu. If something does
+turn up there later, the places xemu is known to be looser are the mouse
+port (Ozmoo saw port 1 on hardware, port 2 in xemu — the button is read
+from both), colour RAM attribute bits, and timing, which xemu reports
+optimistically for compiled C.
+
+**Quitting puts BASIC's display back by value.** `screen_save()`, first
+thing in `main()`, reads the VIC registers that make the screen's geometry
+and colours, and `screen_restore()` writes them back before the return —
+VIC-II/III ones first with the hot registers on, then the VIC-IV ones
+exactly, `$D05D` last (Search And Rescue's `vic4_save_rom`/`vic4_leave`).
+It used to force a fixed 40-column mode, but BASIC 65 boots in 80
+columns, so after quitting it printed 80-column lines into a 40-column
+screen in black, worse on the machine than in xemu. Anything new the game
+does to the VIC has to be in `saved_regs[]` in `src/screen.c`. Seen in
+xemu, from the title and from the game, and on a real MEGA65 (18 Oct
+2026): READY on the blue 80-column screen.
 
 ## What the other Calypsi projects already found out
 
@@ -823,8 +828,8 @@ could be written with `screen_putsxy`.
 - Search And Rescue inferred, by elimination and never run on its own, that
   turning the hot registers off stopped the KERNAL opening files, so it loads
   everything first. Hexwar loads its map *after* `screen_init()` has turned
-  them off, and that works in xemu. **Not yet tried on the machine**; if a
-  real MEGA65 cannot read the map, this is the first suspect.
+  them off, and that works in xemu and on a real MEGA65 (18 Oct 2026), so
+  the inference does not hold here.
 
 **Input and quitting:** the joysticks share CIA1 with the keyboard (port 1
 reads as keys and has to be masked; the fire button needs a debounce, and the
@@ -842,7 +847,7 @@ returning `key` from `input_poll()` on that frame. `KEY_CLICK` is a mouse
 click. **The title and new-game screens come first and count frames
 too**, and so does the opening popup, so a script starts with four
 Returns — Start Game, Mycenaeans, Scribe, and closing the popup: `make
-FAKE_KEYS='{10,0,0,13},{12,0,0,13},{14,0,0,13},{16,0,0,13},{30,0,0,100},{60,0,0,13},{90,0,0,98}'`
+FAKE_KEYS='{10,0,0,13},{12,0,0,13},{14,0,0,13},{16,0,0,13},{30,0,0,42},{60,0,0,13},{90,0,0,98}'`
 starts the game, moves the settler east, ends the turn and founds a city,
 and a screenshot shows the result. Menu item *i* is at sprite y `92 + 16i`
 (`{40,160,108,KEY_CLICK}` clicks the second), and **an item the arrow

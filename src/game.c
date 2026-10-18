@@ -113,7 +113,7 @@ static void draw_frame(void)
     panel_text(ROW_CIV, civ_adjective[player_civ[PLAYER_HUMAN]], TEXT_COLOUR);
     // Wider than the window, so it ends where the window ends rather than
     // starting where it starts.
-    static const char keys[] = "qe/ad/zc move  b found city  space skip  "
+    static const char keys[] = "0-/p*/:= move  b found city  space skip  "
                                "w wait  f fortify  esc quit";
     screen_putsxy(VIEW_LEFT + VIEW_COLUMNS - (sizeof keys - 1),
                   SCREEN_ROWS - 1, keys, TEXT_COLOUR);
@@ -338,12 +338,16 @@ static void unit_key(byte key)
     byte u = unit_active;
 
     switch (key) {
-    case 'q': move_active(DIR_NW); break;
-    case 'e': move_active(DIR_NE); break;
-    case 'a': move_active(DIR_W); break;
-    case 'd': move_active(DIR_E); break;
-    case 'z': move_active(DIR_SW); break;
-    case 'c': move_active(DIR_SE); break;
+    // The same pattern as q e / a d / z c, on the right of the keyboard
+    // beside the cursor keys. The key left of = is : unshifted and [
+    // shifted, so both are taken.
+    case '0': move_active(DIR_NW); break;
+    case '-': move_active(DIR_NE); break;
+    case 'p': move_active(DIR_W); break;
+    case '*': move_active(DIR_E); break;
+    case ':':
+    case '[': move_active(DIR_SW); break;
+    case '=': move_active(DIR_SE); break;
     case 'b': found_city(); break;
     case KEY_SPACE:                         // no orders this turn
         unit_moves[u] = 0;

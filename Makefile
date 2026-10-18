@@ -187,7 +187,19 @@ $(D81): $(PRG) $(MAP) $(RES)/tiles.fci tools/diskutil.rb
 	    -writeprg -copyf1 $(BUILD)/autoboot.c65 \
 	    -writeseq -copyf1 $(MAP) $(RES)/tiles.fci
 
+# The disk image as it is handed out. Plain `make release` after a test build
+# is safe, since the config stamp sees the flags change and rebuilds; what is
+# refused is a release *of* a test build. `make clean` leaves release/ alone.
+RELEASE  = release
+
+release: $(D81)
+ifneq ($(FAKE_KEYS)$(NO_TITLE),)
+	$(error a release must not be built with FAKE_KEYS or NO_TITLE)
+endif
+	mkdir -p $(RELEASE)
+	cp $(D81) $(RELEASE)/
+
 clean:
 	rm -rf $(BUILD)
 
-.PHONY: all run d81 clean
+.PHONY: all run d81 release clean

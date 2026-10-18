@@ -102,7 +102,7 @@ most important routines included in each source file.
 | sheet.c | the tile sheet |
 | &nbsp;&nbsp;&nbsp;_sheet\_load_ | reads TILES.FCI, sets the palette and builds the expanded sheet |
 |  |  |
-| screen.c | the VIC-IV display mode, the palette and text output |
+| screen.c | the VIC-IV display mode, the palette and text output, and BASIC's display kept and put back |
 |  |  |
 | mega65.c | I/O enable and the DMA routines |
 | &nbsp;&nbsp;&nbsp;_blit_ | the transparent copy the map is drawn with |
@@ -116,7 +116,8 @@ drive.
 
 ## Startup
 
-The build produces a disk image, `hexwar.d81`, holding three files:
+The build produces a disk image, `hexwar.d81` (`make release` copies it
+to `release/`), holding three files:
 
 | **File** |  **Contents** |
 | -- |  ---- |
@@ -126,7 +127,8 @@ The build produces a disk image, `hexwar.d81`, holding three files:
 
 The C65 ROM boots AUTOBOOT.C65 automatically. `main()` then:
 
-1. switches the VIC-IV to 80x25 16-bit text mode with full colour characters
+1. keeps the VIC registers as BASIC left them (`screen_save`), switches the
+   VIC-IV to 80x25 16-bit text mode with full colour characters
    (`screen_init`) and puts up the title screen (`title_show`);
 2. reads TILES.FCI, a character at a time. Each character is widened to twice
    its width, because a pixel of this screen mode is half as wide as it is
@@ -150,8 +152,9 @@ Game/Retire on the menu bar asks for confirmation and then goes back to
 step 4 for a new game; `game_init` clears everything the old one left on the
 map and in the unit and city lists. When the player quits, from the title
 menu or from the game, `main()` turns
-the sprites off, puts the screen back
-into the 40-column text mode, banks BASIC back in, and returns to it.
+the sprites off, writes back the VIC registers `screen_save()` read before
+the game touched them, so that BASIC gets its own 80-column screen and
+colours, banks BASIC back in, and returns to it.
 
 # Memory
 
@@ -170,15 +173,15 @@ BASIC ROM and is the program's once `src/bank.s` has banked BASIC out, before
 | \$0002-\$0039 | 0.1 | Calypsi's pseudo registers, in zero page |
 | \$1600-\$1790 | 0.4 | the popup's text (the `zpsave` section, `LOW_FREE`) |
 | \$1791-\$1eff | 1.9 | free |
-| \$2001-\$2aef | 2.7 | BASIC stub, startup code, constant data and text |
-| \$2af0-\$8a4a | 23.8 | code |
-| \$8a4b-\$8c4a | 0.5 | C stack |
-| \$8c4b-\$8ffe | 0.9 | BSS: buffers and small state |
-| \$8fff-\$9fff | 4.0 | free |
+| \$2001-\$2b33 | 2.8 | BASIC stub, startup code, constant data and text |
+| \$2b34-\$8b09 | 24.0 | code |
+| \$8b0a-\$8d09 | 0.5 | C stack |
+| \$8d0a-\$90dd | 1.0 | BSS: buffers and small state |
+| \$90de-\$9fff | 3.8 | free |
 | \$a000-\$b41f | 5.0 | `highbss` (`HIGH_BSS`): the map's terrain layer `map_tile`, the unit and city arrays, the sprite blocks |
 | \$b420-\$bfff | 3.0 | free |
 
-The PRG is everything up to \$8a4a; the C stack and the BSS are not stored in
+The PRG is everything up to \$8b09; the C stack and the BSS are not stored in
 the file, only reserved after it. Nothing initialised may go above \$9fff,
 because the PRG is loaded while BASIC is still mapped there, so only BSS
 marked `HIGH_BSS` is put in the window. BASIC is banked back in as the last
@@ -347,7 +350,7 @@ The orders a unit can be given are:
 
 | **Key** |  **Order** |
 | -- |  ---- |
-| q, e, a, d, z, c | move north-west, north-east, west, east, south-west, south-east |
+| 0, -, p, \*, :, = | move north-west, north-east, west, east, south-west, south-east |
 | b | found a city (settlers only); the settler becomes the city |
 | space | no orders this turn |
 | w | wait: ask again after the other units |

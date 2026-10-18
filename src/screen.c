@@ -78,22 +78,48 @@ void screen_clear(void)
     lfill(COLOR_BASE, 0, 2 * SCREEN_CELLS);
 }
 
-void screen_go8bit(void)
+// The display as BASIC left it, read back by value rather than set to a
+// fixed list, because BASIC 65 boots in 80 columns and a fixed 40-column
+// mode left it printing 80-column lines into a 40-column screen, in black.
+// This is Search And Rescue's vic4_save_rom/vic4_leave.
+//
+// The VIC-II and VIC-III registers come first, because with the hot registers
+// on a write to one of those recomputes the VIC-IV side; the VIC-IV ones then
+// go back exactly as they were, and $D05D -- the hot register bit itself --
+// last. File scope, not a static const in a function: see the Calypsi bugs in
+// CLAUDE.md. Only the first sixteen colours are kept, since BASIC draws in
+// nothing else, and sheet_load() leaves them alone anyway.
+static const byte saved_regs[] = {
+    0x11, 0x16, 0x18, 0x20, 0x21, 0x31,                    // VIC-II, VIC-III
+    0x15, 0x54, 0x55, 0x56, 0x57, 0x58, 0x59, 0x5a, 0x5b,  // VIC-IV
+    0x5e, 0x60, 0x61, 0x62, 0x63, 0x64, 0x65, 0x68, 0x69,
+    0x6a, 0x6b, 0x6c, 0x6d, 0x6e, 0x70, 0x5d,
+};
+#define SAVED_REGS sizeof saved_regs
+#define SAVED_REGS_LEGACY 6
+
+static byte saved_values[SAVED_REGS];
+
+void screen_save(void)
 {
+    byte i;
+
     mega65_io_enable();
-    VIC3CTRL &= 0x7f;  // H640 off
-    VIC3CTRL &= 0xf7;  // V400 off
-    VIC4CTRL &= 0xfa;  // 16-bit characters and full-colour mode off
-    CHRCOUNT = 40;
-    CHARSTEP_LO = 40;
-    CHARSTEP_HI = 0;
-    SCNPTR_0 = 0x00;   // screen back to $0800
-    SCNPTR_1 = 0x08;
-    SCNPTR_2 = 0x00;
-    SCNPTR_3 &= 0xf0;
-    COLPTR_0 = 0x00;   // colour RAM back to $FF80000
-    COLPTR_1 = 0x00;
-    HOTREG |= 0x80;    // and let the VIC-IV recompute the rest
+    for (i = 0; i < SAVED_REGS; i++)
+        saved_values[i] = PEEK(0xd000u + saved_regs[i]);
+}
+
+void screen_restore(void)
+{
+    byte i;
+
+    mega65_io_enable();
+    HOTREG |= 0x80;
+    for (i = 0; i < SAVED_REGS; i++) {
+        if (i == SAVED_REGS_LEGACY)
+            mega65_io_enable();  // a VIC-II write can relock the VIC-IV
+        POKE(0xd000u + saved_regs[i], saved_values[i]);
+    }
 }
 
 // ASCII, as the source spells it, to a screen code. **Calypsi compiles string

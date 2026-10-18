@@ -43,6 +43,8 @@ most important routines included in each source file.
 | hexwar.c | the main routine |
 | &nbsp;&nbsp;&nbsp;_main_ | where execution of Hexwar begins |
 |  |  |
+| bank.s | banks BASIC out of \$a000-\$bfff before `main`, and back in after |
+|  |  |
 | title.c | the title screen and the new-game screens |
 | &nbsp;&nbsp;&nbsp;_title\_run_ | the title menu, then the people and the difficulty |
 | &nbsp;&nbsp;&nbsp;_menu\_run_ | one menu, picked by pointer or keyboard, once round per frame |
@@ -57,11 +59,15 @@ most important routines included in each source file.
 | &nbsp;&nbsp;&nbsp;_unit\_mark_ | keeps the map's "occupied" bit up to date |
 | &nbsp;&nbsp;&nbsp;_unit\_overlay_ | what is drawn over the terrain of an occupied hexagon |
 |  |  |
-| city.c | cities and their names |
+| city.c | cities, their names and their production |
 | &nbsp;&nbsp;&nbsp;_city\_found_ | founds a city |
+| &nbsp;&nbsp;&nbsp;_city\_produce_ | one turn's shields, and the unit when they are enough |
 |  |  |
 | civ.c | the peoples, their leaders and city names, and the difficulty levels |
 | &nbsp;&nbsp;&nbsp;_civ\_choose_ | which people the human and the computer lead |
+|  |  |
+| cityscreen.c | the city screen: the city and its neighbours, and its production |
+| &nbsp;&nbsp;&nbsp;_city\_screen_ | shows a city until the player leaves it |
 |  |  |
 | popup.c | boxes of text over the map, closed with a click or a key |
 | &nbsp;&nbsp;&nbsp;_popup\_show_ | word-wraps and shows the text, waits, and puts the map back |
@@ -126,11 +132,12 @@ The C65 ROM boots AUTOBOOT.C65 automatically. `main()` then:
 6. clears the tile store and enters the main loop (`game_run`).
 
 All disk access is finished by the end of step 3. The KERNAL stays available
-throughout, because nothing the program does banks out the ROM.
+throughout, because the only part of the ROM the program banks out is BASIC,
+at \$a000-\$bfff, and that before `main()` starts.
 
 When the player quits, from the title menu or from the game, `main()` turns
 the sprites off, puts the screen back
-into the 40-column text mode, and returns to BASIC.
+into the 40-column text mode, banks BASIC back in, and returns to it.
 
 # Memory
 
@@ -139,25 +146,32 @@ into the 40-column text mode, and returns to BASIC.
 The program, its data, the BSS and the C stack all have to fit in
 \$2001-\$9fff, the 32 KB that ordinary C code can address directly. This is the
 scarce resource: there is plenty of RAM elsewhere, but code cannot run from
-it without banking. The figures below are from the linker's listing,
-`build/hexwar.lst`, for the build of 17 October 2026.
+it without banking -- plus the 8 KB at \$a000-\$bfff, which is RAM under the
+BASIC ROM and is the program's once `src/bank.s` has banked BASIC out, before
+`main()` runs. The figures below are from the linker's listing,
+`build/hexwar.lst`, for the build of 18 October 2026.
 
 | **Address range** | **KB** |  **Usage** |
 | -- |  - | ---- |
 | \$0002-\$0039 | 0.1 | Calypsi's pseudo registers, in zero page |
 | \$1600-\$1790 | 0.4 | the popup's text (the `zpsave` section, `LOW_FREE`) |
 | \$1791-\$1eff | 1.9 | free |
-| \$2001-\$298a | 2.4 | BASIC stub, startup code, constant data and text |
-| \$298b-\$6836 | 15.7 | code |
-| \$6837-\$6a36 | 0.5 | C stack |
-| \$6a37-\$8097 | 5.6 | BSS: the map, units, cities, buffers |
-| \$8098-\$9fff | 7.9 | free |
+| \$2001-\$2a60 | 2.6 | BASIC stub, startup code, constant data and text |
+| \$2a61-\$7a68 | 20.0 | code |
+| \$7a69-\$7c68 | 0.5 | C stack |
+| \$7c69-\$83f9 | 1.9 | BSS: units, cities, buffers |
+| \$83fa-\$9fff | 7.0 | free |
+| \$a000-\$afff | 4.0 | the map's terrain layer, `map_tile` (`highbss`, `HIGH_BSS`) |
+| \$b000-\$bfff | 4.0 | free |
 
-The PRG is everything up to \$6836; the C stack and the BSS are not stored in
-the file, only reserved after it.
+The PRG is everything up to \$7a68; the C stack and the BSS are not stored in
+the file, only reserved after it. Nothing initialised may go above \$9fff,
+because the PRG is loaded while BASIC is still mapped there, so only BSS
+marked `HIGH_BSS` is put in the window. BASIC is banked back in as the last
+thing `main()` does before it returns.
 
-The largest item in the BSS is the terrain layer, `map_tile`, at 4096 bytes.
-The units take 384 bytes (six one-byte fields for each of 64 units) and the
+The largest item in the BSS is the terrain layer, `map_tile`, at 4096 bytes,
+which is why it was the first to move up. The units take 384 bytes (six one-byte fields for each of 64 units) and the
 cities 128 (four fields for each of 32). Both are stored as one array per
 field rather than as an array of structs, because the 6502 reads `unit_ax[u]`
 with a single indexed instruction.
@@ -170,7 +184,7 @@ between.
 
 When the free space runs low, the order of things to try is written down in
 `CLAUDE.md` ("Growing past 32 KB"): move data out with `__far` first, then
-bank BASIC out for BSS at \$a000-\$bfff, and only then split the code into
+more BSS into the window at \$a000-\$bfff, and only then split the code into
 MAP-banked regions.
 
 ## Chip RAM and the rest of the machine
@@ -308,6 +322,7 @@ terrain is drawn, and their overlays are drawn after the next row's terrain.
 | Orders | each of the player's units that has moves left and no standing orders is selected in turn (`unit_next`) and brought into view |
 | End of turn | with no unit left, the panel shows "End of turn"; Return, or a click on the panel, goes on |
 | Computer player | `ai_turn`, which for now only gives the computer's units their moves back |
+| Production | every city adds its shields (its own hexagon's, at least 1, plus its best neighbour's); one that reaches the cost of what it is building puts the unit on its hexagon and keeps the surplus |
 | New turn | the turn number goes up, the year moves on ten years from 1600 BC, and every unit gets its moves back |
 
 The game is over when the player has neither units nor cities.

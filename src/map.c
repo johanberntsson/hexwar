@@ -5,7 +5,7 @@
 #include "map.h"
 #include "minimap.h"
 
-byte map_tile[MAP_ROWS][MAP_COLUMNS];
+HIGH_BSS byte map_tile[MAP_ROWS][MAP_COLUMNS];
 
 // The file's header; tools/mapgen.py documents the whole layout.
 #define MAP_HEADER_SIZE 16

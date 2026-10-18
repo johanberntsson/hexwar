@@ -126,6 +126,16 @@ void screen_putcodexy(byte x, byte y, byte code, byte color)
     lpoke(col + 1, color);
 }
 
+void screen_fill(byte x, byte y, byte w, byte color)
+{
+    dword cell = SCREEN_CELL(x, y);
+    dword col = COLOR_BASE + (cell - SCREEN_BASE);
+    lfill(cell, 0, 2 * w);
+    lfill_skip(cell, 32, w, 2);
+    lfill(col, 0, 2 * w);
+    lfill_skip(col + 1, color, w, 2);
+}
+
 void screen_box(byte x0, byte y0, byte x1, byte y1, byte color)
 {
     byte i;

@@ -41,6 +41,7 @@ extern byte unit_active;
 // Per kind, indexed by KIND_*.
 extern const char *const unit_kind_name[];
 extern const byte unit_kind_moves[];
+extern const byte unit_kind_cost[];     // shields to build one
 
 // A new unit, with a full turn's moves. UNIT_NONE if the list is full.
 byte unit_create(byte kind, byte owner, byte ax, byte ay);

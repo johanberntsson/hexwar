@@ -10,6 +10,7 @@
 
 #include "game.h"
 #include "city.h"
+#include "cityscreen.h"
 #include "civ.h"
 #include "hexwar.h"
 #include "input.h"
@@ -38,6 +39,14 @@ static byte game_over;
 static byte quit;
 static word turn;
 static word year;
+
+// Frames since the game began, counted by game_run(), and the last click on
+// one of the player's cities: a second click on the same hexagon within
+// DOUBLE_CLICK frames opens it. Longer than the click debounce in input.c.
+#define DOUBLE_CLICK 25
+static word frame;
+static word click_frame;
+static byte click_ax = 0xff, click_ay;
 
 static const char *const terrain_name[] = {
     "Hills", "Grassland", "Mountains", "Ocean", "Shallows", "Tundra",
@@ -85,19 +94,14 @@ static void panel_text(byte row, const char *s, byte colour)
 #define ROW_TURN 14
 #define ROW_UNIT 16
 #define ROW_MOVES 17
-#define ROW_PROMPT 19           // four rows
-#define ROW_MESSAGE 23
+#define ROW_PROMPT 19           // two rows
+#define ROW_MESSAGE 22          // two rows
 
-// A message in the panel, `first` and `second` on one line: "Cannot swim".
+// Two lines of message in the panel. `second` may be `line`.
 static void message(const char *first, const char *second)
 {
-    line_clear();
-    line_add(first);
-    if (*second) {
-        line_add(" ");
-        line_add(second);
-    }
-    panel_text(ROW_MESSAGE, line, COLOR_YELLOW);
+    panel_text(ROW_MESSAGE, first, COLOR_YELLOW);
+    panel_text(ROW_MESSAGE + 1, second, COLOR_YELLOW);
 }
 
 static void draw_frame(void)
@@ -137,21 +141,17 @@ static void draw_orders(void)
         line_add("Moves: ");
         line_add_num(unit_moves[u]);
         panel_text(ROW_MOVES, line, TEXT_COLOUR);
-        for (r = 0; r < 4; ++r) panel_text(ROW_PROMPT + r, "", TEXT_COLOUR);
+        for (r = 0; r < 2; ++r) panel_text(ROW_PROMPT + r, "", TEXT_COLOUR);
         return;
     }
     panel_text(ROW_UNIT, "", TEXT_COLOUR);
     panel_text(ROW_MOVES, "", TEXT_COLOUR);
     if (game_over) {
         panel_text(ROW_PROMPT, "Game over", COLOR_WHITE);
-        panel_text(ROW_PROMPT + 1, "", TEXT_COLOUR);
-        panel_text(ROW_PROMPT + 2, "Press a", TEXT_COLOUR);
-        panel_text(ROW_PROMPT + 3, "key", TEXT_COLOUR);
+        panel_text(ROW_PROMPT + 1, "Press a key", TEXT_COLOUR);
     } else {
-        panel_text(ROW_PROMPT, "End of", COLOR_WHITE);
-        panel_text(ROW_PROMPT + 1, "turn", COLOR_WHITE);
-        panel_text(ROW_PROMPT + 2, "Press", TEXT_COLOUR);
-        panel_text(ROW_PROMPT + 3, "Return", TEXT_COLOUR);
+        panel_text(ROW_PROMPT, "End of turn", COLOR_WHITE);
+        panel_text(ROW_PROMPT + 1, "Press Return", TEXT_COLOUR);
     }
 }
 
@@ -252,14 +252,29 @@ static void ai_turn(void)
     unit_begin_turn(PLAYER_AI);
 }
 
+// Then every city's production, the computer's included, so that a unit
+// finished now is ready for the turn about to begin. With more than one
+// city finishing, the panel names the last.
 static void end_turn(void)
 {
+    byte c, kind;
+
+    message("", "");
     ai_turn();
+    for (c = 0; c < city_count; ++c) {
+        kind = city_produce(c);
+        if (kind != KIND_NONE && city_owner[c] == PLAYER_HUMAN) {
+            line_clear();
+            line_add("built ");
+            line_add(unit_kind_name[kind]);
+            message(city_name_of(c), line);
+            dirty = 1;
+        }
+    }
     ++turn;
     year -= YEARS_PER_TURN;
     unit_begin_turn(PLAYER_HUMAN);
     draw_status();
-    message("", "");
     select_unit(UNIT_NONE);
 }
 
@@ -273,7 +288,7 @@ static void move_active(byte dir)
     if (!map_neighbour(unit_ax[u], unit_ay[u], dir, &nx, &ny)) return;
     t = MAP_TERRAIN(nx, ny);
     if (t == TILE_OCEAN || t == TILE_SHALLOW_OCEAN) {
-        message("Cannot", "swim");
+        message("Cannot swim", "");
         return;
     }
     message("", "");
@@ -294,12 +309,12 @@ static void found_city(void)
     byte c;
 
     if (unit_kind[u] != KIND_SETTLER) {
-        message("Only", "settlers");
+        message("Only settlers", "found cities");
         return;
     }
     c = city_found(PLAYER_HUMAN, unit_ax[u], unit_ay[u]);
     if (c == CITY_NONE) {
-        message("Cannot", "found here");
+        message("Cannot found", "a city here");
         return;
     }
     unit_remove(u);
@@ -335,6 +350,28 @@ static void unit_key(byte key)
     }
 }
 
+// The map screen, all of it, as game_run() first puts it up -- after the
+// city screen, which wrote over every cell of it. The pixels of the minimap
+// are still in place, so only its cells come back; the view is redrawn on
+// the next frame, as the patch the city screen drew has replaced part of it.
+static void draw_screen(void)
+{
+    screen_clear();
+    view_init();
+    minimap_show();
+    draw_frame();
+    draw_status();
+    draw_orders();
+    dirty = 1;
+    hover_dirty = 1;
+}
+
+static void open_city(byte c)
+{
+    city_screen(c);
+    draw_screen();
+}
+
 // A click on a hexagon next to the unit with orders moves it there. A click
 // on one of the player's own units that still has moves gives it the orders
 // instead, waking it if it was fortified. Anywhere else on the map, or on
@@ -342,7 +379,7 @@ static void unit_key(byte key)
 // ends the turn.
 static void click(void)
 {
-    byte ax, ay, u, dir;
+    byte ax, ay, u, dir, c, own;
 
     if (minimap_hex(input_x, input_y, &ax, &ay)) {
         centre_on(ax, ay);
@@ -352,6 +389,22 @@ static void click(void)
         if (unit_active == UNIT_NONE && !game_over) end_turn();
         return;
     }
+
+    // A double click on one of the player's cities opens it. The first
+    // click of the two does what a click does, except that it never centres
+    // the view -- which would move the city out from under the second.
+    c = city_at(ax, ay);
+    own = c != CITY_NONE && city_owner[c] == PLAYER_HUMAN;
+    if (own && ax == click_ax && ay == click_ay
+        && (word)(frame - click_frame) < DOUBLE_CLICK) {
+        click_ax = 0xff;
+        open_city(c);
+        return;
+    }
+    click_ax = own ? ax : 0xff;
+    click_ay = ay;
+    click_frame = frame;
+
     if (unit_active != UNIT_NONE) {
         dir = map_direction(unit_ax[unit_active], unit_ay[unit_active],
                             ax, ay);
@@ -371,7 +424,7 @@ static void click(void)
             return;
         }
     }
-    centre_on(ax, ay);
+    if (!own) centre_on(ax, ay);
 }
 
 // --------------------------------------------------------------- the game
@@ -472,6 +525,7 @@ void game_run(void)
         // also what makes one trip round this loop one frame, which
         // input_poll() counts on.
         view_wait_for_redraw();
+        ++frame;
         if (dirty) {
             view_redraw(off_x, off_y);
             minimap_frame(off_x, off_y);

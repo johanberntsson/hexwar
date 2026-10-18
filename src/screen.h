@@ -76,6 +76,10 @@ void screen_putsxy(byte x, byte y, const char *s, byte color);
 // A screen code as it is, for the glyphs ASCII has no letter for.
 void screen_putcodexy(byte x, byte y, byte code, byte color);
 
+// `w` blank cells from (x, y), in `color` -- which with ATTR_REVERSE is a
+// solid bar. A few DMA jobs, where w screen_putcxy calls would be 4w.
+void screen_fill(byte x, byte y, byte w, byte color);
+
 // Box-drawing screen codes, the same in the upper and the lower case sets.
 #define BOX_TOP_LEFT 112
 #define BOX_TOP_RIGHT 110

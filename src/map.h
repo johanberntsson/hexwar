@@ -68,6 +68,8 @@
 // **Bit 6 says the human player has seen the hexagon.** Until then it is
 // drawn as TILE_UNDISCOVERED and anything on it stays hidden. map_explore()
 // sets it; nothing clears it. The map file has it clear everywhere.
+//
+// **It lives in HIGH_BSS**, under the BASIC ROM, out of the 32 KB.
 extern byte map_tile[MAP_ROWS][MAP_COLUMNS];
 #define MAP_OCCUPIED 0x80
 #define MAP_EXPLORED 0x40

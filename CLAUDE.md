@@ -162,7 +162,8 @@ buffers at the default `$FF80000` and corrupts the display.
 
 | Address | Size | Contents |
 |---|---|---|
-| `$2001-$9FFF` | 32 KB | program, data, BSS, C stack. About 20 KB used |
+| `$2001-$9FFF` | 32 KB | program, data, BSS, C stack. About 25 KB used |
+| `$A000-$BFFF` | 8 KB | `highram`, under the BASIC ROM, banked out by `src/bank.s`: `map_tile`, the rest free — `HIGH_BSS` in `src/mega65.h` moves a variable there |
 | `$1600-$1EFF` | 2304 | `zpsave`: the popup's 400-byte text, the rest free — `LOW_FREE` in `src/mega65.h` moves a variable there |
 | `$12000` | 4000 | screen RAM, 80x25 cells of 2 bytes |
 | `$40000-$56EFF` | 94208 | the view's tile store, 23 rows of 4096 |
@@ -183,16 +184,67 @@ back two-thirds of the drawing time; see **Tearing**.
 
 `$20000-$3FFFF` is left as the C65 ROM.
 
-**The 32 KB is what to watch.** `map_tile` is 4096 of it before any game
-code; the tile sheet used to be linked in too (6.5 KB, and growing a KB a
-tile) and now comes off the disk. At the last measurement `build/hexwar.lst`
-reported the region 81.7% full (about 6 KB free) with milestone 1 in it:
-the display engine, the loaders, input and the pointer, units, cities, the
-turn loop, the title and new-game screens, popups, and the minimap.
+### When bank 5 fills up
 
-**Naming `zdata` in `hexwar.scm`'s `freeSpace` would move the whole BSS to
-`$1600-$1EFF`** — which is what hexgame does — but `map_tile` alone does not
-fit in 2304 bytes. Use `LOW_FREE` per variable instead.
+**Bank 5 is full** (18 Oct 2026): sheet, 4 KB for two more tiles, minimap.
+This is chip RAM the *VIC* has to see — tiles, the minimap, anything else
+drawn as full-colour characters. Data the CPU alone reads goes to attic
+RAM instead and does not count. Decided, not yet done; take these in order
+when a 15th tile or another full-colour surface needs room:
+
+1. **The tile store's row padding.** Each of the 23 rows has 256 unused
+   bytes after its 3840 (`VIEW_ROW_ADDR(r) + 3840`), 92 character slots
+   of 64 bytes in all. A full-colour character's definition can be
+   anywhere, so the minimap can take 92 of its 128 characters from there
+   and keep only 36 (2304 bytes) in bank 5 — about five more tiles of
+   room, for nothing but a less regular `pixel()` in `src/minimap.c` and
+   its screen words. The redraw never writes past 3840 in a row.
+2. **The C64 ROM, which C65 mode never runs.** A dump of the running game
+   shows C64 BASIC at `$2A000` (`CBMBASIC` at `$2A004`) and the GO64
+   KERNAL at `$2E000`, 16 KB together. Using them keeps the C65 KERNAL,
+   CBDOS and the font, but needs hexgame's Hypervisor trap $70
+   (`fc_toggle_rom_write_protect` in
+   `~/commodore/mega65/hexgame/mega65-libc-modified/src/fcio_asm.s`) —
+   **a toggle that outlives the program, so exactly two calls a run** —
+   plus a copy of the 16 KB to attic RAM at start and back on quit, or
+   GO64 breaks after the game. Check the layout against a dump of the ROM
+   version actually installed, and that the font in use is not in the
+   area taken.
+3. **Banking the whole ROM out**, as `fc_bank_out_rom` does in hexgame,
+   for all of `$20000-$3FFFF` less what the machine keeps running on.
+   Last, because it costs the KERNAL: no disk I/O afterwards (Load/Save
+   Game would have to put the ROM back from attic first), no `printf`, a
+   raster handler of our own, and a quit that restores 128 KB and resets
+   the machine, with the VIC-IV registers a real MEGA65 does not reset
+   put back by hand. hexgame's `design.md` (*Putting the write protection
+   back*) is the account of what went wrong there.
+
+**The 32 KB is what to watch.** The tile sheet used to be linked in
+(6.5 KB, and growing a KB a tile) and now comes off the disk, and
+`map_tile`'s 4 KB has moved to `$A000`. At the last measurement (18 Oct
+2026) `build/hexwar.lst` reported the region **77.5% full (about 7.2 KB
+free)** with milestone 1, the minimap and the city screen in it; it was
+89.9% before `map_tile` moved. A `NO_TITLE` build is about 11 points
+smaller, so measure the default build.
+
+**BASIC is banked out for the whole run** (18 Oct 2026, Search And
+Rescue's arrangement, which is confirmed on a real MEGA65 with disk I/O):
+`src/bank.s` clears `$D030` bit 4 in `__low_level_init` — before the
+startup clears BSS, since a read of the window would otherwise come from
+the ROM — and `bank_basic_in()` puts it back as the last thing before
+`main()` returns, on both of its return paths. `hexwar.scm` declares
+`$A000-$BFFF` as `highram` **with no `(type …)`**: `(type any)` makes it a
+second content area as soon as anything initialised lands there
+(*multiple program areas not allowed in prg output*), and `(type ram)`
+does not work. Mark a variable `HIGH_BSS` to move it; **uninitialised data
+only**, since the PRG is loaded with BASIC still mapped. `map_load()`
+reads straight into it through the KERNAL. Seen in xemu: the map loads,
+the game plays, and quitting reaches READY. **Not yet tried on the
+machine** in this program.
+
+**Naming `zdata` in `hexwar.scm`'s `freeSpace` or `highram` would move the
+whole BSS there** — which is what hexgame does — so use `LOW_FREE` and
+`HIGH_BSS` per variable instead.
 
 **Nothing that must survive a KERNAL disk call may live in `LOW_FREE`.** It is
 below `$2001`, where the C65 ROM keeps its own buffers. Search And Rescue,
@@ -229,7 +281,8 @@ not. Take these in order and stop as soon as it fits:
    minimap at `$5E000`. Leave bank 1 alone too: screen RAM is at `$12000` and BASIC 65 owns
    most of the rest. Attic RAM (`$8000000` up, all of it free now that the
    expanded sheet has moved to bank 5) is the real reservoir, reached by DMA or `__huge`.
-2. **Bank BASIC out and put BSS at `$A000-$BFFF`.** Search And Rescue does
+2. **Bank BASIC out and put BSS at `$A000-$BFFF`** — *done, see below.*
+   Search And Rescue does
    exactly this and it is confirmed on a real MEGA65 (2 Oct 2026), disk I/O
    included. Copy its arrangement rather than inventing one: clear `$D030`
    bit 4 in `__low_level_init` (`src/bank.s` there); declare the window in the
@@ -258,8 +311,10 @@ banked region, where a dispatch call costs nothing that matters. Second,
 **give every new subsystem its own `.c` file now**, because that is what makes
 the eventual split a one-line pragma per file instead of a rewrite.
 
-**Do none of this yet.** As of the last check there were about 6 KB free in
-the program region. Revisit when `hexwar.lst` shows the region past ~26 KB.
+**Step 2 is done** for `map_tile` (18 Oct 2026; see **Memory map**), with
+4 KB of the window left for the next BSS that moves. Step 3 is the one to
+put off: revisit when `hexwar.lst` shows the region past ~26 KB again and
+`highram` is full.
 `~/commodore/mega65/hexgame/tools/mkprg.py` (exomizer, one file) is the other
 known trick if the *loaded* size rather than the addressable size is what gets
 tight.
@@ -335,7 +390,8 @@ comes out of the file looks squashed. The cc65 build fixed that at draw time —
 `$0334`, then issued two DMA jobs per source character. `sheet_expand()` does
 it once, in 96 iterations, leaving a sheet in which every tile is natively 8x4.
 After that there is no expansion step in the drawing path, no shared scratch
-buffer to collide over, and no assembly file at all.
+buffer to collide over, and no assembly in the drawing path at all (the
+one assembly file, `src/bank.s`, only banks BASIC).
 
 **A tile row is one DMA job, not eight.** The eight characters of a tile row
 are contiguous in the expanded sheet *and* the cells they land on are
@@ -450,7 +506,8 @@ this. And note `$D012` is 8 bits of a 0-311 raster, so it repeats for lines
 
 TODO.txt's milestones are the plan. Milestone 1 (pointer, turn loop, a
 settler, founding a city) is in; milestone 2 is the city screen and building
-units.
+units, and it is in: the city screen, changing what a city builds, and
+production.
 
 **The title screen comes first** (`src/title.c`): `title_show()` puts the
 title up before the disk is read, and `title_run()` runs the menu — Start
@@ -473,6 +530,37 @@ people each player is — the AI takes the one after the human's — and
 `city_name_of()` goes through it. The five difficulty levels (Scribe to
 Great King) are there too, in `game_level`, which nothing reads yet.
 `NO_TITLE` builds play Mycenaeans against Hittites, as before.
+
+**The city screen** (`src/cityscreen.c`, after
+`civ1-reference/civ1-pic02.png`) takes over the whole screen: the city's
+name on top, three boxes — the units in the city, the city's hexagon and
+its six neighbours, and what it is producing with a CHANGE button — and
+EXIT at the bottom right (`c` and Esc/Return do the same). CHANGE turns the
+production box into a list of what can be built (`buildable[]`: warriors
+and builders), picked like a menu. **It is the map screen's own cells
+rewritten**: text over the panel, the minimap and most of the window, and
+in the middle the window's own full-colour cells, showing 24x10 characters
+of the tile store that `view_draw_patch()` has cleared and drawn the seven
+hexagons into. So nothing is allocated for it, and on the way out
+`draw_screen()` in `src/game.c` puts the whole map screen back —
+`screen_clear()`, `view_init()`, `minimap_show()` (cells only; the pixels
+were never touched) and the panel — and marks the view dirty, so the next
+frame's redraw replaces the patch. That redraw needs no clear, for the
+usual reason. The production box also shows the rate and the turns left.
+
+**Production** (`src/city.c`) stands in for population and food until they
+exist: a city makes the shields of its own hexagon, at least 1, plus those
+of its best neighbour — what a size-1 city working one tile would make.
+`terrain_shields[]` there is the table (hills 2, grassland and mountains 1,
+water and tundra 0), so a grassland city by hills makes 3 a turn: a warrior
+(10) in four turns, a builder (20) in seven. Each city has `city_build` (a
+`KIND_*`, warriors when founded) and `city_shields`. At the end of a turn,
+after `ai_turn()`, `end_turn()` calls `city_produce()` on every city; at
+the cost, the unit appears on the city's hexagon with its moves, so the
+coming turn asks for its orders first like any other, and the surplus
+carries over. The panel says "Mycenae / built Warrior" (the last city, if
+several finish at once). With the unit list full the shields wait at the
+cost.
 
 **Popups** (`src/popup.c`) are a box of word-wrapped text over the middle
 of the map window, closed by a click anywhere, fire, Return, space or Esc.
@@ -559,7 +647,11 @@ puts `SPRPTRADR` back before returning to BASIC.
 Controls: the mouse or a joystick in either port moves the arrow, and the
 button or fire is `KEY_CLICK`. A click next to the active unit moves it
 there, on one of the player's units hands it the orders, elsewhere on the
-map centres the view, and on the panel at the end of a turn ends it. Keys:
+map centres the view (but not on the player's own city, so that a second
+click lands on it too), on the minimap centres the view there, and on the
+panel at the end of a turn ends it. **A double click on one of the
+player's cities opens the city screen** — two clicks on the same hexagon
+within `DOUBLE_CLICK` (25) frames, counted by `game_run()`. Keys:
 `q e a d z c` move the active unit NW, NE, W, E, SW, SE (the tiles are
 pointy-topped, so there is no N or S); `b` founds a city with a settler;
 space skips the unit this turn, `w` asks again after the others, `f`
@@ -569,7 +661,8 @@ quits. **`w a s d` no longer scroll**, since `a d` and `w` are orders now.
 **Not tried on the machine yet** (as of 17 Oct 2026; the user is testing
 next): the mouse and joystick reads are hexgame's, which came from Ozmoo's
 tested code, but nothing in this build has run on a real MEGA65 — nor has
-loading the sheet off the disk, nor the sheet in bank 5. Things to look at
+loading the sheet off the disk, nor the sheet in bank 5, nor BASIC banked
+out with `map_tile` under it (Search And Rescue's arrangement, which has). Things to look at
 there, roughly in order of suspicion: that `TILES.FCI` loads at all (the
 hot-register note below applies to it as much as to the map); which port the
 mouse turns up on (Ozmoo saw port 1 on hardware, port 2 in xemu — the button
@@ -769,5 +862,4 @@ A new tile needs all of these, and nothing checks that they agree:
    minimap at `$5E000` (an `#error` in `src/minimap.c`): from `$57000`,
    **14 tiles, of which 12 are used**. The tile store's own `#error` in
    `src/view.c` keeps the store and the sheet apart. Past 14 something has
-   to move — the minimap could take 92 of its 128 characters from the
-   tile store's row padding, or bank 1 could be looked into properly.
+   to move: see **When bank 5 fills up**.

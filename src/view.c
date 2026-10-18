@@ -148,6 +148,56 @@ static void draw_overlays(byte hy, int ty)
     pending_n[list] = 0;
 }
 
+// The patch in painter's order, top row first, and where each tile goes in
+// it: the hexagon rows are 3 characters apart and the tiles in one are 8.
+// File scope, and 16-bit offsets: see the Calypsi notes in CLAUDE.md.
+static const byte patch_dir[7] = {
+    DIR_NW, DIR_NE, DIR_W, DIR_NONE, DIR_E, DIR_SW, DIR_SE
+};
+static const int patch_x[7] = { 4, 12, 0, 8, 16, 4, 12 };
+static const int patch_y[7] = { 0, 0, 3, 3, 3, 6, 6 };
+
+void view_draw_patch(byte col, byte row, byte ax, byte ay)
+{
+    byte i, k, n, t, nx, ny;
+    byte cell_x[7], cell_y[7];
+    byte tiles[3];
+
+    for (i = 0; i < VIEW_PATCH_ROWS; ++i)
+        lfill(TILE_STORE + VIEW_ROW_STRIDE * (row + i) + 64UL * col, 0,
+              64 * VIEW_PATCH_COLUMNS);
+
+    blit_begin(0x00, SHEET_EXPANDED_BANK, 0x00, 0x00);
+    for (i = 0; i < 7; ++i) {
+        nx = ax;
+        ny = ay;
+        // Off the top or bottom of the map there is nothing, and black.
+        if (patch_dir[i] != DIR_NONE
+            && !map_neighbour(ax, ay, patch_dir[i], &nx, &ny)) {
+            cell_x[i] = 0xff;
+            continue;
+        }
+        cell_x[i] = nx;
+        cell_y[i] = ny;
+        t = map_tile[ny][nx];
+        view_draw_tile(col + patch_x[i], row + patch_y[i],
+                       (t & MAP_EXPLORED) ? (t & MAP_TERRAIN_MASK)
+                                          : TILE_UNDISCOVERED);
+    }
+    // The overlays after all the terrain, as view_redraw() does a row
+    // behind it -- but without the selection ring, which means nothing here.
+    for (i = 0; i < 7; ++i) {
+        if (cell_x[i] == 0xff) continue;
+        t = map_tile[cell_y[i]][cell_x[i]];
+        if ((t & (MAP_EXPLORED | MAP_OCCUPIED)) != (MAP_EXPLORED | MAP_OCCUPIED))
+            continue;
+        n = unit_overlay(cell_x[i], cell_y[i], tiles);
+        for (k = 0; k < n; ++k)
+            if (tiles[k] != TILE_SELECT)
+                view_draw_tile(col + patch_x[i], row + patch_y[i], tiles[k]);
+    }
+}
+
 void view_redraw(word off_x, word off_y)
 {
     byte hy;

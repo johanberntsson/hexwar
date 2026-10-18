@@ -86,6 +86,16 @@ void view_draw_tile(int x, int y, byte tile);
 // immediately before it.
 void view_redraw(word off_x, word off_y);
 
+// **The city screen's picture**: hexagon (ax, ay) and its six neighbours on
+// black, with the cities and units on them, in the VIEW_PATCH_COLUMNS x
+// VIEW_PATCH_ROWS of the store from window cell (col, row). The rest of the
+// store is left alone. It is no longer the map afterwards, so the caller
+// redraws the view before the window shows the map again -- which needs no
+// clear, since view_redraw() covers every byte.
+#define VIEW_PATCH_COLUMNS 24       // three tiles across
+#define VIEW_PATCH_ROWS 10          // three hexagon rows, and a tile's foot
+void view_draw_patch(byte col, byte row, byte ax, byte ay);
+
 // Block until the beam has just left the bottom of the window, which is where
 // a redraw has to start if it is to stay ahead of it.
 //

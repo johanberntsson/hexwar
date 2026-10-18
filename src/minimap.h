@@ -35,6 +35,11 @@
 // all of it. Once, when the game screen goes up.
 void minimap_init(void);
 
+// Only the character numbers and the frame, for putting the minimap back on
+// the screen after something else has used it -- the city screen. The
+// pixels are still there.
+void minimap_show(void);
+
 // Redraw hexagon (ax, ay) from what map_tile now says about it. Called when
 // a hexagon is explored, and whenever unit_mark() looks at one.
 void minimap_plot(byte ax, byte ay);

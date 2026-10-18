@@ -78,21 +78,20 @@ void minimap_plot(byte ax, byte ay)
     lpoke(MINIMAP_STORE + pixel(px, py), c);
 }
 
-void minimap_init(void)
+void minimap_show(void)
 {
-    byte cx, cy, x, y;
-    word px, py, charnum;
-    byte *p;
+    byte cx, cy;
+    word charnum;
     dword at;
 
     screen_box(MINIMAP_LEFT - 1, MINIMAP_TOP - 1,
                MINIMAP_LEFT + MINIMAP_COLUMNS, MINIMAP_TOP + MINIMAP_ROWS,
                COLOR_LIGHTGREY);
 
+    // The screen words, as view_restore() writes the window's: a character
+    // number of its own for every cell, and no colour or attributes, which
+    // apply to full-colour characters too.
     for (cy = 0; cy < MINIMAP_ROWS; ++cy) {
-        // The screen words, as view_restore() writes the window's: a
-        // character number of its own for every cell, and no colour or
-        // attributes, which apply to full-colour characters too.
         charnum = (word)(MINIMAP_STORE / 64) + (word)cy * MINIMAP_COLUMNS;
         for (cx = 0; cx < MINIMAP_COLUMNS; ++cx, ++charnum) {
             cell[2 * cx] = (byte)charnum;
@@ -101,8 +100,18 @@ void minimap_init(void)
         at = SCREEN_CELL(MINIMAP_LEFT, MINIMAP_TOP + cy);
         lcopy((dword)(word)cell, at, 2 * MINIMAP_COLUMNS);
         lfill(COLOR_BASE + (at - SCREEN_BASE), 0, 2 * MINIMAP_COLUMNS);
+    }
+}
 
-        // Then each character's 64 pixels, built here and sent in one job.
+void minimap_init(void)
+{
+    byte cx, cy, x, y;
+    word px, py;
+    byte *p;
+
+    minimap_show();
+    for (cy = 0; cy < MINIMAP_ROWS; ++cy) {
+        // Each character's 64 pixels, built here and sent in one job.
         // A pixel whose column parity differs from its line's is the right
         // half of the hexagon one column to the left.
         for (cx = 0; cx < MINIMAP_COLUMNS; ++cx) {

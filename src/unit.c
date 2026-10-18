@@ -14,6 +14,7 @@ byte unit_active = UNIT_NONE;
 
 const char *const unit_kind_name[] = { "", "Settler", "Warrior", "Builder" };
 const byte unit_kind_moves[] = { 0, 1, 1, 1 };
+const byte unit_kind_cost[] = { 0, 30, 10, 20 };
 static const byte unit_kind_tile[] = {
     0, TILE_SETTLER, TILE_WARRIOR, TILE_BUILDER
 };

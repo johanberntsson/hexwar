@@ -27,6 +27,18 @@ typedef uint32_t dword;
 // has to survive a KERNAL call belongs in it.
 #define LOW_FREE __attribute__((section("zpsave")))
 
+// **Put a variable in the 8 KB of RAM under the BASIC ROM, $A000-$BFFF**,
+// which src/bank.s banks in before main() and hexwar.scm hands to a section
+// called `highbss`. Ordinary 16-bit addresses, so it costs nothing per access
+// either. **Uninitialised data only**: the PRG is loaded with BASIC still
+// mapped, so nothing that has to arrive from the disk can live up there, and
+// the linker script is what keeps it out.
+#define HIGH_BSS __attribute__((section("highbss")))
+
+// BASIC back over $A000-$BFFF, as the ROM had it. The last thing before
+// main() returns; HIGH_BSS is gone after it.
+void bank_basic_in(void);
+
 // Unlock the MEGA65 registers ($D02F knock) and switch the CPU to full speed.
 // Cheap, and every DMA job does it anyway.
 void mega65_io_enable(void);

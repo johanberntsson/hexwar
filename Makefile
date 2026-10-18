@@ -69,12 +69,17 @@ SRCS     = src/hexwar.c \
            src/input.c \
            src/unit.c \
            src/city.c \
+           src/cityscreen.c \
            src/game.c \
            src/civ.c \
            src/popup.c \
            src/title.c
 
-OBJS     = $(patsubst src/%.c,$(BUILD)/%.o,$(SRCS))
+# Assembly: only src/bank.s, which banks BASIC out before main().
+ASRCS    = src/bank.s
+
+OBJS     = $(patsubst src/%.c,$(BUILD)/%.o,$(SRCS)) \
+           $(patsubst src/%.s,$(BUILD)/%.o,$(ASRCS))
 
 ELF      = $(BUILD)/hexwar.elf
 PRG      = $(BUILD)/hexwar.prg
@@ -130,6 +135,9 @@ $(MAP): tools/mapgen.py $(MAP_STAMP) | $(BUILD)
 
 $(BUILD)/%.o: src/%.c $(HDRS) Makefile $(STAMP) | $(BUILD)
 	cc6502 $(CFLAGS) -c -o $@ $<
+
+$(BUILD)/%.o: src/%.s Makefile | $(BUILD)
+	as6502 $(ASFLAGS) -o $@ $<
 
 # The list file is the memory map, and the only place the program's real size
 # is written down -- worth reading after any change that might have pushed it

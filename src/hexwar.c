@@ -52,6 +52,7 @@ int main(void)
     if (title_run() == TITLE_QUIT) {
         input_shutdown();
         screen_go8bit();
+        bank_basic_in();
         return 0;
     }
     screen_clear();
@@ -68,5 +69,6 @@ int main(void)
 
     input_shutdown();
     screen_go8bit();
+    bank_basic_in();
     return 0;
 }

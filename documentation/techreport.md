@@ -78,9 +78,12 @@ most important routines included in each source file.
 | &nbsp;&nbsp;&nbsp;_menu\_click_ | opens the dropdown under the arrow and returns what was picked |
 |  |  |
 | ai.c | the computer players and the barbarians |
-| combat.c | combat, war and peace, and whether a player is still in the game |
 | &nbsp;&nbsp;&nbsp;_ai\_place_ | puts each one's settler on good land, well away from the others |
 | &nbsp;&nbsp;&nbsp;_ai\_turn_ | one computer player's turn |
+| &nbsp;&nbsp;&nbsp;_ai\_barbarians_ | the barbarians' turn: new bands, and every barbarian's move |
+|  |  |
+| combat.c | combat, war and peace, and whether a player is still in the game |
+| &nbsp;&nbsp;&nbsp;_combat\_attack_ | one unit attacks a neighbouring hexagon |
 |  |  |
 | popup.c | boxes of text over the map, closed with a click or a key |
 | &nbsp;&nbsp;&nbsp;_popup\_show_ | word-wraps and shows the text, waits, and puts the map back |
@@ -175,15 +178,15 @@ BASIC ROM and is the program's once `src/bank.s` has banked BASIC out, before
 | \$0002-\$0039 | 0.1 | Calypsi's pseudo registers, in zero page |
 | \$1600-\$1790 | 0.4 | the popup's text (the `zpsave` section, `LOW_FREE`) |
 | \$1791-\$1eff | 1.9 | free |
-| \$2001-\$2b33 | 2.8 | BASIC stub, startup code, constant data and text |
-| \$2b34-\$8b09 | 24.0 | code |
-| \$8b0a-\$8d09 | 0.5 | C stack |
-| \$8d0a-\$90dd | 1.0 | BSS: buffers and small state |
-| \$90de-\$9fff | 3.8 | free |
-| \$a000-\$b41f | 5.0 | `highbss` (`HIGH_BSS`): the map's terrain layer `map_tile`, the unit and city arrays, the sprite blocks |
-| \$b420-\$bfff | 3.0 | free |
+| \$2001-\$2ebf | 3.7 | BASIC stub, startup code, constant data and text |
+| \$2ec0-\$912b | 24.6 | code |
+| \$912c-\$932b | 0.5 | C stack |
+| \$932c-\$96d3 | 0.9 | BSS: buffers and small state |
+| \$96d4-\$9fff | 2.3 | free |
+| \$a000-\$b43f | 5.1 | `highbss` (`HIGH_BSS`): the map's terrain layer `map_tile`, the unit and city arrays, the sprite blocks |
+| \$b440-\$bfff | 2.9 | free |
 
-The PRG is everything up to \$8b09; the C stack and the BSS are not stored in
+The PRG is everything up to \$912b; the C stack and the BSS are not stored in
 the file, only reserved after it. Nothing initialised may go above \$9fff,
 because the PRG is loaded while BASIC is still mapped there, so only BSS
 marked `HIGH_BSS` is put in the window. BASIC is banked back in as the last
@@ -191,7 +194,7 @@ thing `main()` does before it returns.
 
 The largest item in the BSS is the terrain layer, `map_tile`, at 4096 bytes,
 which is why it was the first to move up. The units take 384 bytes (six
-one-byte fields for each of 64 units) and the cities 224 (five byte fields
+one-byte fields for each of 64 units) and the cities 256 (six byte fields
 and a word for each of 32), and they followed it. The startup does not
 clear the window, so a new game empties both lists itself. Both are stored as one array per
 field rather than as an array of structs, because the 6502 reads `unit_ax[u]`
@@ -343,10 +346,14 @@ terrain is drawn, and their overlays are drawn after the next row's terrain.
 | Orders | each of the player's units that has moves left and no standing orders is selected in turn (`unit_next`) and brought into view |
 | End of turn | with no unit left, the panel shows "End of turn"; Return, or a click on the panel, goes on |
 | Computer players | `ai_turn` for each of the three: what each city builds, and every unit's move |
+| Barbarians | `ai_barbarians`: perhaps a new band, then every barbarian's move |
 | Production | every city adds its shields (its own hexagon's, at least 1, plus its best neighbour's); one that reaches the cost of what it is building puts the unit on its hexagon and keeps the surplus |
 | New turn | the turn number goes up, the year moves on ten years from 1600 BC, and every unit gets its moves back |
 
-The game is over when the player has neither units nor cities.
+Anything that happened to the player's units and cities during the other
+players' turns is reported in the panel ("Barbarian attack / a city lost").
+The game is over when the player has lost the last city, or, before
+founding one, the last unit.
 
 The orders a unit can be given are:
 
@@ -361,4 +368,42 @@ The orders a unit can be given are:
 A click on a hexagon next to the selected unit moves the unit there, and a
 click on one of the player's own units selects that unit, waking it if it was
 fortified. A click anywhere else on the map centres the view on that hexagon.
-The cursor keys scroll the view, and ESC or RUN/STOP quits.
+The cursor keys scroll the view, HELP (F1 in xemu) lists the keys, and ESC
+or RUN/STOP quits. In xemu, keypad 7, 9, 4, 6, 1 and 3 move a unit as well.
+
+## Combat
+
+Moving onto a hexagon held by another player is an attack. Only warriors
+can attack; settlers and builders can only defend. As in Civilization,
+each kind of unit has an attack and a defence strength, and the attacker
+wins with probability *attack* / (*attack* + *defence*):
+
+| **Unit** | **Attack** | **Defence** |
+| -- | - | - |
+| Warrior | 1 | 1 |
+| Settler | 0 | 1 |
+| Builder | 0 | 1 |
+
+The defence is worth half as much again on hills and twice as much on
+mountains, and half as much again to a unit that is fortified or in a city.
+The strengths are kept in quarter points so that the arithmetic stays in
+bytes: a warrior fortified in a city on hills defends with 9 against an
+attack of 4.
+
+The unit on the hexagon that defends best fights. If it loses, outside a
+city every unit on the hexagon dies with it; in a city only the defender
+does. A losing attacker dies. An attack uses all of the attacker's moves,
+and the winner stays where it is. A city is taken by moving into it once
+nobody is left to defend it: a people keeps the city, and the barbarians
+burn it.
+
+The peoples are at peace until one attacks another, which the game asks the
+player to confirm as a declaration of war. For now only the player
+declares war. The barbarians are at war with everybody. They appear from
+the fifteenth turn, two at a time, on empty land well away from everyone's
+units and cities. A barbarian attacks whatever is next to it, whatever the
+odds. A computer player's warrior attacks only when the odds are good.
+
+A player who loses the last city is out of the game. For a computer player
+that means its remaining units go too. For the human player the game is
+over. The barbarians have no cities and are never out.

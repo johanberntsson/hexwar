@@ -1,7 +1,6 @@
 --- OPEN ---
 
-
---- MILESTONES ---
+Probably need some scripting or cheat way of testing instead of just playing for hours
 
 Milestone 4, basic warfare
 - Add barbarian as a special AI. Make barbarian units randomly appear where AI/player isn't
@@ -10,7 +9,13 @@ Milestone 4, basic warfare
 - Allow units as city defence
 - Losing the last city means game over (doesn't apply to barbarians)
 
+
+--- MILESTONES ---
+
+Milestone 5, adding resources and trade
+
 --- DONE ---
+
 
 Can we detect if we run on the emulator or on the real machine?
 - Yes, according to discord:

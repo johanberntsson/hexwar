@@ -34,25 +34,34 @@ tool chain and is selected by `--target=mega65`. There is nothing to clone.
 - `res/tiles.fci` — the tile sheet, built from `tiles/*.png` by running
   `make` in `tiles/` (`tools/mktiles.py`). Checked in.
 - `documentation/techreport.md` — the technical report: program structure,
-  memory allocation and the main loop.
+  memory allocation, the main loop and how combat works.
+- `res/xemu-keymap.cfg` — gives xemu's keypad to the game; `make run` loads it.
 - `documentation/design.md` — notes on hex grids and on how the original Civilization's map
   generator worked.
 
 ## Status
 
-Milestones 1-4 of `TODO.txt`: a generated, east-west wrapping map that
-scrolls, under a fog of war; a minimap; a mouse or joystick pointer; a turn
-loop; a settler that founds a city; a city screen (double-click a city)
-where it is told to build warriors or builders, which it then produces; a
-menu bar with Game/Retire and Orders/Show Map; and three computer players
-that found cities, guard them, build and explore; combat, war and peace
-(attack another people and you are at war with it), and barbarians who
-appear in empty land and burn the cities they take.
-HELP (F1 in xemu) shows a screen of every key and click: `0 -` / `p *` / `: =`
-move a unit north-west and north-east, west and east, south-west and
-south-east (keypad 7 9 / 4 6 / 1 3 in xemu, with `make run`'s keymap),
-and the cursor keys scroll. Runs in xemu and on a real MEGA65,
-with the mouse and the joystick, and quits back to BASIC's own screen.
+Milestones 1-4 of `TODO.txt` are in:
+
+- a generated map that wraps east-west and scrolls, under a fog of war,
+  with a minimap;
+- a mouse or joystick pointer, a turn loop, and a menu bar with
+  Game/Retire and Orders/Show Map;
+- settlers that found cities, and a city screen (double-click a city)
+  where it is told to build warriors or builders;
+- three computer players that found cities, guard them, build and explore;
+- combat after Civilization's rules: move onto an enemy to attack, and
+  move into an empty enemy city to take it. Attacking another people
+  declares war on it. Lose your last city and the game is over;
+- barbarians, who appear in empty land from the fifteenth turn, attack
+  whatever they meet and burn the cities they take.
+
+HELP (F1 in xemu) shows a screen of every key and click. `0 -` / `p *` /
+`: =` move a unit north-west and north-east, west and east, south-west and
+south-east (keypad 7 9 / 4 6 / 1 3 in xemu, with `make run`'s keymap), and
+the cursor keys scroll. Milestones 1-3 have been played on a real MEGA65
+with the mouse and the joystick; milestone 4 so far only in xemu. The
+game quits back to BASIC's own screen.
 
 ## Credits
 

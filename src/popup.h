@@ -10,8 +10,8 @@
 //
 // or, for a fixed text, just popup("..."). The text is word-wrapped to fit,
 // and "\n" starts a new line ("\n\n" leaves a blank one).
-#ifndef HEXWAR_POPUP_H
-#define HEXWAR_POPUP_H
+#ifndef SEVENSHIPS_POPUP_H
+#define SEVENSHIPS_POPUP_H
 
 #include "mega65.h"
 
@@ -32,4 +32,4 @@ byte popup_ask(const char *text);
 // The same, for a question built with popup_begin() and popup_add().
 byte popup_ask_shown(void);
 
-#endif // HEXWAR_POPUP_H
+#endif // SEVENSHIPS_POPUP_H

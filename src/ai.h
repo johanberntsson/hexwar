@@ -12,8 +12,8 @@
 //
 // **Per-turn code, and in a file of its own**, so that it can go into a
 // banked region when the 32 KB runs out (CLAUDE.md, "Growing past 32 KB").
-#ifndef HEXWAR_AI_H
-#define HEXWAR_AI_H
+#ifndef SEVENSHIPS_AI_H
+#define SEVENSHIPS_AI_H
 
 #include "mega65.h"
 
@@ -32,4 +32,4 @@ void ai_turn(byte p);
 // makes for the nearest unit or city, and burns a city it takes.
 void ai_barbarians(word turn);
 
-#endif // HEXWAR_AI_H
+#endif // SEVENSHIPS_AI_H

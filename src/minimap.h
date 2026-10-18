@@ -14,8 +14,8 @@
 // and touches nothing else, so it costs the redraw's frame budget nothing.
 // Sprite 2 is the outline; sprite 3 is the part of it that has wrapped round
 // the seam to the left edge, shown only while the view straddles it.
-#ifndef HEXWAR_MINIMAP_H
-#define HEXWAR_MINIMAP_H
+#ifndef SEVENSHIPS_MINIMAP_H
+#define SEVENSHIPS_MINIMAP_H
 
 #include "mega65.h"
 
@@ -52,4 +52,4 @@ void minimap_frame(word off_x, word off_y);
 // 0 if that is not over the minimap.
 byte minimap_hex(word x, word y, byte *ax, byte *ay);
 
-#endif // HEXWAR_MINIMAP_H
+#endif // SEVENSHIPS_MINIMAP_H

@@ -11,8 +11,8 @@
 // **Palette index 0 is transparent.** The DMAgic's transparent copy is told to
 // skip source bytes of 0 (see lcopy_transparent), which is what lets a hexagon
 // be blitted over its neighbour without a rectangle of background around it.
-#ifndef HEXWAR_SHEET_H
-#define HEXWAR_SHEET_H
+#ifndef SEVENSHIPS_SHEET_H
+#define SEVENSHIPS_SHEET_H
 
 #include "mega65.h"
 
@@ -81,4 +81,4 @@ byte sheet_load(void);
     (SHEET_EXPANDED + 64UL * ((dword)(ROW) * SHEET_EXPANDED_COLUMNS \
                               + (dword)(TILE) * TILE_EXPANDED_COLUMNS))
 
-#endif // HEXWAR_SHEET_H
+#endif // SEVENSHIPS_SHEET_H

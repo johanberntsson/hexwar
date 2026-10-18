@@ -6,7 +6,7 @@ Here is the updated and expanded Game Design Document, integrating the expanded 
 
 *The title is from the last letter of Ammurapi, king of Ugarit, to the king of
 Alashiya (c. 1185 BCE): the seven ships of the enemy that came did great
-damage. Ugarit fell soon after. The code still calls the game Hexwar.*
+damage. Ugarit fell soon after.*
 
 **Platform Target:** MEGA65 (GS4510 CPU @ 40.5 MHz, VIC-IV)
 
@@ -167,7 +167,7 @@ than this game will ever need. What it does **not** have is more than **32 KB
 of 16-bit addressable space** — `$2001-$9FFF`, which holds all code, all
 initialised data, the BSS and the C stack. That single region is the budget
 everything competes for, and it is currently 61.9% full with the display
-engine and milestone 1 (input, units, cities, the turn loop) in it (`build/hexwar.lst` is where the real figure is written
+engine and milestone 1 (input, units, cities, the turn loop) in it (`build/sevenships.lst` is where the real figure is written
 down).
 
 | Where | Size | What can live there | Cost to reach |
@@ -179,7 +179,7 @@ down).
 
 `$10000-$1FFFF` is not usable — screen RAM sits at `$12000` and BASIC 65 owns
 most of the rest — and `$20000-$3FFFF` is the C65 ROM, which this program
-deliberately never banks out (see `hexwar.scm`).
+deliberately never banks out (see `sevenships.scm`).
 
 **Consequence for the design:** cheap to add, in this order — more map layers,
 more unit records, more tables of any kind, since data goes far or attic almost

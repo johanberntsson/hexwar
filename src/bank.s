@@ -1,7 +1,7 @@
 ; BASIC out of $A000-$BFFF for the run, and back in for the return.
 ;
 ; **The 8 KB under the BASIC ROM is the HIGH_BSS window** (src/mega65.h and
-; hexwar.scm). $D030 bit 4 maps the ROM there; with it clear the CPU sees the
+; sevenships.scm). $D030 bit 4 maps the ROM there; with it clear the CPU sees the
 ; RAM underneath. The arrangement is Search And Rescue's (its src/bank.s),
 ; confirmed on a real MEGA65 on 2 Oct 2026 with the KERNAL reading the whole
 ; disk banked like this -- the KERNAL, its interrupt vectors and $C000-$CFFF

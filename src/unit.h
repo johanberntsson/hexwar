@@ -5,8 +5,8 @@
 // array with a byte index as `lda abs,x`, and every field here is a byte, so
 // unit_ax[u] is one instruction where units[u].ax would be a multiply and a
 // pointer. It is also the shape vision.md §6 wants for the map layers.
-#ifndef HEXWAR_UNIT_H
-#define HEXWAR_UNIT_H
+#ifndef SEVENSHIPS_UNIT_H
+#define SEVENSHIPS_UNIT_H
 
 #include "mega65.h"
 
@@ -91,4 +91,4 @@ void unit_mark(byte ax, byte ay);
 // three tile numbers into `tiles` and returns how many.
 byte unit_overlay(byte ax, byte ay, byte *tiles);
 
-#endif // HEXWAR_UNIT_H
+#endif // SEVENSHIPS_UNIT_H

@@ -1,7 +1,7 @@
 // The game: the turn loop, the player's orders, and the panel that shows
 // them.
-#ifndef HEXWAR_GAME_H
-#define HEXWAR_GAME_H
+#ifndef SEVENSHIPS_GAME_H
+#define SEVENSHIPS_GAME_H
 
 #include "mega65.h"
 
@@ -17,4 +17,4 @@ void game_init(void);
 // Play until the player quits, retires or the game is over.
 byte game_run(void);
 
-#endif // HEXWAR_GAME_H
+#endif // SEVENSHIPS_GAME_H

@@ -86,7 +86,7 @@ void help_screen(void)
     sprite_hide(2);             // the minimap's outline, which is gone
     sprite_hide(3);
     screen_clear();
-    screen_putsxy((SCREEN_COLUMNS - 13) / 2, 0, "Hexwar's keys", COLOR_WHITE);
+    screen_putsxy((SCREEN_COLUMNS - 30) / 2, 0, "Seven Ships of the Enemy: keys", COLOR_WHITE);
     draw_column(LEFT, left_column);
     draw_column(RIGHT, right_column);
     keys = move_keys[input_real_hw ? 0 : 1];

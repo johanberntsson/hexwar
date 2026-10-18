@@ -7,8 +7,4 @@ civ1-reference/
 shot*.png
 mem.bin
 
-# The cc65 build's leavings, for as long as old-cc65/ is still here
-old-cc65/bin/
-old-cc65/obj/
-old-cc65/d81data/
 .map

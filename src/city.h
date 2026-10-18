@@ -1,6 +1,6 @@
 // Cities: a place, a name, and what it is building.
-#ifndef HEXWAR_CITY_H
-#define HEXWAR_CITY_H
+#ifndef SEVENSHIPS_CITY_H
+#define SEVENSHIPS_CITY_H
 
 #include "mega65.h"
 
@@ -55,4 +55,4 @@ byte city_turns_left(byte c);
 // full the shields wait at the cost until there is room.
 byte city_produce(byte c);
 
-#endif // HEXWAR_CITY_H
+#endif // SEVENSHIPS_CITY_H

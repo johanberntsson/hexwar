@@ -1,6 +1,6 @@
 // The title screen and its menu: Start Game, Load Saved Game, Quit.
-#ifndef HEXWAR_TITLE_H
-#define HEXWAR_TITLE_H
+#ifndef SEVENSHIPS_TITLE_H
+#define SEVENSHIPS_TITLE_H
 
 #include "mega65.h"
 
@@ -22,4 +22,4 @@ void title_show(void);
 // so. Needs input_init(). Leaves its last screen up; the caller clears it.
 byte title_run(void);
 
-#endif // HEXWAR_TITLE_H
+#endif // SEVENSHIPS_TITLE_H

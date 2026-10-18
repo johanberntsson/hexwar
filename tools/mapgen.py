@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Generate a Hexwar map file.
+"""Generate a map file for Seven Ships of the Enemy.
 
     mapgen.py [--seed N] [--land PERCENT] [--png preview.png] out.map
 

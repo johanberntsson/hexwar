@@ -5,12 +5,22 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## What this is
 
 A Civilization-style hex game for the **MEGA65**, written in C for the
-**Calypsi 6502** tool chain. It was a cc65 project until August 2026; that
-version is still on disk under `old-cc65/` and will be deleted once this one
-has everything it had.
+**Calypsi 6502** tool chain. It was a cc65 project until August 2026, and
+there was an XC=BASIC 3 version as well.
 
-`basic/civ.bas` is a more complete XC=BASIC 3 version of the same idea and
-`basic/civ-basic.png` is the layout it reached. The map window's size in
+**`old-cc65/` and `basic/` are gone from the tree** (18 Oct 2026) and live
+only in git history: `git show 36047ba^:old-cc65/src/graphics.c`, or
+`git show 737bfd8^:basic/civ.bas`. The paths into them that this file and
+the source comments still cite are paths at those commits. Nothing should
+need them any more.
+
+The game is **Seven Ships of the Enemy** (`vision.md` has where the title
+comes from), `sevenships` wherever a short name is needed: the repository,
+the PRG, the disk and its map file `SEVENSHIPS.MAP`. Until 19 Oct 2026 it
+was called Hexwar, and so is everything in git history before that.
+
+`basic/civ.bas` was a more complete XC=BASIC 3 version of the same idea and
+`basic/civ-basic.png` the layout it reached. The map window's size in
 `src/view.h` comes straight from its `fc_setMergeTileMode(10, 1, 60, 23,
 true)`, but **the window now starts at column 18, not 10**, as in
 `civ1-reference/civ1-pic01.png`: the panel on the left is 18 columns wide so
@@ -21,7 +31,7 @@ BASIC nor the cc65 version ever scrolled correctly; see **Scrolling** below.
 than for working on the code — program structure, memory allocation and the
 main loop, in the format of Ozmoo's (pandoc markdown, `\$` in tables). **Keep
 it in step** when the memory map, the startup or the loop changes; the
-figures in it come from `build/hexwar.lst`. `vision.md` is the game design document — a Late Bronze Age eastern
+figures in it come from `build/sevenships.lst`. `vision.md` is the game design document — a Late Bronze Age eastern
 Mediterranean 4X. Its §6 is the technical section and is written to agree
 with this file; **if the two ever disagree, this file is right and §6 is
 stale.** `vision-old.md` is a superseded draft.
@@ -29,7 +39,7 @@ stale.** `vision-old.md` is a superseded draft.
 ## Build and run
 
 ```sh
-make                      # build/hexwar.prg, build/hexwar.map and build/hexwar.d81
+make                      # build/sevenships.prg, build/sevenships.map and build/sevenships.d81
 make run                  # build them and boot it in xemu (blocks until closed)
 make START_OFF_X=41       # start the view one character further right; see below
 make MAP_SEED=7           # another map; MAP_LAND=45 for more land
@@ -54,7 +64,7 @@ There are no tests. Verification is running it — see **Verifying a change**.
 the same stem. Linking straight to a `.prg` name silently produces an ELF file
 that the MEGA65 then tries to RUN as BASIC.
 
-**`build/hexwar.lst` is the memory map and the only place the program's real
+**`build/sevenships.lst` is the memory map and the only place the program's real
 size is written down.** Worth reading after anything that might have grown it.
 A change that will not link is more likely to be a few hundred bytes over than
 wrong.
@@ -76,8 +86,8 @@ change still boots and draws:
 
 ```sh
 timeout -s TERM 20 xemu-xmega65 -skipconfigfile -headless -sleepless -besure \
-    -fastboot -8 $PWD/build/hexwar.d81 -screenshot $PWD/shot.png \
-    -dumpmem $PWD/mem.bin -prg build/hexwar.prg
+    -fastboot -8 $PWD/build/sevenships.d81 -screenshot $PWD/shot.png \
+    -dumpmem $PWD/mem.bin -prg build/sevenships.prg
 ```
 
 The screenshot is written when xemu exits, including on SIGTERM, so the
@@ -90,7 +100,7 @@ RAM at `$12000`, the whole tile store at `$40000` and the expanded tile sheet
 at `$57000`.
 
 **Nothing headless can press a key**, so `START_OFF_X` / `START_OFF_Y` (Makefile
-`-D`s, defaults in `src/hexwar.h`) exist to start the view somewhere else. Two
+`-D`s, defaults in `src/sevenships.h`) exist to start the view somewhere else. Two
 builds one apart are how scrolling is checked: `make NO_TITLE=1` then `make
 NO_TITLE=1 START_OFF_X=41` must shift the map exactly eight pixels and leave
 the panel byte-identical.
@@ -142,7 +152,7 @@ a rule that all disk I/O must finish first. (`~/commodore/SearchAndRescue` was
 once listed here too, wrongly: it keeps the ROM and lives in banks 1, 4 and 5
 plus attic RAM, as this does.)
 
-Hexwar needs none of it because of one number: the view is 60x23, so its tile
+The game needs none of it because of one number: the view is 60x23, so its tile
 store is `60*23*64 = 88320` bytes, and that fits in banks 4 and 5
 (`$40000-$559FF`) with 40 KB to spare. **So the KERNAL stays live, `printf`
 works, the interrupt vectors are still the ROM's, and quitting is a return from
@@ -233,7 +243,7 @@ when a 15th tile or another full-colour surface needs room:
 **The 32 KB is what to watch.** The tile sheet used to be linked in
 (6.5 KB, and growing a KB a tile) and now comes off the disk, and
 `map_tile`'s 4 KB has moved to `$A000`. At the last measurement (18 Oct
-2026) `build/hexwar.lst` reported the region **92.8% full (about 2.3 KB
+2026) `build/sevenships.lst` reported the region **92.8% full (about 2.3 KB
 free)** with milestones 1-4, the minimap, the city and help screens, the menu
 bar and the quit-time register restore in it, and `highram` 63.3% full.
 Milestone 4 alone was about 2 KB, paid for in part by taking `puts` out of
@@ -250,7 +260,7 @@ Rescue's arrangement, which is confirmed on a real MEGA65 with disk I/O):
 `src/bank.s` clears `$D030` bit 4 in `__low_level_init` — before the
 startup clears BSS, since a read of the window would otherwise come from
 the ROM — and `bank_basic_in()` puts it back as the last thing before
-`main()` returns, on both of its return paths. `hexwar.scm` declares
+`main()` returns, on both of its return paths. `sevenships.scm` declares
 `$A000-$BFFF` as `highram` **with no `(type …)`**: `(type any)` makes it a
 second content area as soon as anything initialised lands there
 (*multiple program areas not allowed in prg output*), and `(type ram)`
@@ -260,7 +270,7 @@ reads straight into it through the KERNAL. Seen in xemu and on a real
 MEGA65 (18 Oct 2026): the map loads, the game plays, and quitting
 reaches READY.
 
-**Naming `zdata` in `hexwar.scm`'s `freeSpace` or `highram` would move the
+**Naming `zdata` in `sevenships.scm`'s `freeSpace` or `highram` would move the
 whole BSS there** — which is what hexgame does — so use `LOW_FREE` and
 `HIGH_BSS` per variable instead.
 
@@ -331,7 +341,7 @@ the eventual split a one-line pragma per file instead of a rewrite.
 
 **Step 2 is done** for `map_tile` (18 Oct 2026; see **Memory map**), with
 4 KB of the window left for the next BSS that moves. Step 3 is the one to
-put off: revisit when `hexwar.lst` shows the region past ~26 KB again and
+put off: revisit when `sevenships.lst` shows the region past ~26 KB again and
 `highram` is full.
 `~/commodore/mega65/hexgame/tools/mkprg.py` (exomizer, one file) is the other
 known trick if the *loaded* size rather than the addressable size is what gets
@@ -357,7 +367,7 @@ version, columns, rows, layer count, seed) followed by 4096-byte layers. Layer
 0 is terrain, and **its values are currently `TILE_*` numbers** because every
 terrain has exactly one tile; more terrain types mean more tiles in the sheet
 and, once the two diverge, a terrain-to-tile table. `make` leaves a preview at
-`build/hexwar-map.png`, which is the fastest way to judge a generator change.
+`build/sevenships-map.png`, which is the fastest way to judge a generator change.
 `map_load()` reads the file with the Calypsi `_Stub_open`/`_Stub_read` calls
 directly; stdio would only add a buffer. That cost about 560 bytes. **It reads
 a row per call because `_Stub_read` miscounts** when the file ends on the last
@@ -814,7 +824,7 @@ this one will meet: `~/commodore/SearchAndRescue` (MEGA65, a full game, its
 `CLAUDE.md` sections **Memory map**, **Performance** and **Gotchas**) and
 `~/commodore/titanfall` on the `calypsi` branch (a C64 game ported from
 assembly to C; `c/README.md` and `c/COMPARISON.md`). Read those before
-solving something they cover. The points that bear on hexwar:
+solving something they cover. The points that bear on this game:
 
 **Attic RAM is slow to DMA *out of*, and xemu does not show it.** Measured on
 a real MEGA65 by Search And Rescue: a DMA copy chip to chip is 2.2 cycles a
@@ -887,7 +897,7 @@ it writes with `screen_putsxy` now, and nothing else should bring them back.
   bytes pushed (A, X, Y, Z, B), not the C64's three.
 - Search And Rescue inferred, by elimination and never run on its own, that
   turning the hot registers off stopped the KERNAL opening files, so it loads
-  everything first. Hexwar loads its map *after* `screen_init()` has turned
+  everything first. The game loads its map *after* `screen_init()` has turned
   them off, and that works in xemu and on a real MEGA65 (18 Oct 2026), so
   the inference does not hold here.
 
@@ -925,7 +935,7 @@ for milestone 4. A long game is a script of `{f, 0,0,'f'},{f+3,0,0,13}`
 pairs — fortify whatever asks, then end the turn — 80 or 150 turns of
 it, generated by a shell loop. What happened is then read out of
 `-dumpmem`: the unit and city arrays are in `highram`, and their
-addresses are in `build/hexwar.lst` (`unit_kind = 0000a280`); **take them
+addresses are in `build/sevenships.lst` (`unit_kind = 0000a280`); **take them
 from the listing of the build that ran**, since a relink moves the small
 ones like `city_count`. A situation that would take hundreds of turns to
 arise — an enemy next to the settler, an empty city beside a barbarian —

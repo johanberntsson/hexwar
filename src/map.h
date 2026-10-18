@@ -18,8 +18,8 @@
 // glass, portrait. 128x32 is 64 across by 64 down, 512 characters by 193 rows,
 // which a character's 1:2 aspect makes about 1.33:1, landscape. One layer is
 // 4096 bytes, near enough what 80x50 cost.
-#ifndef HEXWAR_MAP_H
-#define HEXWAR_MAP_H
+#ifndef SEVENSHIPS_MAP_H
+#define SEVENSHIPS_MAP_H
 
 #include "mega65.h"
 
@@ -113,10 +113,10 @@ void map_explore(byte ax, byte ay);
 // on the disk next to the program by `make d81`.
 //
 // **The name is spelled in capitals because the disk spells it that way.**
-// tools/diskutil.rb turns the host name hexwar.map into unshifted PETSCII,
-// which is the bytes of ASCII "HEXWAR.MAP", and Calypsi passes literals
+// tools/diskutil.rb turns the host name sevenships.map into unshifted PETSCII,
+// which is the bytes of ASCII "SEVENSHIPS.MAP", and Calypsi passes literals
 // through unchanged.
-#define MAP_FILE_NAME "HEXWAR.MAP"
+#define MAP_FILE_NAME "SEVENSHIPS.MAP"
 #define MAP_VERSION 1
 
 // The cell whose hexagon is under map-space character (cx, cy), cx below
@@ -129,4 +129,4 @@ void map_cell_at(word cx, word cy, byte *ax, byte *ay);
 // file cannot be opened or is not a map of this size and version.
 byte map_load(void);
 
-#endif // HEXWAR_MAP_H
+#endif // SEVENSHIPS_MAP_H

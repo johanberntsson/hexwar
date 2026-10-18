@@ -8,8 +8,8 @@
 // as much again to a unit that is fortified or in a city. An attack takes
 // the attacker's whole turn, and a winner stays where it is; it takes an
 // enemy city by walking into it once nobody is left to defend it.
-#ifndef HEXWAR_COMBAT_H
-#define HEXWAR_COMBAT_H
+#ifndef SEVENSHIPS_COMBAT_H
+#define SEVENSHIPS_COMBAT_H
 
 #include "mega65.h"
 
@@ -62,4 +62,4 @@ byte player_alive(byte p);
 // deterministic; nothing here needs better.
 byte rnd(void);
 
-#endif // HEXWAR_COMBAT_H
+#endif // SEVENSHIPS_COMBAT_H

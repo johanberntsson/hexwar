@@ -1,6 +1,6 @@
 // Things main() needs that have nowhere better to live.
-#ifndef HEXWAR_HEXWAR_H
-#define HEXWAR_HEXWAR_H
+#ifndef SEVENSHIPS_SEVENSHIPS_H
+#define SEVENSHIPS_SEVENSHIPS_H
 
 #include <stdio.h>
 
@@ -14,4 +14,4 @@
 #define START_OFF_Y 30
 #endif
 
-#endif // HEXWAR_HEXWAR_H
+#endif // SEVENSHIPS_SEVENSHIPS_H

@@ -4,7 +4,7 @@
 
 ## Overview
 
-Hexwar is a turn-based strategy game on a hexagonal map for the MEGA65, written
+Seven Ships of the Enemy is a turn-based strategy game on a hexagonal map for the MEGA65, written
 in C for the Calypsi 6502 tool chain. It runs in the MEGA65's native C65 mode,
 with the C65 KERNAL left in place (only BASIC is banked out, for the RAM
 under it), and returns to BASIC when the player quits. Its
@@ -44,8 +44,8 @@ most important routines included in each source file.
 
 | **File/Routine** |  **Comment** |
 | -- |  ---- |
-| hexwar.c | the main routine |
-| &nbsp;&nbsp;&nbsp;_main_ | where execution of Hexwar begins |
+| sevenships.c | the main routine |
+| &nbsp;&nbsp;&nbsp;_main_ | where execution of the game begins |
 |  |  |
 | bank.s | banks BASIC out of \$a000-\$bfff before `main`, and back in after |
 |  |  |
@@ -92,7 +92,7 @@ most important routines included in each source file.
 | &nbsp;&nbsp;&nbsp;_input\_poll_ | one frame's input, returned as a key code |
 |  |  |
 | map.c | the map and hexagon geometry |
-| &nbsp;&nbsp;&nbsp;_map\_load_ | reads the terrain from HEXWAR.MAP |
+| &nbsp;&nbsp;&nbsp;_map\_load_ | reads the terrain from SEVENSHIPS.MAP |
 | &nbsp;&nbsp;&nbsp;_map\_cell\_at_ | which hexagon is under a character of the map |
 | &nbsp;&nbsp;&nbsp;_map\_neighbour_ | one step in one of the six directions |
 |  |  |
@@ -121,14 +121,14 @@ drive.
 
 ## Startup
 
-The build produces a disk image, `hexwar.d81` (`make release` copies it
+The build produces a disk image, `sevenships.d81` (`make release` copies it
 to `release/`), holding three files:
 
 | **File** |  **Contents** |
 | -- |  ---- |
 | AUTOBOOT.C65 | the program, a C65-mode PRG loaded at \$2001 |
 | TILES.FCI | the tile sheet: a palette and 12 tiles of 4x4 full colour characters |
-| HEXWAR.MAP | the map: a 16-byte header and one 4096-byte layer of terrain |
+| SEVENSHIPS.MAP | the map: a 16-byte header and one 4096-byte layer of terrain |
 
 The C65 ROM boots AUTOBOOT.C65 automatically. `main()` then:
 
@@ -138,7 +138,7 @@ The C65 ROM boots AUTOBOOT.C65 automatically. `main()` then:
 2. reads TILES.FCI, a character at a time. Each character is widened to twice
    its width, because a pixel of this screen mode is half as wide as it is
    tall, and copied into the expanded sheet in bank 5 (`sheet_load`);
-3. reads HEXWAR.MAP into `map_tile` (`map_load`);
+3. reads SEVENSHIPS.MAP into `map_tile` (`map_load`);
 4. sets up the pointer sprites (`input_init`) and runs the title menu
    (`title_run`): Start Game, Load Saved Game (not implemented yet) or Quit.
    Start Game then asks for a people (Mycenaeans, Hittites, Egyptians or
@@ -171,7 +171,7 @@ scarce resource: there is plenty of RAM elsewhere, but code cannot run from
 it without banking -- plus the 8 KB at \$a000-\$bfff, which is RAM under the
 BASIC ROM and is the program's once `src/bank.s` has banked BASIC out, before
 `main()` runs. The figures below are from the linker's listing,
-`build/hexwar.lst`, for the build of 18 October 2026.
+`build/sevenships.lst`, for the build of 18 October 2026.
 
 | **Address range** | **KB** |  **Usage** |
 | -- |  - | ---- |

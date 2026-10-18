@@ -14,8 +14,8 @@
 // exactly that: the joystick's speed, the click debounce and the fake-key
 // script below all count calls to it as frames. The KERNAL jiffy clock does
 // not advance in this program, so there is no other clock to count against.
-#ifndef HEXWAR_INPUT_H
-#define HEXWAR_INPUT_H
+#ifndef SEVENSHIPS_INPUT_H
+#define SEVENSHIPS_INPUT_H
 
 #include "mega65.h"
 
@@ -79,4 +79,4 @@ byte *sprite_shape(byte n);
 void sprite_place(byte n, word x, word y);
 void sprite_hide(byte n);
 
-#endif // HEXWAR_INPUT_H
+#endif // SEVENSHIPS_INPUT_H

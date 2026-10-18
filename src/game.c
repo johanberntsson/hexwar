@@ -15,7 +15,7 @@
 #include "cityscreen.h"
 #include "civ.h"
 #include "combat.h"
-#include "hexwar.h"
+#include "sevenships.h"
 #include "input.h"
 #include "map.h"
 #include "menu.h"

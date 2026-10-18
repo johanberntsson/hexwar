@@ -1,8 +1,8 @@
 // The menu bar along the top row of the map screen -- Game, Orders,
 // Advisors, World, Civilopedia, as in civ1-reference/civ1-pic01.png -- and
 // its dropdowns. Only Game has anything in it yet.
-#ifndef HEXWAR_MENU_H
-#define HEXWAR_MENU_H
+#ifndef SEVENSHIPS_MENU_H
+#define SEVENSHIPS_MENU_H
 
 #include "mega65.h"
 
@@ -22,4 +22,4 @@ void menu_draw(void);
 // minimap's outline: **the caller redraws the view**, which puts them back.
 byte menu_click(void);
 
-#endif // HEXWAR_MENU_H
+#endif // SEVENSHIPS_MENU_H

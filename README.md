@@ -11,14 +11,14 @@ Needs the [Calypsi 6502 tool chain](https://www.calypsi.cc/) (5.18 or later —
 `tools/diskutil.rb`), and `xemu-xmega65` to run it. Pillow only if the tile art changes.
 
 ```sh
-make            # build/hexwar.prg, build/hexwar.map and build/hexwar.d81
+make            # build/sevenships.prg, build/sevenships.map and build/sevenships.d81
 make run        # build them and boot the disk in xemu
 make release    # build the disk and copy it into release/
 make clean
 ```
 
-**The game is the disk, not the PRG.** `build/hexwar.d81` holds the program
-(as `autoboot.c65`), the tile sheet (`tiles.fci`) and the map (`hexwar.map`,
+**The game is the disk, not the PRG.** `build/sevenships.d81` holds the program
+(as `autoboot.c65`), the tile sheet (`tiles.fci`) and the map (`sevenships.map`,
 made at build time by `tools/mapgen.py`), and the program reads the last two
 from drive 8 at start-up.
 

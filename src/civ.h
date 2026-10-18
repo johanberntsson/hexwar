@@ -1,8 +1,8 @@
 // The peoples a player can lead (vision.md §3), the difficulty levels, and
 // which people each player is. For now a people is a set of names; what
 // makes them play differently comes later.
-#ifndef HEXWAR_CIV_H
-#define HEXWAR_CIV_H
+#ifndef SEVENSHIPS_CIV_H
+#define SEVENSHIPS_CIV_H
 
 #include "mega65.h"
 
@@ -46,4 +46,4 @@ const char *player_people(byte p);
 // the list they repeat.
 const char *civ_city_name(byte civ, byte n);
 
-#endif // HEXWAR_CIV_H
+#endif // SEVENSHIPS_CIV_H

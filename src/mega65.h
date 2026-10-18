@@ -4,10 +4,10 @@
 // mega65-libc uses (lpeek/lpoke/lcopy/lfill), because the other two MEGA65
 // projects in this tree use that library and it is easier to read across them
 // than to invent a second vocabulary -- but this is a fresh, much smaller
-// implementation. mega65-libc looks abandoned, and hexwar uses six of its
+// implementation. mega65-libc looks abandoned, and sevenships uses six of its
 // functions.
-#ifndef HEXWAR_MEGA65_H
-#define HEXWAR_MEGA65_H
+#ifndef SEVENSHIPS_MEGA65_H
+#define SEVENSHIPS_MEGA65_H
 
 #include <stdint.h>
 
@@ -21,14 +21,14 @@ typedef uint32_t dword;
 // Put a variable in the 2304 bytes of chip RAM at $1600-$1EFF that the linker
 // rules hand to a section called `zpsave`, which nothing here uses. It is
 // ordinary near-addressable RAM, so this costs nothing per access -- it is
-// simply room that is not part of the 32 KB at $2001. See hexwar.scm.
+// simply room that is not part of the 32 KB at $2001. See sevenships.scm.
 //
 // It sits below $2001 where the C65 ROM keeps its own buffers, so nothing that
 // has to survive a KERNAL call belongs in it.
 #define LOW_FREE __attribute__((section("zpsave")))
 
 // **Put a variable in the 8 KB of RAM under the BASIC ROM, $A000-$BFFF**,
-// which src/bank.s banks in before main() and hexwar.scm hands to a section
+// which src/bank.s banks in before main() and sevenships.scm hands to a section
 // called `highbss`. Ordinary 16-bit addresses, so it costs nothing per access
 // either. **Uninitialised data only**: the PRG is loaded with BASIC still
 // mapped, so nothing that has to arrive from the disk can live up there, and
@@ -79,4 +79,4 @@ void blit_begin(byte source_mb, byte source_bank, byte dest_mb,
                 byte transparent);
 void blit(word source_addr, byte dest_bank, word dest_addr, word count);
 
-#endif // HEXWAR_MEGA65_H
+#endif // SEVENSHIPS_MEGA65_H

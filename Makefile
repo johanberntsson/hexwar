@@ -1,4 +1,4 @@
-# Hexwar for the MEGA65, built with the Calypsi 6502 tool chain.
+# Seven Ships of the Enemy for the MEGA65, built with the Calypsi 6502 tool chain.
 #
 # This replaced a cl65/cc65 build (old-cc65/Makefile). The switch is not only a
 # change of compiler: cc65 built a C64-mode program that a wrapper
@@ -17,12 +17,12 @@
 TARGET   = --target=mega65
 
 # -O2 --speed rather than -Os. Nothing here is size-critical yet -- see
-# hexwar.scm for what the 32 KB is doing -- and the one hot path, redrawing
+# sevenships.scm for what the 32 KB is doing -- and the one hot path, redrawing
 # the map view, is address arithmetic feeding DMA jobs.
 # Where the view starts, in map characters. Overriding these is the only way a
 # headless run can photograph the view anywhere but its default position, since
 # nothing headless can press a cursor key -- see the verification notes in
-# CLAUDE.md and START_OFF_X in src/hexwar.h.
+# CLAUDE.md and START_OFF_X in src/sevenships.h.
 START_OFF_X ?= 40
 START_OFF_Y ?= 30
 
@@ -45,7 +45,7 @@ CFLAGS  += -DNO_TITLE
 endif
 ASFLAGS  = $(TARGET)
 LDFLAGS  = $(TARGET) --output-format=prg
-LINKFILE = hexwar.scm
+LINKFILE = sevenships.scm
 
 # The C stack. The tool chain's default is 4096, which is many times what this
 # needs: the deepest chain is main -> view_redraw -> view_draw_tile -> lcopy,
@@ -59,7 +59,7 @@ HEAP    ?= 256
 BUILD    = build
 RES      = res
 
-SRCS     = src/hexwar.c \
+SRCS     = src/sevenships.c \
            src/mega65.c \
            src/screen.c \
            src/sheet.c \
@@ -85,23 +85,23 @@ ASRCS    = src/bank.s
 OBJS     = $(patsubst src/%.c,$(BUILD)/%.o,$(SRCS)) \
            $(patsubst src/%.s,$(BUILD)/%.o,$(ASRCS))
 
-ELF      = $(BUILD)/hexwar.elf
-PRG      = $(BUILD)/hexwar.prg
+ELF      = $(BUILD)/sevenships.elf
+PRG      = $(BUILD)/sevenships.prg
 
 # The map, made by tools/mapgen.py and read off the disk at start-up. Same seed,
 # same map: `make MAP_SEED=7` is how to look at another one, and MAP_LAND is the
 # percentage of it that is land.
 MAP_SEED ?= 1
 MAP_LAND ?= 35
-MAP      = $(BUILD)/hexwar.map
-D81      = $(BUILD)/hexwar.d81
+MAP      = $(BUILD)/sevenships.map
+D81      = $(BUILD)/sevenships.d81
 
 all: $(PRG) $(D81)
 
 # xemu-xmega65 blocks until the window is closed. For an automated check run it
 # headless and screenshot on exit -- see the Verification section of CLAUDE.md.
 # **The disk has to be mounted**: the program reads its map from drive 8, and
-# without the image it stops at "cannot read HEXWAR.MAP".
+# without the image it stops at "cannot read SEVENSHIPS.MAP".
 run: $(PRG) $(D81)
 	xemu-xmega65 -besure -keymap $(CURDIR)/res/xemu-keymap.cfg -8 $(D81) -prg $(PRG)
 
@@ -143,7 +143,7 @@ endif
 # change to the generator.
 $(MAP): tools/mapgen.py $(MAP_STAMP) | $(BUILD)
 	python3 tools/mapgen.py --seed $(MAP_SEED) --land $(MAP_LAND) \
-	    --png $(BUILD)/hexwar-map.png $@
+	    --png $(BUILD)/sevenships-map.png $@
 
 $(BUILD)/%.o: src/%.c $(HDRS) Makefile $(STAMP) | $(BUILD)
 	cc6502 $(CFLAGS) -c -o $@ $<
@@ -156,7 +156,7 @@ $(BUILD)/%.o: src/%.s Makefile | $(BUILD)
 # towards $9FFF.
 $(ELF): $(OBJS) $(LINKFILE)
 	ln6502 $(LDFLAGS) --cstack-size $(CSTACK) --heap-size $(HEAP) \
-	    --list-file $(BUILD)/hexwar.lst -o $@ $(LINKFILE) $(OBJS)
+	    --list-file $(BUILD)/sevenships.lst -o $@ $(LINKFILE) $(OBJS)
 
 # **ln6502 -o names the ELF, not the PRG.** The PRG is written beside it under
 # the same stem, so this rule exists only to make the dependency explicit;
@@ -175,7 +175,7 @@ $(PRG): $(ELF)
 # reads about five times faster on a MEGA65 than with the 1581's default.
 # It names a file on the disk after the host file's basename, which is why the
 # PRG is copied to autoboot.c65 first, and writes that name as unshifted
-# PETSCII, so hexwar.map here is "HEXWAR.MAP" to the program; see
+# PETSCII, so sevenships.map here is "SEVENSHIPS.MAP" to the program; see
 # MAP_FILE_NAME in src/map.h. It refuses to overwrite a file already on the
 # image, so the image is always built from scratch. The data files go on as
 # SEQ, as Search And Rescue's do: they have no load address, and the program
@@ -185,7 +185,7 @@ d81: $(D81)
 $(D81): $(PRG) $(MAP) $(RES)/tiles.fci tools/diskutil.rb
 	rm -f $@
 	cp $(PRG) $(BUILD)/autoboot.c65
-	ruby tools/diskutil.rb $@ -name hexwar -id hw \
+	ruby tools/diskutil.rb $@ -name sevenships -id ss \
 	    -writeprg -copyf1 $(BUILD)/autoboot.c65 \
 	    -writeseq -copyf1 $(MAP) $(RES)/tiles.fci
 

@@ -1,11 +1,11 @@
-// Hexwar: a Civilization-style hex game for the MEGA65.
+// Seven Ships of the Enemy: a Civilization-style hex game for the MEGA65.
 //
-// This is the Calypsi rewrite of a 2022 cc65 proof of concept, which is kept
-// under old-cc65/ until this reaches parity. The layout started from
-// basic/civ-basic.png, from the XC=BASIC version in basic/civ.bas, with the
-// map moved right to leave room on the left as in civ1-reference.
+// This is the Calypsi rewrite of a 2022 cc65 proof of concept. The layout
+// started from basic/civ-basic.png, from the XC=BASIC version in
+// basic/civ.bas, with the map moved right to leave room on the left as in
+// civ1-reference. Both are in git history only; see CLAUDE.md.
 
-#include "hexwar.h"
+#include "sevenships.h"
 #include "game.h"
 #include "input.h"
 #include "map.h"
@@ -22,8 +22,8 @@
 static void fatal(const char *message)
 {
     screen_clear();
-    screen_putsxy(0, 0, "hexwar: ", COLOR_WHITE);
-    screen_putsxy(8, 0, message, COLOR_WHITE);
+    screen_putsxy(0, 0, "sevenships: ", COLOR_WHITE);
+    screen_putsxy(12, 0, message, COLOR_WHITE);
     while (1) continue;
 }
 

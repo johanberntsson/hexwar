@@ -9,8 +9,8 @@
 // found at `number * 64` as an absolute 28-bit address. That is what the map
 // view is made of, and why the view's tile store at $40000 can be pointed at
 // directly: $40000 / 64 = 0x1000, comfortably past 256.
-#ifndef HEXWAR_SCREEN_H
-#define HEXWAR_SCREEN_H
+#ifndef SEVENSHIPS_SCREEN_H
+#define SEVENSHIPS_SCREEN_H
 
 #include "mega65.h"
 
@@ -59,7 +59,7 @@ void screen_init(void);
 
 // Keep the display as BASIC left it, before screen_init() changes it, and put
 // it back before returning to BASIC. Cheap because this program never banked
-// the ROM out in the first place -- see hexwar.scm.
+// the ROM out in the first place -- see sevenships.scm.
 void screen_save(void);
 void screen_restore(void);
 
@@ -112,4 +112,4 @@ void screen_wait_raster(byte line);
 // The first raster line of character row `c`.
 #define SCREEN_ROW_LINE(C) ((byte)(51 + 8 * (C)))
 
-#endif // HEXWAR_SCREEN_H
+#endif // SEVENSHIPS_SCREEN_H

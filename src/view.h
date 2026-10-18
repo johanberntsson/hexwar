@@ -1,7 +1,7 @@
 // The map view: a window on the text screen whose every character has a
 // full-colour bitmap of its own, and the drawing of the hex map into it.
-#ifndef HEXWAR_VIEW_H
-#define HEXWAR_VIEW_H
+#ifndef SEVENSHIPS_VIEW_H
+#define SEVENSHIPS_VIEW_H
 
 #include "mega65.h"
 
@@ -49,9 +49,9 @@
 #error "VIEW_ROW_BANK assumes the store starts on a 64 KB boundary"
 #endif
 
-// **This is why hexwar does not have to bank out the C65 ROM.** The store runs
+// **This is why sevenships does not have to bank out the C65 ROM.** The store runs
 // $40000-$56EBF, entirely inside the free banks 4 and 5, so the ROM area at
-// $20000-$3FFFF is never wanted -- see hexwar.scm. A larger window would not
+// $20000-$3FFFF is never wanted -- see sevenships.scm. A larger window would not
 // fit and would drag in all the machinery the other two MEGA65 projects here
 // carry, so the check is worth keeping.
 #if (TILE_STORE + TILE_STORE_SIZE) > 0x60000UL
@@ -127,4 +127,4 @@ void view_wait_for_redraw(void);
 #define VIEW_MIN_OFF_Y 4
 #define VIEW_MAX_OFF_Y (3 * (2 * MAP_ROWS - 1) - VIEW_ROWS)        // 166
 
-#endif // HEXWAR_VIEW_H
+#endif // SEVENSHIPS_VIEW_H

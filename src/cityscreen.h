@@ -2,8 +2,8 @@
 // the city and its neighbours in the middle, the units in it on the left,
 // and what it is building on the right with a CHANGE button. EXIT goes back
 // to the map.
-#ifndef HEXWAR_CITYSCREEN_H
-#define HEXWAR_CITYSCREEN_H
+#ifndef SEVENSHIPS_CITYSCREEN_H
+#define SEVENSHIPS_CITYSCREEN_H
 
 #include "mega65.h"
 
@@ -13,4 +13,4 @@
 // the patch in the middle is drawn into the map window's tile store.
 void city_screen(byte c);
 
-#endif // HEXWAR_CITYSCREEN_H
+#endif // SEVENSHIPS_CITYSCREEN_H

@@ -724,6 +724,23 @@ form); the tiles are pointy-topped, so there is no N or S; `b` founds a
 city with a settler; space skips the unit this turn, `w` asks again
 after the others, `f` fortifies; Return ends the turn; the cursor keys
 scroll; ESC or RUN/STOP quits. `w a s d` do not scroll.
+**HELP or F1 opens the help screen** (`src/help.c`), which lists all of
+this; the map screen's bottom row only says "HELP for the keys". It takes
+over the screen like the city screen, and `draw_screen()` puts the map
+back. HELP arrives in `$D610` as `$1F` (mega65-core's
+`matrix_to_ascii.vhdl`, which xemu copies), and `input_poll()` returns it
+as `KEY_HELP`, F1's code, so `FAKE_KEYS` presses it as 241.
+
+**The game knows when it is in xemu**: bit 5 of `$D60F` is set on a real
+MEGA65 and clear in xemu, read into `input_real_hw` by `input_init()`. In
+xemu, which has no HELP key and a PC keypad, the hint and the help screen
+say F1, and **keypad 7 9 4 6 1 3 move the unit** — but only with
+`res/xemu-keymap.cfg`, which `make run` passes with `-keymap`. Stock xemu
+gives keypad 2 4 6 8 to its fake joystick and 7 9 1 3 to nothing; the
+keymap turns them into F3-F8 (`$F3`-`$F8`, `KEY_PAD_FIRST`), which
+`unit_key()` takes only when `input_real_hw` is 0. F3-F8 because the game
+uses none of them and xemu keeps F9-F11 for hot keys. `0 - p * : =` still
+work in xemu too.
 
 **Tried on a real MEGA65 and it works** (18 Oct 2026, milestones 1-3):
 the sheet and map load off the disk with the hot registers off, BASIC

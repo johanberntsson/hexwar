@@ -70,6 +70,7 @@ SRCS     = src/hexwar.c \
            src/unit.c \
            src/city.c \
            src/cityscreen.c \
+           src/help.c \
            src/game.c \
            src/ai.c \
            src/civ.c \
@@ -101,7 +102,7 @@ all: $(PRG) $(D81)
 # **The disk has to be mounted**: the program reads its map from drive 8, and
 # without the image it stops at "cannot read HEXWAR.MAP".
 run: $(PRG) $(D81)
-	xemu-xmega65 -besure -8 $(D81) -prg $(PRG)
+	xemu-xmega65 -besure -keymap $(CURDIR)/res/xemu-keymap.cfg -8 $(D81) -prg $(PRG)
 
 $(BUILD):
 	mkdir -p $(BUILD)

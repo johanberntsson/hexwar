@@ -34,12 +34,27 @@
 // (input_x, input_y). $D610 never delivers it -- the F keys start at 241.
 #define KEY_CLICK 0xf0
 
+// HELP, or F1: $D610's code for F1. input_poll() turns HELP's own code into
+// it, so the two are one key to the game.
+#define KEY_HELP 0xf1
+
+// xemu has neither HELP nor a keypad of its own, so there the game takes F1
+// for help and the keypad for moving. **The keypad needs `make run`'s
+// res/xemu-keymap.cfg**, which gives keypad 7 9 4 6 1 3 to F3-F8 -- keys
+// nothing else here wants, and that xemu does not keep for hot keys -- so
+// they arrive as $F3-$F8. Stock xemu gives the keypad to its fake joystick.
+#define KEY_PAD_FIRST 0xf3
+#define KEY_PAD_LAST 0xf8
+
 // Where the tip of the arrow is, in sprite coordinates relative to the top
 // left of the display: 0-319 across and 0-199 down. **A unit across is two
 // H640 pixels, so a character is 4 units wide and 8 tall**; see
 // game.c:pointer_hex().
 extern word input_x;
 extern word input_y;
+
+// Non-zero on a real MEGA65, zero in xemu; set by input_init().
+extern byte input_real_hw;
 
 // Call once, after screen_init(), and after the last file has been read.
 void input_init(void);

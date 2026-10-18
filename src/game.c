@@ -9,6 +9,7 @@
 // UNIT_NONE and the end-of-turn prompt in the panel.
 
 #include "game.h"
+#include "help.h"
 #include "ai.h"
 #include "city.h"
 #include "cityscreen.h"
@@ -113,10 +114,12 @@ static void draw_frame(void)
     panel_text(ROW_CIV, civ_adjective[player_civ[PLAYER_HUMAN]], TEXT_COLOUR);
     // Wider than the window, so it ends where the window ends rather than
     // starting where it starts.
-    static const char keys[] = "0-/p*/:= move  b found city  space skip  "
-                               "w wait  f fortify  esc quit";
-    screen_putsxy(VIEW_LEFT + VIEW_COLUMNS - (sizeof keys - 1),
-                  SCREEN_ROWS - 1, keys, TEXT_COLOUR);
+    if (input_real_hw)
+        screen_putsxy(VIEW_LEFT + VIEW_COLUMNS - 17, SCREEN_ROWS - 1,
+                      "HELP for the keys", TEXT_COLOUR);
+    else
+        screen_putsxy(VIEW_LEFT + VIEW_COLUMNS - 15, SCREEN_ROWS - 1,
+                      "F1 for the keys", TEXT_COLOUR);
 }
 
 static void draw_status(void)
@@ -333,9 +336,17 @@ static void found_city(void)
     select_unit(u);
 }
 
+// The keypad in xemu, as res/xemu-keymap.cfg delivers it: 7 9 4 6 1 3.
+static const byte pad_dir[] = { DIR_NW, DIR_NE, DIR_W, DIR_E, DIR_SW, DIR_SE };
+
 static void unit_key(byte key)
 {
     byte u = unit_active;
+
+    if (!input_real_hw && key >= KEY_PAD_FIRST && key <= KEY_PAD_LAST) {
+        move_active(pad_dir[(byte)(key - KEY_PAD_FIRST)]);
+        return;
+    }
 
     switch (key) {
     // The same pattern as q e / a d / z c, on the right of the keyboard
@@ -382,6 +393,12 @@ static void draw_screen(void)
 static void open_city(byte c)
 {
     city_screen(c);
+    draw_screen();
+}
+
+static void open_help(void)
+{
+    help_screen();
     draw_screen();
 }
 
@@ -620,6 +637,9 @@ byte game_run(void)
             break;
         case KEY_CLICK:
             click();
+            break;
+        case KEY_HELP:
+            open_help();
             break;
         default:
             if (unit_active != UNIT_NONE) unit_key(key);

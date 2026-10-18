@@ -11,6 +11,15 @@
 // control port this pair belongs to is not the same in xemu as on the
 // machine** (Ozmoo found the mouse on port 1 on real hardware and on port 2
 // under xemu), so the button is taken from both ports below.
+// What $D610 delivers for HELP (mega65-core's matrix_to_ascii.vhdl, which
+// xemu copies), handed on as KEY_HELP.
+#define KEYBOARD_HELP 0x1f
+
+// Bit 5 of $D60F is set on a real MEGA65 and clear in xemu (or a VHDL
+// simulator).
+#define REALHW 0xd60fu
+#define REALHW_BIT 0x20
+
 #define POTX 0xd620u
 #define POTY 0xd621u
 
@@ -56,6 +65,7 @@
 
 word input_x;
 word input_y;
+byte input_real_hw;
 
 // **A smaller arrow than hexgame's.** That one was 18 sprite pixels tall; at
 // H640/V200 a monochrome sprite pixel is two pixels by one line, which is
@@ -221,6 +231,7 @@ void input_init(void)
     word ptr;
     byte i;
 
+    input_real_hw = PEEK(REALHW) & REALHW_BIT;
     sprite_list = list;
     for (ptr = 0; ptr < 4 * 64; ++ptr) POKE(body + ptr, 0);
     for (i = 0; i < ARROW_BYTES; ++i) {
@@ -338,7 +349,7 @@ byte input_poll(void)
     key = PEEK(KEYBOARD);
     if (key) {
         POKE(KEYBOARD, 0);
-        return key;
+        return key == KEYBOARD_HELP ? KEY_HELP : key;
     }
 
     // --- either fire button, on either port, is the mouse button ---

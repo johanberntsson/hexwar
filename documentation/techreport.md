@@ -71,6 +71,7 @@ most important routines included in each source file.
 | &nbsp;&nbsp;&nbsp;_civ\_choose_ | which people the human and the computer lead |
 |  |  |
 | cityscreen.c | the city screen: the city and its neighbours, and its production |
+| help.c | the help screen: every key and click the map screen answers to |
 | &nbsp;&nbsp;&nbsp;_city\_screen_ | shows a city until the player leaves it |
 |  |  |
 | menu.c | the menu bar along the top, and its dropdowns |

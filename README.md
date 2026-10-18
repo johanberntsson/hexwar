@@ -46,9 +46,10 @@ loop; a settler that founds a city; a city screen (double-click a city)
 where it is told to build warriors or builders, which it then produces; a
 menu bar with Game/Retire and Orders/Show Map; and three computer players
 that found cities, guard them, build and explore. There is no combat yet.
-Controls are listed along the bottom of the screen: `0 -` / `p *` / `: =`
+HELP (F1 in xemu) shows a screen of every key and click: `0 -` / `p *` / `: =`
 move a unit north-west and north-east, west and east, south-west and
-south-east, and the cursor keys scroll. Runs in xemu and on a real MEGA65,
+south-east (keypad 7 9 / 4 6 / 1 3 in xemu, with `make run`'s keymap),
+and the cursor keys scroll. Runs in xemu and on a real MEGA65,
 with the mouse and the joystick, and quits back to BASIC's own screen.
 
 ## Credits

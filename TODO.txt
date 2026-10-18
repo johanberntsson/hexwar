@@ -1,6 +1,17 @@
 --- OPEN ---
 
 
+--- MILESTONES ---
+
+Milestone 4, basic warfare
+- Add barbarian as a special AI. Make barbarian units randomly appear where AI/player isn't
+- Keep track of if at war or peace for AI (but currently always at peace)
+- Allow attack (including barbarians), both for AI (if at war) and player. Need attack and defence points for warrior unit
+- Allow units as city defence
+- Losing the last city means game over (doesn't apply to barbarians)
+
+--- DONE ---
+
 Can we detect if we run on the emulator or on the real machine?
 - Yes, according to discord:
   REALHW D60F bit 5 is clear (0) if running on Xemu or in a VHDL simulator, or 1 if running on "real hardware."
@@ -11,16 +22,6 @@ Make HELP open a screen that described keyboard commands. Show HELP hint on game
 Change some key binding in the emulator:
 - Instead of HELP, use F1 in the emulator (the onscreen text is F1 for help instead of HELP for help)
 - instead of 0-/p*/:-", use numpad directions as keys in the emulator. (change help screen accordingly)
-
---- MILESTONES ---
-
-Milestone 4, basic warfare
-- Add barbarian as a special AI. Make barbarians appear where AI/player isn't
-- Allow attack (including barbarians), both for AI and player
-- Allow units as city defence
-- Losing the last city means game over
-
---- DONE ---
 
 Milestone 3: basic AI players
 - Pick starting positions for AI players. Something on a plain, not too close to other AI (and

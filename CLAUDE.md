@@ -233,9 +233,11 @@ when a 15th tile or another full-colour surface needs room:
 **The 32 KB is what to watch.** The tile sheet used to be linked in
 (6.5 KB, and growing a KB a tile) and now comes off the disk, and
 `map_tile`'s 4 KB has moved to `$A000`. At the last measurement (18 Oct
-2026) `build/hexwar.lst` reported the region **88.2% full (about 3.8 KB
-free)** with milestones 1-3, the minimap, the city screen, the menu
-bar and the quit-time register restore in it, and `highram` 62.9% full; the region was 89.9% before
+2026) `build/hexwar.lst` reported the region **92.8% full (about 2.3 KB
+free)** with milestones 1-4, the minimap, the city and help screens, the menu
+bar and the quit-time register restore in it, and `highram` 63.3% full.
+Milestone 4 alone was about 2 KB, paid for in part by taking `puts` out of
+`fatal()` (1.1 KB). The region was 89.9% before
 `map_tile` moved, and 90.7% before the unit and city arrays and the sprite
 blocks followed it. **Anything moved to `HIGH_BSS` must be set before it is
 read**, since the startup clears only the ordinary BSS: `unit_reset()` and
@@ -521,8 +523,8 @@ this. And note `$D012` is 8 bits of a 0-311 raster, so it repeats for lines
 ## The game
 
 TODO.txt's milestones are the plan. Milestones 1 (pointer, turn loop, a
-settler, founding a city), 2 (the city screen and building units) and 3
-(computer players) are in, as of 18 Oct 2026.
+settler, founding a city), 2 (the city screen and building units), 3
+(computer players) and 4 (combat and barbarians) are in, as of 18 Oct 2026.
 
 **The title screen comes first** (`src/title.c`): `title_show()` puts the
 title up before the disk is read, and `title_run()` runs the menu — Start
@@ -588,12 +590,52 @@ none, then a builder if it has none, then warriors, until the player has
 `AI_UNIT_CAP` (6) units, when it builds nothing (`city_build` =
 `KIND_NONE`), so that three computer players cannot fill the 64 unit slots
 everyone shares. Its random numbers are a xorshift with a fixed seed, so a
-headless run is deterministic. **There is no combat**: `unit_can_enter()`
-keeps every unit, the human's included, off water and off another player's
-units and cities ("Blocked by the Hittites"). Other players' units and
-cities are drawn like the human's — only on explored hexagons — and told
-apart by the hover readout ("Hittite Warrior") and on the minimap by
-colour: the human white, then red, purple and orange.
+headless run is deterministic (`rnd()`, in `src/combat.c` since milestone
+4). Since milestone 4 a warrior first attacks an enemy next to it if the
+odds are good enough (`AI_ODDS`), then goes home if its city has nobody
+fortified in it, then makes for the nearest enemy within `AI_RANGE`, and
+only then explores. `approach()` takes an exploring step when no
+neighbour is nearer, which is what gets units round water. Other players'
+units and cities are drawn like the human's — only on explored hexagons —
+and told apart by the hover readout ("Hittite Warrior", "Barbarian
+Warrior") and on the minimap by colour: the human white, then red,
+purple and orange, and the barbarians brown.
+
+**Combat is `src/combat.c`** (milestone 4), after Civilization: attack
+against defence (`unit_kind_attack[]`, `unit_kind_defence[]`: warriors
+1/1, settlers and builders 0/1), the attacker winning with probability
+A/(A+D), in quarter points so it stays in bytes. Defence is ×1.5 on hills,
+×2 on mountains, and ×1.5 again for a unit that is fortified or in a city
+(not both). The best defender on the hexagon fights; outside a city the
+whole stack dies with it, in a city only the defender. An attack uses all
+the attacker's moves and the winner stays put; **a city is taken by moving
+into it once nobody is left in it** — captured by a people, burnt by
+barbarians (`city_destroy()`, which moves the last city into the hole).
+`unit_can_enter()` still says `ENTER_FOREIGN` for another player's
+hexagon, and the caller decides that it is an attack: `attack()` in
+`src/game.c` for the human, `attack_near()` in `src/ai.c` otherwise.
+**War** is a bitmask per player in `combat.c`; everyone is at war with the
+barbarians, the peoples start at peace, and only the human declares war,
+by attacking ("Declare war on the Hittites?", `popup_ask_shown()`). The
+computer players never do yet. **A player is out** (`player_alive()`) once
+the last city is gone if it ever founded one (`city_founded`, a bitmask),
+or when its units are gone if not: a computer player's remaining units
+are removed with it, and for the human the game is over. A city keeps its
+name when captured, which is why `city_founder[]` and not `city_owner[]`
+picks the name list.
+
+**The barbarians are `PLAYER_BARBARIAN`** (= `PLAYERS`, 4), an owner with
+units but no cities, outside `PLAYERS` so the peoples' arrays stay four
+long; anything indexed by owner (the minimap's colours,
+`player_adjective()`/`player_people()` in `src/civ.c`) has a fifth entry
+or a test. `ai_barbarians()` runs after the computer players: from turn
+`BARB_FIRST_TURN` (15), one turn in eight on average, two warriors appear
+on empty land at least `BARB_SPACING` (6) hexagons from every unit and
+city, up to `BARB_CAP` (8) — a band can take it to 9. Every barbarian
+attacks whatever is next to it, whatever the odds, or makes for the
+nearest unit or city within 24. What happened to the human during the
+other turns goes into `news` and is shown in the panel at the end of
+`end_turn()` ("Barbarian attack / a city lost").
 
 **The city screen** (`src/cityscreen.c`, after
 `civ1-reference/civ1-pic02.png`) takes over the whole screen: the city's
@@ -827,9 +869,9 @@ out wrong:
   the largest single item in a profile, so keep per-tile code flat.
 
 **Size:** `printf` costs 6.5 KB, and Search And Rescue got it out of the link
-entirely. Here `fatal()`'s `puts` pulls in `__lib_fwrite`, `__lib_fflush`,
-`__lib_rdflush` and `_Stub_write`, about 1.1 KB, for an error message that
-could be written with `screen_putsxy`.
+entirely. `fatal()` used `puts`, which pulled in `__lib_fwrite`, `__lib_fflush`,
+`__lib_rdflush` and `_Stub_write`, about 1.1 KB, for one error message;
+it writes with `screen_putsxy` now, and nothing else should bring them back.
 
 **Display:**
 - **colour RAM's second byte has attribute bits 4-7 even on full-colour

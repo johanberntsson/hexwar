@@ -79,3 +79,13 @@ const char *civ_city_name(byte civ, byte n)
 {
     return city_names[civ][n % CITY_NAMES];
 }
+
+const char *player_adjective(byte p)
+{
+    return p == PLAYER_BARBARIAN ? "Barbarian" : civ_adjective[player_civ[p]];
+}
+
+const char *player_people(byte p)
+{
+    return p == PLAYER_BARBARIAN ? "Barbarians" : civ_people[player_civ[p]];
+}

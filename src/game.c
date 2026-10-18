@@ -14,6 +14,7 @@
 #include "city.h"
 #include "cityscreen.h"
 #include "civ.h"
+#include "combat.h"
 #include "hexwar.h"
 #include "input.h"
 #include "map.h"
@@ -72,6 +73,14 @@ static void line_add(const char *s)
 {
     while (*s && line_len < sizeof line - 1) line[line_len++] = *s++;
     line[line_len] = 0;
+}
+
+// "Hittite Warrior".
+static void line_add_unit(byte owner, byte kind)
+{
+    line_add(player_adjective(owner));
+    line_add(" ");
+    line_add(unit_kind_name[kind]);
 }
 
 static void line_add_num(word v)
@@ -198,9 +207,7 @@ static void draw_hover(void)
                 line_add(city_name_of(c));
                 line_add("  ");
             } else if (u != UNIT_NONE) {
-                line_add(civ_adjective[player_civ[unit_owner[u]]]);
-                line_add(" ");
-                line_add(unit_kind_name[unit_kind[u]]);
+                line_add_unit(unit_owner[u], unit_kind[u]);
                 line_add("  ");
             }
             line_add(terrain_name[MAP_TERRAIN(ax, ay)]);
@@ -248,11 +255,14 @@ static void select_unit(byte after)
     byte was = unit_active;
     byte u = unit_next(PLAYER_HUMAN, after);
 
+    if (!player_alive(PLAYER_HUMAN)) {
+        game_over = 1;
+        u = UNIT_NONE;
+    }
     unit_active = u;
     if (was != u) dirty = 1;   // the ring moves
     if (u != UNIT_NONE && !in_view(unit_ax[u], unit_ay[u]))
         centre_on(unit_ax[u], unit_ay[u]);
-    if (u == UNIT_NONE && unit_count(PLAYER_HUMAN) == 0) game_over = 1;
     draw_orders();
 }
 
@@ -265,7 +275,9 @@ static void end_turn(void)
     byte c, kind;
 
     message("", "");
+    news = NEWS_NONE;
     for (c = PLAYER_FIRST_AI; c < PLAYERS; ++c) ai_turn(c);
+    ai_barbarians(turn);
     for (c = 0; c < city_count; ++c) {
         kind = city_produce(c);
         if (kind != KIND_NONE && city_owner[c] == PLAYER_HUMAN) {
@@ -276,6 +288,18 @@ static void end_turn(void)
             dirty = 1;
         }
     }
+    // Being attacked matters more than what was built.
+    if (news != NEWS_NONE) {
+        static const char *const what[] = {
+            "", "repelled", "a unit lost", "a city lost"
+        };
+        line_clear();
+        line_add(player_adjective(news_owner));
+        line_add(" attack");
+        message(line, what[news]);
+    }
+    dirty = 1;
+    hover_dirty = 1;
     ++turn;
     year -= YEARS_PER_TURN;
     unit_begin_turn(PLAYER_HUMAN);
@@ -284,6 +308,45 @@ static void end_turn(void)
 }
 
 // --------------------------------------------------------------- orders
+
+// The active unit u attacks (nx, ny) -- after a declaration of war, if it
+// takes one -- and the panel says how it went.
+static void attack(byte u, byte nx, byte ny)
+{
+    byte kind = unit_kind[u];
+    byte o = combat_holder(nx, ny);
+
+    if (!unit_kind_attack[kind]) {
+        message(unit_kind_name[kind], "cannot attack");
+        return;
+    }
+    if (!at_war(PLAYER_HUMAN, o)) {
+        popup_begin();
+        popup_add("Declare war on the ");
+        popup_add(player_people(o));
+        popup_add("?");
+        if (!popup_ask_shown()) return;
+        declare_war(PLAYER_HUMAN, o);
+    }
+    line_clear();
+    switch (combat_attack(u, nx, ny)) {
+    case COMBAT_WON:
+        line_add_unit(combat_owner, combat_kind);
+        message(line, "destroyed");
+        break;
+    case COMBAT_LOST:
+        line_add("Your ");
+        line_add(unit_kind_name[kind]);
+        message(line, "was destroyed");
+        break;
+    default:
+        message("Captured", city_name_of(combat_city));
+        break;
+    }
+    dirty = 1;
+    hover_dirty = 1;
+    select_unit(u);
+}
 
 static void move_active(byte dir)
 {
@@ -297,10 +360,7 @@ static void move_active(byte dir)
         return;
     }
     if (t == ENTER_FOREIGN) {
-        // Whose: a city's owner if there is one, otherwise the unit's.
-        t = city_at(nx, ny);
-        t = (t != CITY_NONE) ? city_owner[t] : unit_owner[unit_at(nx, ny)];
-        message("Blocked by the", civ_people[player_civ[t]]);
+        attack(u, nx, ny);
         return;
     }
     message("", "");
@@ -515,6 +575,7 @@ void game_init(void)
     map_reset();
     unit_reset();
     city_reset();
+    combat_reset();
     game_over = quit = retired = 0;
     click_ax = 0xff;
 

@@ -30,6 +30,7 @@ static const struct help_line left_column[] = {
     { "", "west, east" },
     { "", "south-west, south-east" },
     { "click", "next to the unit: there" },
+    { "", "onto an enemy: attack" },
     { 0, "" },
     { 0, "Orders" },
     { "b", "found a city (settler)" },

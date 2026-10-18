@@ -30,12 +30,14 @@
 
 #define PAL_PURPLE 4
 #define PAL_ORANGE 8
+#define PAL_BROWN 9
 
 #define PAL_UNEXPLORED PAL_BLACK
 
-// Cities and units in their player's colour, the human's white.
-static const byte player_colour[PLAYERS] = {
-    PAL_WHITE, PAL_RED, PAL_PURPLE, PAL_ORANGE,
+// Cities and units in their player's colour, the human's white and the
+// barbarians' brown.
+static const byte player_colour[PLAYERS + 1] = {
+    PAL_WHITE, PAL_RED, PAL_PURPLE, PAL_ORANGE, PAL_BROWN,
 };
 
 // By terrain value, which is a TILE_* number.

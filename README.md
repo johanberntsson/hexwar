@@ -40,12 +40,14 @@ tool chain and is selected by `--target=mega65`. There is nothing to clone.
 
 ## Status
 
-Milestones 1-3 of `TODO.txt`: a generated, east-west wrapping map that
+Milestones 1-4 of `TODO.txt`: a generated, east-west wrapping map that
 scrolls, under a fog of war; a minimap; a mouse or joystick pointer; a turn
 loop; a settler that founds a city; a city screen (double-click a city)
 where it is told to build warriors or builders, which it then produces; a
 menu bar with Game/Retire and Orders/Show Map; and three computer players
-that found cities, guard them, build and explore. There is no combat yet.
+that found cities, guard them, build and explore; combat, war and peace
+(attack another people and you are at war with it), and barbarians who
+appear in empty land and burn the cities they take.
 HELP (F1 in xemu) shows a screen of every key and click: `0 -` / `p *` / `: =`
 move a unit north-west and north-east, west and east, south-west and
 south-east (keypad 7 9 / 4 6 / 1 3 in xemu, with `make run`'s keymap),

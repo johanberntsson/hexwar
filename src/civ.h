@@ -37,6 +37,11 @@ extern byte player_civ[CIVS];
 // The human leads `civ`, and the computer players the others in list order.
 void civ_choose(byte civ);
 
+// Player p's adjective and people as civ_adjective and civ_people have
+// them, or the barbarians' for PLAYER_BARBARIAN (unit.h).
+const char *player_adjective(byte p);
+const char *player_people(byte p);
+
 // The nth city name of a people, at most ten characters; past the end of
 // the list they repeat.
 const char *civ_city_name(byte civ, byte n);

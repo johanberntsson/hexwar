@@ -73,6 +73,7 @@ SRCS     = src/hexwar.c \
            src/help.c \
            src/game.c \
            src/ai.c \
+           src/combat.c \
            src/civ.c \
            src/popup.c \
            src/menu.c \

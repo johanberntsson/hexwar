@@ -77,7 +77,8 @@ most important routines included in each source file.
 | menu.c | the menu bar along the top, and its dropdowns |
 | &nbsp;&nbsp;&nbsp;_menu\_click_ | opens the dropdown under the arrow and returns what was picked |
 |  |  |
-| ai.c | the computer players |
+| ai.c | the computer players and the barbarians |
+| combat.c | combat, war and peace, and whether a player is still in the game |
 | &nbsp;&nbsp;&nbsp;_ai\_place_ | puts each one's settler on good land, well away from the others |
 | &nbsp;&nbsp;&nbsp;_ai\_turn_ | one computer player's turn |
 |  |  |

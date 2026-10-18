@@ -15,13 +15,15 @@
 #include "title.h"
 #include "view.h"
 
-// A message on an otherwise empty 8-bit screen, for the things that stop the
-// program before it has a display of its own.
+// A message on an otherwise empty screen, for the things that stop the
+// program before the game starts. Written with screen_putsxy() on the
+// game's own display rather than puts() on BASIC's, which pulled about
+// 1.1 KB of stdio into the link for this alone.
 static void fatal(const char *message)
 {
-    screen_restore();
-    puts("hexwar: ");
-    puts(message);
+    screen_clear();
+    screen_putsxy(0, 0, "hexwar: ", COLOR_WHITE);
+    screen_putsxy(8, 0, message, COLOR_WHITE);
     while (1) continue;
 }
 

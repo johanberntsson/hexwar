@@ -167,6 +167,11 @@ byte popup_ask(const char *s)
     return show(1);
 }
 
+byte popup_ask_shown(void)
+{
+    return show(1);
+}
+
 void popup(const char *s)
 {
     popup_begin();

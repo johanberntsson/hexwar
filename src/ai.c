@@ -1,5 +1,6 @@
 #include "ai.h"
 #include "city.h"
+#include "combat.h"
 #include "map.h"
 #include "sheet.h"
 #include "unit.h"
@@ -14,21 +15,26 @@
 // them cannot fill the 64 slots every player shares.
 #define AI_UNIT_CAP 6
 
+// Odds, as combat_worth() takes them: a computer player's warrior attacks
+// when its attack is at least 3/4 of the defence, a barbarian at 1/4 --
+// which is anything. Each makes for an enemy no further than its range.
+#define AI_ODDS 3
+#define AI_RANGE 8
+#define BARB_ODDS 1
+#define BARB_RANGE 24
+
+// Barbarians appear from this turn on, one turn in BARB_CHANCE + 1 on
+// average, no nearer anybody than BARB_SPACING, and never more than
+// BARB_CAP of them at once.
+#define BARB_FIRST_TURN 15
+#define BARB_CHANCE 7
+#define BARB_SPACING 6
+#define BARB_CAP 8
+#define BARB_TRIES 50
+
 // Which way each exploring warrior is heading, DIR_*. Kept between turns so
 // that it walks somewhere rather than jittering on the spot.
 HIGH_BSS static byte heading[MAX_UNITS];
-
-// A 16-bit xorshift. The same seed every game, which keeps a headless run
-// deterministic; nothing here needs better.
-static word seed = 0x2a6d;
-
-static byte rnd(void)
-{
-    seed ^= seed << 7;
-    seed ^= seed >> 9;
-    seed ^= seed << 8;
-    return (byte)seed;
-}
 
 // Hexagons between two cells, round the east-west wrap. In doubled
 // coordinates that is dy, plus whatever of dx the diagonal steps do not
@@ -54,16 +60,38 @@ static byte land_neighbours(byte ax, byte ay)
     return n;
 }
 
-// The nearest of any player's units to (ax, ay); at the start of a game
-// those are the settlers.
-static word nearest_unit(byte ax, byte ay)
+// The nearest unit or city to (ax, ay) whose owner `me` is at war with --
+// or of any owner, for me = OWNER_ANY -- and how far it is. 0xffff with
+// none.
+#define OWNER_ANY 0xff
+static byte near_x, near_y;
+
+static byte enemy(byte me, byte owner)
 {
-    byte u;
+    return me == OWNER_ANY || (owner != me && at_war(me, owner));
+}
+
+static word nearest(byte me, byte ax, byte ay)
+{
+    byte i;
     word d, best = 0xffff;
-    for (u = 0; u < MAX_UNITS; ++u) {
-        if (unit_kind[u] == KIND_NONE) continue;
-        d = distance(ax, ay, unit_ax[u], unit_ay[u]);
-        if (d < best) best = d;
+    for (i = 0; i < MAX_UNITS; ++i) {
+        if (unit_kind[i] == KIND_NONE || !enemy(me, unit_owner[i])) continue;
+        d = distance(ax, ay, unit_ax[i], unit_ay[i]);
+        if (d < best) {
+            best = d;
+            near_x = unit_ax[i];
+            near_y = unit_ay[i];
+        }
+    }
+    for (i = 0; i < city_count; ++i) {
+        if (!enemy(me, city_owner[i])) continue;
+        d = distance(ax, ay, city_ax[i], city_ay[i]);
+        if (d < best) {
+            best = d;
+            near_x = city_ax[i];
+            near_y = city_ay[i];
+        }
     }
     return best;
 }
@@ -81,7 +109,7 @@ void ai_place(void)
                 if (MAP_TERRAIN(ax, ay) == TILE_GRASS
                     && !(map_tile[ay][ax] & MAP_OCCUPIED)
                     && land_neighbours(ax, ay) >= 4
-                    && nearest_unit(ax, ay) >= spacing)
+                    && nearest(OWNER_ANY, ax, ay) >= spacing)
                     goto found;
             }
             if (spacing <= START_SPACING_STEP) break;   // no room: none
@@ -119,7 +147,9 @@ static void explore(byte u)
     unit_moves[u] = 0;
 }
 
-// The step from u's hexagon that comes nearest (bx, by), if any is nearer.
+// The step from u's hexagon that comes nearest (bx, by), if any is nearer;
+// if none is, water or somebody is in the way, and a step of exploring is
+// what gets round it.
 static void approach(byte u, byte bx, byte by)
 {
     byte dir, nx, ny, best = DIR_NONE;
@@ -134,7 +164,7 @@ static void approach(byte u, byte bx, byte by)
             best = dir;
         }
     }
-    if (best == DIR_NONE || !step(u, best)) unit_moves[u] = 0;
+    if (best == DIR_NONE || !step(u, best)) explore(u);
 }
 
 // p's city nearest u, or CITY_NONE.
@@ -165,10 +195,39 @@ static byte guarded(byte u, byte ax, byte ay)
     return 0;
 }
 
+// Attack a neighbouring enemy if the odds are `odds` or better (see
+// combat_worth()). Whether it did.
+static byte attack_near(byte u, byte odds)
+{
+    byte dir, nx, ny, me = unit_owner[u];
+    for (dir = 0; dir < 6; ++dir) {
+        if (!map_neighbour(unit_ax[u], unit_ay[u], dir, &nx, &ny)) continue;
+        if (!(map_tile[ny][nx] & MAP_OCCUPIED)) continue;
+        if (!enemy(me, combat_holder(nx, ny))) continue;
+        if (!combat_worth(unit_kind[u], nx, ny, odds)) continue;
+        combat_attack(u, nx, ny);
+        return 1;
+    }
+    return 0;
+}
+
+// Towards the nearest enemy within `range`, or exploring if there is none.
+static void hunt(byte u, word range)
+{
+    if (nearest(unit_owner[u], unit_ax[u], unit_ay[u]) <= range)
+        approach(u, near_x, near_y);
+    else
+        explore(u);
+}
+
 static void move_unit(byte u)
 {
     byte c, ax = unit_ax[u], ay = unit_ay[u];
 
+    if (unit_owner[u] == PLAYER_BARBARIAN) {
+        if (!attack_near(u, BARB_ODDS)) hunt(u, BARB_RANGE);
+        return;
+    }
     switch (unit_kind[u]) {
     case KIND_SETTLER:
         // 1. With no city, found one where it stands; it was put on good
@@ -181,15 +240,21 @@ static void move_unit(byte u)
         explore(u);
         break;
     case KIND_WARRIOR:
-        // The first warrior in an unguarded city stays to guard it; 4. the
-        // rest explore.
-        c = city_at(ax, ay);
-        if (c != CITY_NONE && !guarded(u, ax, ay)) {
-            unit_orders[u] = ORDERS_FORTIFY;
-            unit_moves[u] = 0;
+        // A fair fight next to it first. Then the first warrior home in an
+        // unguarded city stays to guard it, and any other goes home to; 4.
+        // the rest hunt the enemy nearby or explore.
+        if (attack_near(u, AI_ODDS)) return;
+        c = home(u);
+        if (c != CITY_NONE && !guarded(u, city_ax[c], city_ay[c])) {
+            if (ax == city_ax[c] && ay == city_ay[c]) {
+                unit_orders[u] = ORDERS_FORTIFY;
+                unit_moves[u] = 0;
+            } else {
+                approach(u, city_ax[c], city_ay[c]);
+            }
             return;
         }
-        explore(u);
+        hunt(u, AI_RANGE);
         break;
     case KIND_BUILDER:
         // 5. To a hexagon next to its city, and there it stays: there are no
@@ -214,6 +279,7 @@ void ai_turn(byte p)
     byte c, u;
     byte units = unit_count_kind(p, KIND_NONE);
 
+    if (!player_alive(p)) return;
     unit_begin_turn(p);
 
     // 2. No military, build some; 3. no builder, build one; then warriors
@@ -234,6 +300,44 @@ void ai_turn(byte p)
     for (u = 0; u < MAX_UNITS; ++u) {
         if (unit_kind[u] == KIND_NONE || unit_owner[u] != p) continue;
         if (unit_orders[u] != ORDERS_NONE) continue;
+        while (unit_kind[u] != KIND_NONE && unit_moves[u]) move_unit(u);
+    }
+}
+
+// Land with nobody on it.
+static byte empty_land(byte ax, byte ay)
+{
+    return unit_can_enter(PLAYER_BARBARIAN, ax, ay) == ENTER_OK
+           && !(map_tile[ay][ax] & MAP_OCCUPIED);
+}
+
+void ai_barbarians(word turn)
+{
+    byte u, ax, ay, tries, dir, nx, ny;
+
+    unit_begin_turn(PLAYER_BARBARIAN);
+    if (turn >= BARB_FIRST_TURN && !(rnd() & BARB_CHANCE)
+        && unit_count_kind(PLAYER_BARBARIAN, KIND_NONE) < BARB_CAP) {
+        for (tries = 0; tries < BARB_TRIES; ++tries) {
+            ax = rnd() & (MAP_COLUMNS - 1);
+            ay = 2 + rnd() % (MAP_ROWS - 4);
+            if (!empty_land(ax, ay)
+                || nearest(OWNER_ANY, ax, ay) < BARB_SPACING)
+                continue;
+            unit_create(KIND_WARRIOR, PLAYER_BARBARIAN, ax, ay);
+            for (dir = 0; dir < 6; ++dir) {
+                if (map_neighbour(ax, ay, dir, &nx, &ny)
+                    && empty_land(nx, ny)) {
+                    unit_create(KIND_WARRIOR, PLAYER_BARBARIAN, nx, ny);
+                    break;
+                }
+            }
+            break;
+        }
+    }
+
+    for (u = 0; u < MAX_UNITS; ++u) {
+        if (unit_owner[u] != PLAYER_BARBARIAN) continue;
         while (unit_kind[u] != KIND_NONE && unit_moves[u]) move_unit(u);
     }
 }

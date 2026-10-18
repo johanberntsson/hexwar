@@ -1,6 +1,7 @@
 #include "city.h"
 #include "civ.h"
 #include "map.h"
+#include "minimap.h"
 #include "sheet.h"
 #include "unit.h"
 
@@ -15,11 +16,13 @@ static const byte terrain_shields[] = {
 };
 
 byte city_count;
+byte city_founded;
 // In HIGH_BSS, out of the 32 KB; city_count says which entries mean
 // anything, and city_reset() sets it for every game.
 HIGH_BSS byte city_owner[MAX_CITIES];
 HIGH_BSS byte city_ax[MAX_CITIES];
 HIGH_BSS byte city_ay[MAX_CITIES];
+HIGH_BSS byte city_founder[MAX_CITIES];
 HIGH_BSS byte city_name[MAX_CITIES];
 HIGH_BSS byte city_build[MAX_CITIES];
 HIGH_BSS word city_shields[MAX_CITIES];
@@ -31,6 +34,7 @@ void city_reset(void)
 {
     byte p;
     city_count = 0;
+    city_founded = 0;
     for (p = 0; p < PLAYERS; ++p) named[p] = 0;
 }
 
@@ -46,22 +50,45 @@ byte city_found(byte owner, byte ax, byte ay)
 {
     byte c = city_count;
     if (c == MAX_CITIES || city_at(ax, ay) != CITY_NONE) return CITY_NONE;
-    city_owner[c] = owner;
+    city_founder[c] = owner;
     city_ax[c] = ax;
     city_ay[c] = ay;
     city_name[c] = named[owner]++;
-    city_build[c] = KIND_WARRIOR;
-    city_shields[c] = 0;
+    city_founded |= (byte)(1 << owner);
     ++city_count;
+    city_capture(c, owner);
     unit_mark(ax, ay);
     return c;
+}
+
+void city_capture(byte c, byte owner)
+{
+    city_owner[c] = owner;
+    city_build[c] = KIND_WARRIOR;
+    city_shields[c] = 0;
+    minimap_plot(city_ax[c], city_ay[c]);
+}
+
+void city_destroy(byte c)
+{
+    byte ax = city_ax[c], ay = city_ay[c];
+    byte last = --city_count;
+
+    city_owner[c] = city_owner[last];
+    city_founder[c] = city_founder[last];
+    city_ax[c] = city_ax[last];
+    city_ay[c] = city_ay[last];
+    city_name[c] = city_name[last];
+    city_build[c] = city_build[last];
+    city_shields[c] = city_shields[last];
+    unit_mark(ax, ay);
 }
 
 const char *city_name_of(byte c)
 {
     // Past the end of a list, names repeat; that is a problem for when a
     // player has founded a dozen cities, which nobody can yet.
-    return civ_city_name(player_civ[city_owner[c]], city_name[c]);
+    return civ_city_name(player_civ[city_founder[c]], city_name[c]);
 }
 
 byte city_production(byte c)

@@ -17,6 +17,8 @@ byte unit_active = UNIT_NONE;
 const char *const unit_kind_name[] = { "", "Settler", "Warrior", "Builder" };
 const byte unit_kind_moves[] = { 0, 1, 1, 1 };
 const byte unit_kind_cost[] = { 0, 30, 10, 20 };
+const byte unit_kind_attack[] = { 0, 0, 1, 0 };
+const byte unit_kind_defence[] = { 0, 1, 1, 1 };
 static const byte unit_kind_tile[] = {
     0, TILE_SETTLER, TILE_WARRIOR, TILE_BUILDER
 };
@@ -84,16 +86,6 @@ byte unit_next(byte owner, byte after)
             return u;
     }
     return UNIT_NONE;
-}
-
-byte unit_count(byte owner)
-{
-    byte u, n = 0;
-    for (u = 0; u < MAX_UNITS; ++u)
-        if (unit_kind[u] != KIND_NONE && unit_owner[u] == owner) ++n;
-    for (u = 0; u < city_count; ++u)
-        if (city_owner[u] == owner) ++n;
-    return n;
 }
 
 byte unit_count_kind(byte owner, byte kind)

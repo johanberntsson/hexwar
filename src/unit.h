@@ -29,6 +29,10 @@
 #define PLAYER_FIRST_AI 1
 #define PLAYERS 4
 
+// The barbarians own units like a player, but no cities, and are at war
+// with everybody (combat.h). Not counted in PLAYERS, which is the peoples.
+#define PLAYER_BARBARIAN PLAYERS
+
 extern byte unit_kind[MAX_UNITS];
 extern byte unit_owner[MAX_UNITS];
 extern byte unit_ax[MAX_UNITS];
@@ -44,6 +48,8 @@ extern byte unit_active;
 extern const char *const unit_kind_name[];
 extern const byte unit_kind_moves[];
 extern const byte unit_kind_cost[];     // shields to build one
+extern const byte unit_kind_attack[];   // 0: cannot attack
+extern const byte unit_kind_defence[];
 
 // No units at all, for a new game.
 void unit_reset(void);
@@ -62,9 +68,6 @@ void unit_begin_turn(byte owner);
 // UNIT_NONE to start from the beginning.
 byte unit_next(byte owner, byte after);
 
-// How many units and cities `owner` has, for deciding the game is over.
-byte unit_count(byte owner);
-
 // How many units of `kind` `owner` has; KIND_NONE counts all of them.
 byte unit_count_kind(byte owner, byte kind);
 
@@ -73,7 +76,7 @@ byte unit_count_kind(byte owner, byte kind);
 byte unit_at(byte ax, byte ay);
 
 // Whether a unit of `owner` may step onto (ax, ay): not into water, and not
-// onto another player's unit or city, since there is no combat yet.
+// onto another player's unit or city, which is an attack (combat.h).
 #define ENTER_OK 0
 #define ENTER_WATER 1
 #define ENTER_FOREIGN 2

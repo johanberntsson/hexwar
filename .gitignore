@@ -12,5 +12,3 @@ old-cc65/bin/
 old-cc65/obj/
 old-cc65/d81data/
 .map
-*.d64
-*.d81

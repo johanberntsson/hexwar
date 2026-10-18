@@ -1,5 +1,9 @@
 --- OPEN ---
 
+Flash the active unit instead of using tile_select.png
+
+Add a list of (known) AIs on the game screen with some basic info
+
 Probably need some scripting or cheat way of testing instead of just playing for hours
 
 Milestone 4, basic warfare

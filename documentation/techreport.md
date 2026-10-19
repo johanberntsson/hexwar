@@ -67,11 +67,13 @@ most important routines included in each source file.
 | &nbsp;&nbsp;&nbsp;_city\_found_ | founds a city |
 | &nbsp;&nbsp;&nbsp;_city\_produce_ | one turn's shields, and the unit when they are enough |
 |  |  |
-| civ.c | the peoples, their leaders and city names, and the difficulty levels |
+| civ.c | the peoples, their leaders and city names, and the difficulty levels (the names themselves are texts) |
 | &nbsp;&nbsp;&nbsp;_civ\_choose_ | which people the human and the computer lead |
 |  |  |
 | cityscreen.c | the city screen: the city and its neighbours, and its production |
 | help.c | the help screen: every key and click the map screen answers to |
+| text.c | the long texts: read into Attic RAM at start-up, drawn from there |
+| &nbsp;&nbsp;&nbsp;_text\_show_ | draws one text, following its markup for position and colour |
 | topcities.c | the Top Five Cities screen, opened from World (empty so far) |
 | &nbsp;&nbsp;&nbsp;_city\_screen_ | shows a city until the player leaves it |
 |  |  |
@@ -136,12 +138,14 @@ to `release/`), holding three files:
 | AUTOBOOT.C65 | the program, a C65-mode PRG loaded at \$2001 |
 | TILES.FCI | the tile sheet: a palette and 12 tiles of 4x4 full colour characters |
 | SEVENSHIPS.MAP | the map: a 16-byte header and one 4096-byte layer of terrain |
+| TEXT.PAK | the texts -- the title, help and new-game screens, the opening popup, and the lists of names -- with their markup |
 
 The C65 ROM boots AUTOBOOT.C65 automatically. `main()` then:
 
 1. keeps the VIC registers as BASIC left them (`screen_save`), switches the
    VIC-IV to 80x25 16-bit text mode with full colour characters
-   (`screen_init`) and puts up the title screen (`title_show`);
+   (`screen_init`), reads TEXT.PAK into Attic RAM (`text_load`), and puts
+   up the title screen, which is one of those texts (`title_show`);
 2. reads TILES.FCI, a character at a time. Each character is widened to twice
    its width, because a pixel of this screen mode is half as wide as it is
    tall, and copied into the expanded sheet in bank 5 (`sheet_load`);
@@ -181,22 +185,26 @@ scarce resource: there is plenty of RAM elsewhere, but code cannot run from
 it without banking -- plus the 8 KB at \$a000-\$bfff, which is RAM under the
 BASIC ROM and is the program's once `src/bank.s` has banked BASIC out, before
 `main()` runs. The figures below are from the linker's listing,
-`build/sevenships.lst`, for the build of 18 October 2026.
+`build/sevenships.lst`, for the build of 19 October 2026.
 
 | **Address range** | **KB** |  **Usage** |
 | -- |  - | ---- |
 | \$0002-\$0039 | 0.1 | Calypsi's pseudo registers, in zero page |
 | \$1600-\$1790 | 0.4 | the popup's text (the `zpsave` section, `LOW_FREE`) |
 | \$1791-\$1eff | 1.9 | free |
-| \$2001-\$2ebf | 3.7 | BASIC stub, startup code, constant data and text |
-| \$2ec0-\$912b | 24.6 | code |
-| \$912c-\$932b | 0.5 | C stack |
-| \$932c-\$96d3 | 0.9 | BSS: buffers and small state |
-| \$96d4-\$9fff | 2.3 | free |
-| \$a000-\$b43f | 5.1 | `highbss` (`HIGH_BSS`): the map's terrain layer `map_tile`, the unit and city arrays, the sprite blocks |
-| \$b440-\$bfff | 2.9 | free |
+| \$2001-\$26d0 | 1.7 | BASIC stub, startup code, constant data and the short strings |
+| \$26d1-\$904f | 26.4 | code |
+| \$9050-\$924f | 0.5 | C stack |
+| \$9250-\$960d | 0.9 | BSS: buffers and small state |
+| \$960e-\$9fff | 2.5 | free |
+| \$a000-\$b561 | 5.3 | `highbss` (`HIGH_BSS`): the map's terrain layer `map_tile`, the unit and city arrays, the sprite blocks, the AI's headings, and the texts' staging and line buffers |
+| \$b562-\$bfff | 2.7 | free |
 
-The PRG is everything up to \$912b; the C stack and the BSS are not stored in
+The long texts and the names are not in this table at all: they are in
+TEXT.PAK, read into Attic RAM at start-up, which is most of why the
+constant data went from 3.7 KB on 18 October to 1.7 KB.
+
+The PRG is everything up to \$904f; the C stack and the BSS are not stored in
 the file, only reserved after it. Nothing initialised may go above \$9fff,
 because the PRG is loaded while BASIC is still mapped there, so only BSS
 marked `HIGH_BSS` is put in the window. BASIC is banked back in as the last
@@ -217,9 +225,10 @@ because a popup's text is put together and shown with no disk access in
 between.
 
 When the free space runs low, the order of things to try is written down in
-`CLAUDE.md` ("Growing past 32 KB"): move data out with `__far` first, then
-more BSS into the window at \$a000-\$bfff, and only then split the code into
-MAP-banked regions.
+`CLAUDE.md` ("Growing past 32 KB"): move data out first -- more texts and
+tables into Attic RAM, as the long texts already are, or with `__far` --
+then more BSS into the window at \$a000-\$bfff, and only then split the
+code into MAP-banked regions.
 
 ## Chip RAM and the rest of the machine
 
@@ -231,7 +240,7 @@ MAP-banked regions.
 | \$57000-\$5cfff | 24 | The expanded tile sheet |
 | \$5d000-\$5dfff | 4 | free, for two more tiles |
 | \$5e000-\$5ffff | 8 | The minimap's character definitions |
-| \$08000000- | 8192 | Attic RAM, free |
+| \$08000000- | 8192 | Attic RAM: the texts from TEXT.PAK at the bottom, the rest free |
 | \$0ff81000-\$0ff81f9f | 4 | Colour RAM |
 
 **The tile store** is the heart of the display. A screen cell in this mode is a

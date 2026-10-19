@@ -14,7 +14,7 @@ only in git history: `git show 36047ba^:old-cc65/src/graphics.c`, or
 the source comments still cite are paths at those commits. Nothing should
 need them any more.
 
-The game is **Seven Ships of the Enemy** (`vision.md` has where the title
+The game is **Seven Ships of the Enemy** (`documentation/vision.md` has where the title
 comes from), `sevenships` wherever a short name is needed: the repository,
 the PRG, the disk and its map file `SEVENSHIPS.MAP`. Until 19 Oct 2026 it
 was called Hexwar, and so is everything in git history before that.
@@ -26,15 +26,17 @@ true)`, but **the window now starts at column 18, not 10**, as in
 `civ1-reference/civ1-pic01.png`: the panel on the left is 18 columns wide so
 that a minimap can go at its top. Neither the
 BASIC nor the cc65 version ever scrolled correctly; see **Scrolling** below.
-`design.md` holds the hex-grid and Civ-1 map-generator research, and
+`documentation/design.md` holds the hex-grid and Civ-1 map-generator research, and
 `documentation/techreport.md` is the technical report for readers rather
 than for working on the code — program structure, memory allocation and the
 main loop, in the format of Ozmoo's (pandoc markdown, `\$` in tables). **Keep
 it in step** when the memory map, the startup or the loop changes; the
-figures in it come from `build/sevenships.lst`. `vision.md` is the game design document — a Late Bronze Age eastern
+figures in it come from `build/sevenships.lst`. `documentation/vision.md` is the game design document — a Late Bronze Age eastern
 Mediterranean 4X. Its §6 is the technical section and is written to agree
 with this file; **if the two ever disagree, this file is right and §6 is
-stale.** `vision-old.md` is a superseded draft.
+stale.** `documentation/vision-old.md` is a superseded draft. (All three
+moved into `documentation/`; a bare `vision.md` or `design.md` below means
+these, except hexgame's own `design.md`.)
 
 ## Build and run
 
@@ -184,14 +186,15 @@ buffers at the default `$FF80000` and corrupts the display.
 
 | Address | Size | Contents |
 |---|---|---|
-| `$2001-$9FFF` | 32 KB | program, data, BSS, C stack. About 29.7 KB used |
-| `$A000-$BFFF` | 8 KB | `highram`, under the BASIC ROM, banked out by `src/bank.s`: `map_tile`, the unit and city arrays, the sprite blocks, the AI's headings; about 3 KB free — `HIGH_BSS` in `src/mega65.h` moves a variable there, and **the startup does not clear it** |
+| `$2001-$9FFF` | 32 KB | program, data, BSS, C stack. About 30.2 KB used, 2.5 KB free |
+| `$A000-$BFFF` | 8 KB | `highram`, under the BASIC ROM, banked out by `src/bank.s`: `map_tile`, the unit and city arrays, the sprite blocks, the AI's headings, the texts' staging and line buffers; about 2.7 KB free — `HIGH_BSS` in `src/mega65.h` moves a variable there, and **the startup does not clear it** |
 | `$1600-$1EFF` | 2304 | `zpsave`: the popup's 400-byte text, the rest free — `LOW_FREE` in `src/mega65.h` moves a variable there |
 | `$12000` | 4000 | screen RAM, 80x25 cells of 2 bytes |
 | `$40000-$56EFF` | 94208 | the view's tile store, 23 rows of 4096 |
 | `$57000-$5CFFF` | 24576 | the x-expanded tile sheet, 96x4 characters |
 | `$5D000-$5DFFF` | 4096 | free: room for two more tiles of sheet |
 | `$5E000-$5FFFF` | 8192 | the minimap's 16x8 full-colour characters |
+| `$8000000` | ~1 KB | attic RAM: the texts, `TEXT.PAK`'s body (`src/text.h`); the rest of the 8 MB free |
 | `$FF81000` | 4000 | colour RAM |
 
 **The store's rows are padded to 4096 bytes, and the padding is load bearing.**
@@ -247,9 +250,14 @@ when a 15th tile or another full-colour surface needs room:
 2026, after the rename and the blinking unit) `build/sevenships.lst`
 reported the region **93.0% full (about 2.2 KB free)**, 94.3% after
 the menus' keyboard control, 96.3% after the menu changes, Play 50 Turns
-and the byline, and **99.2% (about 260 bytes free) after save and load**
-(about 900 bytes, a fifth of it `_Stub_write`), with milestones 1-4, the minimap, the city and help screens, the menu
-bar and the quit-time register restore in it, and `highram` 63.3% full.
+and the byline, 99.2% (about 260 bytes free) after save and load
+(about 900 bytes, a fifth of it `_Stub_write`), and **97.4% (855 bytes
+free) once the help screen became a text in attic RAM** (see **Texts**),
+95.8% (1370 bytes free) once the title, setup screens and intro
+followed it, and **92.2% (2549 bytes free) once `civ.c`'s names did**,
+with milestones 1-4, the minimap, the city and help screens, the menu
+bar, save and load and the quit-time register restore in it, and
+`highram` 66.8% full.
 Milestone 4 alone was about 2 KB, paid for in part by taking `puts` out of
 `fatal()` (1.1 KB). The region was 89.9% before
 `map_tile` moved, and 90.7% before the unit and city arrays and the sprite
@@ -312,8 +320,9 @@ not. Take these in order and stop as soon as it fits:
    straight on top of the tile store and the expanded sheet. Trim it to
    nothing: bank 5 is now the sheet, 4 KB kept for its next two tiles, and the
    minimap at `$5E000`. Leave bank 1 alone too: screen RAM is at `$12000` and BASIC 65 owns
-   most of the rest. Attic RAM (`$8000000` up, all of it free now that the
-   expanded sheet has moved to bank 5) is the real reservoir, reached by DMA or `__huge`.
+   most of the rest. Attic RAM (`$8000000` up: the texts at the bottom,
+   since the expanded sheet moved to bank 5) is the real reservoir,
+   reached by DMA or `__huge`.
 2. **Bank BASIC out and put BSS at `$A000-$BFFF`** — *done, see below.*
    Search And Rescue does
    exactly this and it is confirmed on a real MEGA65 (2 Oct 2026), disk I/O
@@ -345,9 +354,13 @@ banked region, where a dispatch call costs nothing that matters. Second,
 the eventual split a one-line pragma per file instead of a rewrite.
 
 **Step 2 is done** for `map_tile` (18 Oct 2026; see **Memory map**), with
-4 KB of the window left for the next BSS that moves. Step 3 is the one to
-put off: revisit when `sevenships.lst` shows the region past ~26 KB again and
-`highram` is full.
+about 2.7 KB of the window left for the next BSS that moves. **So is step 1
+for text** (19 Oct 2026): the long texts and the names are in attic RAM
+(see **Texts**), which took the region from 99.2% back to 92.2%. Before
+reaching for step 3, look for more of that kind — big read-only tables
+and strings that can be texts or attic data. Step 3 is the one to put off:
+revisit when the region is near full again with nothing of that kind left
+to move, and `highram` is full.
 `~/commodore/mega65/hexgame/tools/mkprg.py` (exomizer, one file) is the other
 known trick if the *loaded* size rather than the addressable size is what gets
 tight.
@@ -542,7 +555,8 @@ settler, founding a city), 2 (the city screen and building units), 3
 (computer players) and 4 (combat and barbarians) are in, as of 18 Oct 2026.
 
 **The title screen comes first** (`src/title.c`): `title_show()` puts the
-title up before the disk is read, and `title_run()` runs the menu — Start
+title up once the texts are read and before the sheet and the map are,
+and `title_run()` runs the menu — Start
 Game, Load Saved Game, Quit — after
 `input_init()`. Start Game goes on to two more screens, the people and the
 difficulty level, and Esc on either goes back one. All three are the one
@@ -635,14 +649,20 @@ statics the table needs were exported under module prefixes:
 `combat_war`, `combat_seed`, `city_named`, `ai_heading`, `game_turn`,
 `game_year`. Checked headlessly: the whole of `highram` is byte-identical
 between a dump taken after saving and one after loading, and a second
-save replaces the first (`c1541 -attach … -list` shows one file). To test
+save replaces the first (`c1541 -attach … -list` shows one file).
+**Saving and loading work on a real MEGA65 too** (19 Oct 2026), so the
+`@0:…,S,W` write through `_Stub_write` holds on the machine. To test
 a load, run the saving build against a copy of the d81 and the loading
 build against a copy of that, since a rebuild remakes `build/`'s image.
 
 **The peoples are `src/civ.c`**: Mycenaeans, Hittites, Egyptians and
 Canaanites (vision.md §3), each a name for the menu, an adjective for the
 panel, a line about them, a leader and the title the diplomatic letters will
-use (kept apart for that reason), and a dozen city names. `player_civ[]` says which
+use (kept apart for that reason), and a dozen city names. **All of those
+are texts** (`res/text/list_*.txt`, a name a line, by `CIV_*`), and
+`civ_people(c)`, `civ_leader(c)` and the rest are macros for
+`text_line()`; the barbarians are the fifth line of the people and
+adjective lists. `player_civ[]` says which
 people each player is — **every people plays**, `PLAYERS` = `CIVS` = 4,
 the human first and the computer players the others in list order — and
 `city_name_of()` goes through it. The five difficulty levels (Scribe to
@@ -758,7 +778,9 @@ joystick must be read every frame whatever the game is waiting for, and
 click debounce, `FAKE_KEYS`) because **the KERNAL jiffy clock does not
 advance in this program**. What the game is waiting for is only
 `unit_active`: a unit wanting orders, or `UNIT_NONE` and the end-of-turn
-prompt in the panel. A turn is: every human unit with moves and no standing
+prompt in the panel, whose "Press Return" blinks — `ATTR_BLINK`, colour
+RAM's attribute bit, so the VIC does it and no code runs for it. Seen
+blinking in xemu and on a real MEGA65 (19 Oct 2026). A turn is: every human unit with moves and no standing
 orders gets asked, in list order (`unit_next()`); then the prompt; then
 `ai_turn()` for each computer player; then every city's production; then
 the year moves on. The game is over
@@ -851,8 +873,8 @@ city with a settler; MEGA or CTRL with a menu title's first letter (`g o d w h`)
 after the others, `f` fortifies; Return ends the turn; the cursor keys
 scroll; ESC or RUN/STOP quits to BASIC, after asking with `popup_ask()`
 (Esc again is No). `w a s d` do not scroll.
-**HELP or F1 opens the help screen** (`src/help.c`), which lists all of
-this; the map screen's bottom row only says "HELP for the keys". It takes
+**HELP or F1 opens the help screen** (`src/help.c`, and what it says is
+`res/text/help.txt`; see **Texts**), which lists all of this; the map screen's bottom row only says "HELP for the keys". It takes
 over the screen like the city screen, and `draw_screen()` puts the map
 back. HELP arrives in `$D610` as `$1F` (mega65-core's
 `matrix_to_ascii.vhdl`, which xemu copies), and `input_poll()` returns it
@@ -1053,6 +1075,53 @@ suspect when something behaves oddly:
   A runtime format passed through to `vsprintf` makes it pick `reduced`, which
   has no field widths. Add `--rtattr printf=medium` to `LDFLAGS` if that
   happens.
+
+## Texts
+
+**Long texts live in attic RAM, not in the 32 KB.** Each is a file in
+`res/text/`, plain ASCII with a little markup in braces — `{at X Y}`,
+`{tab N}`, a colour such as `{key}` or `{rev red}`, and `{A|B}` for
+what differs between a real MEGA65 (A) and xemu (B), such as `{HELP|F1}`
+— all described in `tools/mktext.py`'s docstring. The Makefile's `TEXTS`
+lists them, **and the order there is the numbering**: `mktext.py` packs
+them into `build/text.pak` (`TEXT.PAK` on the disk) and writes
+`build/textid.h` with `TEXT_HELP` and the rest, rewriting it only when
+the numbering changes, so editing what a text says remakes the pack and
+the disk and compiles nothing. `text_load()`, **first of the three loads
+at boot because the title screen is a text**, reads the pack's body into attic RAM at `$8000000` through a 128-byte
+`HIGH_BSS` staging buffer (pieces under 256 for the `_Stub_read` bug; not
+`LOW_FREE`, which the KERNAL's disk buffers share), and refuses a pack
+whose count differs from the build's. `text_show(id)` draws one over the
+screen as its markup says, reading it back out of attic a piece at a
+time. A text is a whole screen or part of one; the caller clears first
+and runs its own exit loop. `{centre Y}` places the rest of the line in
+the middle of the screen, which is how `title.txt`, `people.txt` and
+`level.txt` are laid out round `title.c`'s menus (they keep clear of
+`MENU_ROW` and `NOTE_ROW`). **A popup's text** comes through
+`popup_add_text(id, args)`, which reads it with `text_open()` and
+`text_next()` and replaces each `{arg N}` with `args[N]` — `intro.txt`
+gets the people and the leader that way — so a popup text is plain text,
+line breaks and arguments, and the popup word-wraps it. **A list** is a
+text with an entry a line (`list_*.txt`): `text_line(id, n)` copies line
+`n` into one of two `HIGH_BSS` buffers, used in turn, so **its string is
+good until the next call but one** — enough for a leader and a title at
+once, and no more; copy it (`line_add()`, `popup_add()`) to keep it.
+`civ.c`'s names, the levels and the title menu's items are lists, and
+`menu_run()` in `title.c` takes a list's number rather than an array.
+**All of it works on a real MEGA65** (19 Oct 2026): the pack loading
+into attic RAM first thing at boot, and every screen, popup and name
+drawn back out of it.
+
+The machinery cost 661 bytes and moving the help screen saved 1342; the
+title, setup screens and intro saved 515 more, and `civ.c`'s names 1179.
+Each text moved from now on saves its full size. **Next**: the
+Civilopedia, a text an entry. What is left in the program is short
+messages built round numbers and names — the panel's, the city screen's,
+the menus' — where the call costs about as much as the string. If the pack grows
+large enough to slow the boot, the same index allows reading one text
+from the disk when it is opened. A real-hardware screen can be checked
+in xemu by building once with `input_real_hw = 1` forced in
+`input_init()`, as was done for the help screen.
 
 ## Assets
 

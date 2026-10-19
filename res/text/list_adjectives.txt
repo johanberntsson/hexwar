@@ -1,0 +1,7 @@
+# The adjective, for the panel ("Egyptian"), ten characters at most; by
+# CIV_*, and the barbarians fifth.
+Mycenaean
+Hittite
+Egyptian
+Canaanite
+Barbarian

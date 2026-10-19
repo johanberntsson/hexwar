@@ -1,0 +1,34 @@
+# The help screen: HELP or F1 on the map, or Help/Keyboard Control.
+# The markup is described in tools/mktext.py.
+{at 25 0}{head}Seven Ships of the Enemy: keys
+{at 2 3}{head}Moving a unit
+{key}{0  -|pad 7  9}{tab 10}{text}north-west, north-east
+{key}{p  *|pad 4  6}{tab 10}{text}west, east
+{key}{:  =|pad 1  3}{tab 10}{text}south-west, south-east
+{key}click{tab 10}{text}next to the unit: there
+{tab 10}onto an enemy: attack
+
+{head}Orders
+{key}b{tab 10}{text}found a city (settler)
+{key}f{tab 10}{text}fortify
+{key}w{tab 10}{text}wait: ask again later
+{key}space{tab 10}{text}skip this unit's turn
+{key}Return{tab 10}{text}end the turn
+{at 42 3}{head}The map
+{key}cursor{tab 10}{text}scroll the view
+{key}click{tab 10}{text}a unit: give it orders
+{tab 10}elsewhere: centre there
+{key}2 clicks{tab 10}{text}on a city: city screen
+{key}minimap{tab 10}{text}click to centre there
+
+{head}The game
+{key}menu bar{tab 10}{text}click a title to open it
+{key}{MEGA+G...|Alt+G...}{tab 10}{text}Game, Orders... menu
+{key}{HELP|F1}{tab 10}{text}this screen
+{key}Esc{tab 10}{text}quit to BASIC
+{at 2 18}{text}The moving keys sit round the unit like the six sides of its \
+hexagon:
+{at 4 20}{key}{ 0 -| 7 9}
+{p U *|4 U 6}
+{ : =| 1 3}
+{at 0 24}{grey}{HELP|F1}, Esc or Return to go back{at 72 24}{rev red} EXIT 

@@ -1,0 +1,4 @@
+# Start Game's second screen, behind its menu (src/title.c).
+{centre 5}{white}Choose the difficulty
+{centre 6}{yellow}---------------------
+{centre 24}{grey}Esc goes back

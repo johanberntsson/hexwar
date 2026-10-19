@@ -1,10 +1,14 @@
 // The peoples a player can lead (vision.md §3), the difficulty levels, and
 // which people each player is. For now a people is a set of names; what
 // makes them play differently comes later.
+//
+// **The names are texts** (res/text/list_*.txt, read with text_line()), so
+// each of these returns a string that is good until the next call but one.
 #ifndef SEVENSHIPS_CIV_H
 #define SEVENSHIPS_CIV_H
 
 #include "mega65.h"
+#include "text.h"
 
 #define CIV_MYCENAEANS 0
 #define CIV_HITTITES 1
@@ -13,20 +17,21 @@
 #define CIVS 4
 
 // The people, for the menu ("Egyptians"); the adjective, for the panel
-// ("Egyptian", ten characters at most); and a line about them.
-extern const char *const civ_people[CIVS];
-extern const char *const civ_adjective[CIVS];
-extern const char *const civ_note[CIVS];
+// ("Egyptian", ten characters at most); and a line about them. CIVS, the
+// fifth line, is the barbarians' in the first two.
+#define civ_people(C) text_line(TEXT_LIST_PEOPLES, (C))
+#define civ_adjective(C) text_line(TEXT_LIST_ADJECTIVES, (C))
+#define civ_note(C) text_line(TEXT_LIST_NOTES, (C))
 
 // The leader, and the title the letters will address them by (vision.md §3,
 // "Diplomacy in the Voice of the Letters").
-extern const char *const civ_leader[CIVS];
-extern const char *const civ_title[CIVS];
+#define civ_leader(C) text_line(TEXT_LIST_LEADERS, (C))
+#define civ_title(C) text_line(TEXT_LIST_TITLES, (C))
 
 // Easiest first. game_level is an index into these, and does nothing yet.
 #define LEVELS 5
-extern const char *const level_name[LEVELS];
-extern const char *const level_note[LEVELS];
+#define level_name(L) text_line(TEXT_LIST_LEVELS, (L))
+#define level_note(L) text_line(TEXT_LIST_LEVEL_NOTES, (L))
 extern byte game_level;
 
 // Which people each player is, PLAYER_HUMAN first: every people plays, so

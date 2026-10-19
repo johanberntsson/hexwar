@@ -1,0 +1,7 @@
+# The popup a new game opens with (intro() in src/game.c): {arg 0} is the
+# people, {arg 1} their leader. The popup wraps it, so a paragraph is one
+# line, run on with backslashes.
+The tribes of the {arg 0} have given up their wandering life to settle \
+the land, and have chosen you, {arg 1}, to lead them.
+
+Move your settler to good land and press b to found your first city.

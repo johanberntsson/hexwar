@@ -8,6 +8,8 @@ Milestone 5, adding resources and trade
 
 --- DONE ---
 
+Put longs texts in attic to save PRG mem
+
 Save/restore implemented
 
 Milestone 4, basic warfare

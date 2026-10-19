@@ -26,7 +26,7 @@ TARGET   = --target=mega65
 START_OFF_X ?= 40
 START_OFF_Y ?= 30
 
-CFLAGS   = $(TARGET) -O2 --speed -I src \
+CFLAGS   = $(TARGET) -O2 --speed -I src -I build \
            -DSTART_OFF_X=$(START_OFF_X) -DSTART_OFF_Y=$(START_OFF_Y)
 
 # Keys for a headless run to "press", since nothing headless can: each entry
@@ -83,6 +83,7 @@ SRCS     = src/sevenships.c \
            src/help.c \
            src/topcities.c \
            src/save.c \
+           src/text.c \
            src/game.c \
            src/ai.c \
            src/combat.c \
@@ -108,6 +109,26 @@ MAP_LAND ?= 35
 MAP      = $(BUILD)/sevenships.map
 D81      = $(BUILD)/sevenships.d81
 
+# The texts, packed by tools/mktext.py into a file for the disk and a header
+# of their numbers (src/text.h). **The order here is the numbering**, so add
+# to the end.
+TEXTS    = $(RES)/text/help.txt \
+           $(RES)/text/title.txt \
+           $(RES)/text/choose_people.txt \
+           $(RES)/text/choose_level.txt \
+           $(RES)/text/intro.txt \
+           $(RES)/text/list_title_menu.txt \
+           $(RES)/text/list_peoples.txt \
+           $(RES)/text/list_adjectives.txt \
+           $(RES)/text/list_notes.txt \
+           $(RES)/text/list_leaders.txt \
+           $(RES)/text/list_titles.txt \
+           $(RES)/text/list_levels.txt \
+           $(RES)/text/list_level_notes.txt \
+           $(RES)/text/list_cities.txt
+TEXT_PAK = $(BUILD)/text.pak
+TEXT_IDS = $(BUILD)/textid.h
+
 all: $(PRG) $(D81)
 
 # xemu-xmega65 blocks until the window is closed. For an automated check run it
@@ -123,7 +144,7 @@ $(BUILD):
 # Every object depends on every header. Crude, but src/screen.h carries the
 # screen geometry and src/view.h the memory map, and an object built against a
 # stale one fails as a corrupt display rather than as an error.
-HDRS = $(wildcard src/*.h)
+HDRS = $(wildcard src/*.h) $(TEXT_IDS)
 
 # **The config stamp, and it is not optional.** START_OFF_X and friends reach
 # the compiler as -D flags, which make cannot see: without this, `make
@@ -156,6 +177,12 @@ endif
 $(MAP): tools/mapgen.py $(MAP_STAMP) | $(BUILD)
 	python3 tools/mapgen.py --seed $(MAP_SEED) --land $(MAP_LAND) \
 	    --png $(BUILD)/sevenships-map.png $@
+
+# The pack and the header come out of one run. mktext.py leaves the header
+# alone when the numbering has not changed, so editing what a text says
+# remakes the pack and the disk but no object.
+$(TEXT_PAK) $(TEXT_IDS) &: $(TEXTS) tools/mktext.py | $(BUILD)
+	python3 tools/mktext.py $(TEXT_PAK) $(TEXT_IDS) $(TEXTS)
 
 $(BUILD)/%.o: src/%.c $(HDRS) Makefile $(STAMP) | $(BUILD)
 	cc6502 $(CFLAGS) -c -o $@ $<
@@ -196,12 +223,12 @@ $(ELF) $(PRG) &: $(OBJS) $(LINKFILE)
 # opens them by name whatever their type.
 d81: $(D81)
 
-$(D81): $(PRG) $(MAP) $(RES)/tiles.fci tools/diskutil.rb
+$(D81): $(PRG) $(MAP) $(RES)/tiles.fci $(TEXT_PAK) tools/diskutil.rb
 	rm -f $@
 	cp $(PRG) $(BUILD)/autoboot.c65
 	ruby tools/diskutil.rb $@ -name sevenships -id ss \
 	    -writeprg -copyf1 $(BUILD)/autoboot.c65 \
-	    -writeseq -copyf1 $(MAP) $(RES)/tiles.fci
+	    -writeseq -copyf1 $(MAP) $(RES)/tiles.fci $(TEXT_PAK)
 
 # The disk image as it is handed out. Plain `make release` after a test build
 # is safe, since the config stamp sees the flags change and rebuilds; what is

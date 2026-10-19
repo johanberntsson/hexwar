@@ -15,6 +15,7 @@
 #include "cityscreen.h"
 #include "topcities.h"
 #include "save.h"
+#include "text.h"
 #include "civ.h"
 #include "combat.h"
 #include "sevenships.h"
@@ -131,7 +132,7 @@ static void message(const char *first, const char *second)
 static void draw_frame(void)
 {
     menu_draw();
-    panel_text(ROW_CIV, civ_adjective[player_civ[PLAYER_HUMAN]], TEXT_COLOUR);
+    panel_text(ROW_CIV, civ_adjective(player_civ[PLAYER_HUMAN]), TEXT_COLOUR);
     // Wider than the window, so it ends where the window ends rather than
     // starting where it starts.
     if (input_real_hw)
@@ -176,7 +177,7 @@ static void draw_orders(void)
         panel_text(ROW_PROMPT + 1, "Press a key", TEXT_COLOUR);
     } else {
         panel_text(ROW_PROMPT, "End of turn", COLOR_WHITE);
-        panel_text(ROW_PROMPT + 1, "Press Return", TEXT_COLOUR);
+        panel_text(ROW_PROMPT + 1, "Press Return", ATTR_BLINK | TEXT_COLOUR);
     }
 }
 
@@ -681,19 +682,16 @@ byte game_load(void)
     return loaded = save_read();
 }
 
+// res/text/intro.txt, with the people and their leader filled in.
 static void intro(void)
 {
     byte civ = player_civ[PLAYER_HUMAN];
+    const char *args[2];
 
+    args[0] = civ_people(civ);
+    args[1] = civ_leader(civ);
     popup_begin();
-    popup_add("The tribes of the ");
-    popup_add(civ_people[civ]);
-    popup_add(" have given up their wandering life to settle the land, "
-              "and have chosen you, ");
-    popup_add(civ_leader[civ]);
-    popup_add(", to lead them.\n\n"
-              "Move your settler to good land and press b to found your "
-              "first city.");
+    popup_add_text(TEXT_INTRO, args);
     popup_show();
 }
 

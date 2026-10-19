@@ -1,0 +1,7 @@
+# The peoples, for the menu and the panel's news ("Egyptians"), by CIV_*
+# (src/civ.h); the fifth line is the barbarians, PLAYER_BARBARIAN.
+Mycenaeans
+Hittites
+Egyptians
+Canaanites
+Barbarians

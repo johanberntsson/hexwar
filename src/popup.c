@@ -11,6 +11,7 @@
 #include "popup.h"
 #include "input.h"
 #include "screen.h"
+#include "text.h"
 #include "view.h"
 
 // The text, wrapped to at most TEXT_WIDTH columns and MAX_LINES lines; a
@@ -47,6 +48,21 @@ void popup_add_num(word v)
     digits[i] = 0;
     do { digits[--i] = (char)('0' + v % 10); v /= 10; } while (v);
     popup_add(digits + i);
+}
+
+void popup_add_text(byte id, const char *const *args)
+{
+    byte c;
+
+    text_open(id);
+    while ((c = text_next()) != 0) {
+        if (c == TEXT_ARG) {
+            popup_add(args[text_next()]);
+        } else if (text_len < TEXT_SIZE) {
+            text[text_len++] = c;
+            text[text_len] = 0;
+        }
+    }
 }
 
 // Word-wrap the text, and draw it with its top left at (x, y) if `draw`.

@@ -1,0 +1,56 @@
+# Each people's palace centres and towns, roughly in order of importance:
+# CITY_NAMES (12) a people, in CIV_* order, so civ_city_name() finds name n
+# of people c on line 12c + n. None over ten characters, the panel's width.
+#
+# The Mycenaeans: the Linear B tablets' palaces and towns.
+Mycenae
+Tiryns
+Pylos
+Argos
+Thebes
+Athens
+Orchomenos
+Iolkos
+Midea
+Gla
+Sparta
+Knossos
+# The Hittites.
+Hattusa
+Kanesh
+Sapinuwa
+Tarhuntasa
+Karkemish
+Samuha
+Nerik
+Arinna
+Kussara
+Sarissa
+Tapikka
+Zippalanda
+# The Egyptians, by their own names: Waset is Thebes, Men-nefer Memphis.
+Waset
+Men-nefer
+Iunu
+Abdju
+Avaris
+Per-Ramesu
+Bubastis
+Sais
+Nekheb
+Buto
+Tjaru
+Akhmim
+# The Canaanites.
+Ugarit
+Byblos
+Sidon
+Tyre
+Arwad
+Megiddo
+Hazor
+Ashkelon
+Gaza
+Jaffa
+Akko
+Kadesh

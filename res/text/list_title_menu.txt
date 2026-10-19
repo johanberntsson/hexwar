@@ -1,0 +1,4 @@
+# The title screen's menu, in TITLE_* order (src/title.h).
+Start Game
+Load Saved Game
+Quit

@@ -35,6 +35,9 @@ tool chain and is selected by `--target=mega65`. There is nothing to clone.
   `make` in `tiles/` (`tools/mktiles.py`). Checked in.
 - `documentation/techreport.md` — the technical report: program structure,
   memory allocation, the main loop and how combat works.
+- `res/text/` — the game's texts: the title, help and new-game screens, the
+  opening popup, and the lists of names. `tools/mktext.py` packs them into
+  `TEXT.PAK` on the disk, and the game reads them into attic RAM at start-up.
 - `res/xemu-keymap.cfg` — gives xemu's keypad to the game; `make run` loads it.
 - `documentation/design.md` — notes on hex grids and on how the original Civilization's map
   generator worked.
@@ -45,8 +48,14 @@ Milestones 1-4 of `TODO.txt` are in:
 
 - a generated map that wraps east-west and scrolls, under a fog of war,
   with a minimap;
-- a mouse or joystick pointer, a turn loop, and a menu bar with
-  Game/Retire and Orders/Show Map;
+- a mouse or joystick pointer, a turn loop, and a menu bar — Game (Save
+  Game, Retire), Orders (what the active unit can do), World (Top Five
+  Cities, still empty) and Help (Keyboard Control) — opened with a click
+  or MEGA and the title's first letter (Alt in xemu); development builds
+  also have Debug, with Show Map and Play 50 Turns, which `make release`
+  leaves out;
+- saving and loading a game: Game/Save Game, and Load Saved Game on the
+  title screen;
 - settlers that found cities, and a city screen (double-click a city)
   where it is told to build warriors or builders;
 - three computer players that found cities, guard them, build and explore;
@@ -59,9 +68,10 @@ Milestones 1-4 of `TODO.txt` are in:
 HELP (F1 in xemu) shows a screen of every key and click. `0 -` / `p *` /
 `: =` move a unit north-west and north-east, west and east, south-west and
 south-east (keypad 7 9 / 4 6 / 1 3 in xemu, with `make run`'s keymap), and
-the cursor keys scroll. Milestones 1-3 have been played on a real MEGA65
-with the mouse and the joystick; milestone 4 so far only in xemu. The
-game quits back to BASIC's own screen.
+the cursor keys scroll. Esc asks before quitting. Milestones 1-3 have
+been played on a real MEGA65 with the mouse and the joystick, and saving,
+loading and the texts in attic RAM have been tried there too. The game
+quits back to BASIC's own screen.
 
 ## Credits
 

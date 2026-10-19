@@ -13,26 +13,18 @@
 #include "civ.h"
 #include "input.h"
 #include "screen.h"
+#include "text.h"
 
 #define TEXT_COLOUR COLOR_LIGHTGREEN
 
-#define HEADING_ROW 5
-#define SUBTITLE_ROW 8
 #define MENU_ROW 11             // the first item; they are two rows apart
-#define BYLINE_ROW 18           // on the title screen
 #define NOTE_ROW 21
-#define QUOTE_ROW 23            // two rows, on the title screen
-#define HINT_ROW 24             // on the others
 
 // What menu_run() returns besides an item: Esc or RUN/STOP.
 #define MENU_BACK 0xfe
 
-static const char *const title_items[TITLE_ITEMS] = {
-    "Start Game", "Load Saved Game", "Quit",
-};
-
-// The menu menu_run() is showing.
-static const char *const *menu_items;
+// The menu menu_run() is showing: a list text, an item a line.
+static byte menu_list;
 static void (*menu_describe)(byte i);   // draws a line or two, or 0
 static byte menu_count;
 static byte menu_left;                  // the band of columns the arrow
@@ -58,23 +50,11 @@ static void blank_row(byte row)
     for (x = 0; x < SCREEN_COLUMNS; ++x) screen_putcxy(x, row, ' ', TEXT_COLOUR);
 }
 
-// A heading, centred, with a yellow rule under it as long as it is.
-static void heading(const char *s)
-{
-    byte len = length(s);
-    byte x = (byte)((SCREEN_COLUMNS - len) / 2);
-    byte i;
-
-    screen_putsxy(x, HEADING_ROW, s, COLOR_WHITE);
-    for (i = 0; i < len; ++i)
-        screen_putcxy(x + i, HEADING_ROW + 1, '-', COLOR_YELLOW);
-}
-
 // --------------------------------------------------------------- the menu
 
 static void draw_item(byte i)
 {
-    const char *s = menu_items[i];
+    const char *s = text_line(menu_list, i);
     byte len = length(s);
     byte x = (byte)((SCREEN_COLUMNS - len) / 2);
     byte row = MENU_ROW + 2 * i;
@@ -119,19 +99,20 @@ static byte item_under_pointer(void)
 // Show `count` items from MENU_ROW down, `first` selected, and return the
 // one the player picks, or MENU_BACK. The arrow selects by hovering and a
 // click picks; the cursor keys and Return or space do the same, and each
-// item can also be picked by its letter in `keys`. `describe`, if not 0,
+// item can also be picked by its letter in `keys`. The items are the lines
+// of the list text `list` (res/text/list_*.txt). `describe`, if not 0,
 // writes something about the selected item at NOTE_ROW and the row below.
-static byte menu_run(const char *const *items, void (*describe)(byte i),
+static byte menu_run(byte list, void (*describe)(byte i),
                      byte count, const char *keys, byte first)
 {
     byte key, i, widest = 0;
 
-    menu_items = items;
+    menu_list = list;
     menu_describe = describe;
     menu_count = count;
     selected = first;
     for (i = 0; i < count; ++i) {
-        byte len = length(items[i]);
+        byte len = length(text_line(list, i));
         if (len > widest) widest = len;
         blank_row(MENU_ROW + 2 * i);
         draw_item(i);
@@ -183,17 +164,12 @@ static byte menu_run(const char *const *items, void (*describe)(byte i),
 
 // ----------------------------------------------------------- the screens
 
-static void draw_title(void)
+// What is behind the menus is res/text/title.txt, people.txt and
+// level.txt, which keep clear of MENU_ROW and NOTE_ROW.
+static void draw_screen(byte id)
 {
     screen_clear();
-    heading("Seven Ships of the Enemy");
-    centre(SUBTITLE_ROW, "The eastern Mediterranean, 1600 BC",
-           COLOR_LIGHTGREY);
-    centre(BYLINE_ROW, "By Johan Berntsson in 2026", COLOR_LIGHTGREY);
-    centre(QUOTE_ROW, "\"The seven ships of the enemy that came have "
-           "inflicted much damage upon us.\"", COLOR_LIGHTGREY);
-    centre(QUOTE_ROW + 1, "Ammurapi, king of Ugarit, c. 1185 BC",
-           COLOR_LIGHTGREY);
+    text_show(id);
 }
 
 // "Led by Thutmose III, King of Egypt", put together here so that civ.c
@@ -206,27 +182,20 @@ static void describe_civ(byte i)
     const char *s;
 
     parts[0] = "Led by ";
-    parts[1] = civ_leader[i];
+    parts[1] = civ_leader(i);   // two text_line()s at once, and no more
     parts[2] = ", ";
-    parts[3] = civ_title[i];
+    parts[3] = civ_title(i);
     for (p = 0; p < 4; ++p)
         for (s = parts[p]; *s && n < SCREEN_COLUMNS; ++s) line[n++] = *s;
     line[n] = 0;
 
-    centre(NOTE_ROW, civ_note[i], COLOR_LIGHTGREY);
+    centre(NOTE_ROW, civ_note(i), COLOR_LIGHTGREY);
     centre(NOTE_ROW + 1, line, COLOR_WHITE);
 }
 
 static void describe_level(byte i)
 {
-    centre(NOTE_ROW, level_note[i], COLOR_LIGHTGREY);
-}
-
-static void draw_setup(const char *s)
-{
-    screen_clear();
-    heading(s);
-    centre(HINT_ROW, "Esc goes back", COLOR_LIGHTGREY);
+    centre(NOTE_ROW, level_note(i), COLOR_LIGHTGREY);
 }
 
 // The people, then the difficulty. 1 once both are chosen, 0 if the player
@@ -237,13 +206,13 @@ static byte new_game(void)
     byte pick;
 
     for (;;) {
-        draw_setup("Choose your people");
-        pick = menu_run(civ_people, describe_civ, CIVS, "mhec", civ);
+        draw_screen(TEXT_CHOOSE_PEOPLE);
+        pick = menu_run(TEXT_LIST_PEOPLES, describe_civ, CIVS, "mhec", civ);
         if (pick == MENU_BACK) return 0;
         civ = pick;
 
-        draw_setup("Choose the difficulty");
-        pick = menu_run(level_name, describe_level, LEVELS, "12345", level);
+        draw_screen(TEXT_CHOOSE_LEVEL);
+        pick = menu_run(TEXT_LIST_LEVELS, describe_level, LEVELS, "12345", level);
         if (pick != MENU_BACK) {
             level = pick;
             civ_choose(civ);
@@ -255,7 +224,7 @@ static byte new_game(void)
 
 void title_show(void)
 {
-    draw_title();
+    draw_screen(TEXT_TITLE);
     centre(MENU_ROW, "Loading...", TEXT_COLOUR);
 }
 
@@ -269,10 +238,10 @@ byte title_run(byte load_failed)
     }
 
     for (;;) {
-        pick = menu_run(title_items, 0, TITLE_ITEMS, "slq", pick);
+        pick = menu_run(TEXT_LIST_TITLE_MENU, 0, TITLE_ITEMS, "slq", pick);
         if (pick == MENU_BACK || pick == TITLE_QUIT) return TITLE_QUIT;
         if (pick == TITLE_LOAD) return TITLE_LOAD;
         if (new_game()) return TITLE_START;
-        draw_title();
+        draw_screen(TEXT_TITLE);
     }
 }

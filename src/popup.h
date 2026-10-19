@@ -18,6 +18,9 @@
 void popup_begin(void);
 void popup_add(const char *s);
 void popup_add_num(word v);
+// Text `id` from TEXT.PAK (src/text.h), with each {arg N} in it replaced by
+// args[N]. Plain text, line breaks and arguments only.
+void popup_add_text(byte id, const char *const *args);
 
 // Show what has been added, and return once it is closed, with the map
 // under it put back. Runs its own once-a-frame loop, reading the input

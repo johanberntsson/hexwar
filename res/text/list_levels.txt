@@ -1,0 +1,6 @@
+# The difficulty levels, easiest first; game_level indexes them.
+Scribe
+Governor
+Prince
+King
+Great King

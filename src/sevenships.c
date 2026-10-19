@@ -12,6 +12,7 @@
 #include "mega65.h"
 #include "screen.h"
 #include "sheet.h"
+#include "text.h"
 #include "title.h"
 #include "view.h"
 
@@ -36,15 +37,19 @@ int main(void)
     mega65_io_enable();
     screen_save();
     screen_init();
+
+    // The texts, the tile sheet and the map all come off the disk. The ROM
+    // is never banked out, so there is no ordering rule about doing disk I/O
+    // before touching the memory map -- which is what shaped main() in the
+    // cc65 build and in hexgame. Colour RAM was moved out of CBDOS's way in
+    // screen_init(), so the display survives the reads. **The texts come
+    // first**, small and quick, because the title screen is one of them and
+    // is something to look at while the rest loads.
+    if (!text_load()) fatal("cannot read " TEXT_FILE_NAME
+                            " or it is not the one this build expects");
 #ifndef NO_TITLE
     title_show();
 #endif
-
-    // Both the tile sheet and the map come off the disk. The ROM is never
-    // banked out, so there is no ordering rule about doing disk I/O before
-    // touching the memory map -- which is what shaped main() in the cc65
-    // build and in hexgame. Colour RAM was moved out of CBDOS's way in
-    // screen_init(), so the display survives the reads.
     if (!sheet_load()) fatal("cannot read " SHEET_FILE_NAME
                              " or it is not the sheet this build expects");
     if (!map_load()) fatal("cannot read " MAP_FILE_NAME);

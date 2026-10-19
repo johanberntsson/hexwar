@@ -1,0 +1,4 @@
+# Start Game's first screen, behind its menu (src/title.c).
+{centre 5}{white}Choose your people
+{centre 6}{yellow}------------------
+{centre 24}{grey}Esc goes back

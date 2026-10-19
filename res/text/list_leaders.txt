@@ -1,0 +1,9 @@
+# One famous ruler each, from anywhere in the period rather than all alive
+# in 1600 BC. No Mycenaean king's name survives for certain -- the Linear
+# B tablets name the office, wanax, not the man -- so theirs is Homer's.
+# Ammurapi, the last king of Ugarit, would be the other choice for the
+# Canaanites, but he is the one whose letter is the title.
+Agamemnon
+Suppiluliuma
+Thutmose III
+Niqmaddu II

@@ -1,0 +1,9 @@
+# The title screen, behind its menu. The rows have to keep clear of the
+# menu (rows 11-15) and the note under it (21-22), which src/title.c draws.
+{centre 5}{white}Seven Ships of the Enemy
+{centre 6}{yellow}------------------------
+{centre 8}{grey}The eastern Mediterranean, 1600 BC
+{centre 18}By Johan Berntsson in 2026
+{centre 23}"The seven ships of the enemy that came have inflicted much damage \
+upon us."
+{centre 24}Ammurapi, king of Ugarit, c. 1185 BC

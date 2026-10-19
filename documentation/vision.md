@@ -166,16 +166,21 @@ The machine has 384 KB of chip RAM and 8 MB of attic RAM, which is far more
 than this game will ever need. What it does **not** have is more than **32 KB
 of 16-bit addressable space** — `$2001-$9FFF`, which holds all code, all
 initialised data, the BSS and the C stack. That single region is the budget
-everything competes for, and it is currently 61.9% full with the display
-engine and milestone 1 (input, units, cities, the turn loop) in it (`build/sevenships.lst` is where the real figure is written
-down).
+everything competes for, and it is 92.2% full (19 Oct 2026) with the
+display engine, milestones 1-4, the menus, and saving and loading in it,
+after the long texts and the names moved out to attic RAM
+(`build/sevenships.lst` is where the real figure is written down).
 
 | Where | Size | What can live there | Cost to reach |
 |---|---|---|---|
 | `$2001-$9FFF` | 32 KB | code, hot data, C stack | free (normal C) |
 | `$1600-$1EFF` | 2304 B | one or two hot tables (`LOW_FREE`) | free |
-| `$5C800-$5FFFF` | 14 KB | warm tables, `__far` (above the expanded tile sheet) | far pointer, a few cycles |
-| `$8000000-$87FFFFF` | 8 MB | cold data, save state, per-turn scratch | DMA block, or `__huge` |
+| `$A000-$BFFF` | 8 KB | BSS under the banked-out BASIC ROM (`HIGH_BSS`): the map, units, cities; about 2.7 KB free | free |
+| `$8000000-$87FFFFF` | 8 MB | texts (already: `TEXT.PAK`), cold data, per-turn scratch | DMA block, or `__huge` |
+
+Bank 5 (`$50000-$5FFFF`) is full: the expanded tile sheet, room for two more
+tiles, and the minimap. `CLAUDE.md` ("When bank 5 fills up") has what to do
+next.
 
 `$10000-$1FFFF` is not usable — screen RAM sits at `$12000` and BASIC 65 owns
 most of the rest — and `$20000-$3FFFF` is the C65 ROM, which this program
@@ -185,8 +190,11 @@ deliberately never banks out (see `sevenships.scm`).
 more unit records, more tables of any kind, since data goes far or attic almost
 for free. Expensive to add: more *code*. Every new subsystem (map generator,
 A* pathfinder, trade-route solver, diplomacy, the Crisis phase, save/load, the
-city screen) spends the scarce 32 KB. When that region approaches ~26 KB the
-project has to adopt Calypsi's MAP-register regions and a dispatch stub
+city screen) spends the scarce 32 KB. Text is the exception: anything long
+that is only read — screens, popups, names, the Civilopedia — goes to attic
+RAM as a text (`res/text/`), which costs nothing in the 32 KB. When the region
+fills up again with nothing of that kind left to move, the project has to
+adopt Calypsi's MAP-register regions and a dispatch stub
 (Dan Sanderson, *Calypsi part 3*): code is then split into 24 KB windows with
 `#pragma clang section`, called through a resident trampoline. It works, but it
 costs `--no-cross-call`, forces shared data into a common section, and breaks

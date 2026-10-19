@@ -1,0 +1,109 @@
+HOW THE AI WORKS IN CIVILIZATION 1 AND CIVILIZATION 2
+A guide to existing summaries and analyses (non-code)
+Compiled October 2026
+
+======================================================================
+SHORT ANSWER
+======================================================================
+
+There's no single polished essay for either game, but there's a good
+body of fan analysis. The Civ1 material is surprisingly detailed
+because people have taken the game apart.
+
+
+======================================================================
+CIVILIZATION 1: THE BEST SOURCE
+======================================================================
+
+The most substantive work is a series of CivFanatics forum posts by a
+user named "tupi". They are based on disassembling the game, so they
+describe what the AI actually does rather than what players guess it
+does. The posts are written in plain language with numbered rules, not
+code. Topics include:
+
+* Wonders
+  The AI never builds more than one wonder per turn, needs the
+  relevant advance, and can only start a wonder in a city whose
+  population exceeds the wonder's shield cost divided by 100. There is
+  also a simple nuclear-deterrence rule: if the human also knows
+  Rocketry, the AI builds the Manhattan Project only when its military
+  power is at or below the human's.
+  Link: https://forums.civfanatics.com/threads/civ-1-explained-ai-wonders.656707/
+
+* City production
+  This is a set of priority rules with odd edge cases. For example,
+  the AI doesn't build Carriers, and if it has no units under
+  despotism it always builds Militia, even when Militia is obsolete.
+  The same thread describes a per-continent "policy" that drives what
+  every city on a landmass builds, and whenever that policy changes,
+  the AI switches production in all its cities on that continent.
+  Link: https://forums.civfanatics.com/threads/civone-request-ai-city-building-logic.648274/
+
+* Government changes
+  Link: https://forums.civfanatics.com/threads/ai-logic-revolutions-government-change.657844/
+
+* Tax / science / luxury split
+  Link: https://forums.civfanatics.com/threads/computer-player-logic-tax-science-luxuries-distribution.657037/
+
+* How each civ's 1-7 ranking is computed (matters for things like
+  civil war)
+  Link: https://forums.civfanatics.com/threads/how-civilization-place-1-7-is-determined.656969/
+
+To find more of these, search CivFanatics for "Civ 1 explained" or
+browse the "decompilation" tag:
+  https://forums.civfanatics.com/tags/decompilation/
+
+
+======================================================================
+CIVILIZATION 2: THINNER AND MORE EMPIRICAL
+======================================================================
+
+I didn't find a decompilation-based writeup comparable to tupi's.
+What exists is mostly careful observation plus what the modding files
+reveal:
+
+* AI personalities
+  Melth's Civ2 Let's Play on the LP Archive has a mechanics chapter on
+  this (Part 30) that's a good readable overview. Its notable points
+  are that the personality belongs to the civilization rather than the
+  ruler, and that it found no evidence Gandhi is unusually aggressive
+  in Civ2.
+  Link: https://lparchive.org/Civilization-2/Update%2030
+
+* Unit "roles" in rules.txt
+  Each unit carries a role field that, according to the file's own
+  comments, generally affects how computer players use the unit. This
+  is the main lever behind AI unit behavior, and scenario designers
+  have written a lot about it.
+  Link: https://forums.civfanatics.com/threads/nukes-and-ai-response.1343
+
+* Attitude
+  Players have described permanent per-civ traits (aggressive,
+  expansionist, and so on) plus a separate attitude variable that
+  depends mainly on how you've treated that AI. In the Multiplayer
+  Gold Edition, the AI is notoriously hostile, and patches exist to
+  fix it.
+  Links: https://forums.civfanatics.com/threads/ai-behaviour.397784/
+         https://forums.civfanatics.com/threads/ai-attitude-change.154251
+
+* Overall architecture
+  A useful contemporary critique from the Civ3 era characterizes Civ2
+  as an "every unit works on its own" approach, with no higher-level
+  coordination of attacks.
+  Link: https://apolyton.net/forum/miscellaneous/archives/civ3-general-archive/41443-interview-soren-johnson-on-ai?p=926777
+
+
+======================================================================
+IF YOU WANT TO GO DEEPER
+======================================================================
+
+* OpenCiv1 is a rewrite based on disassembly of DOS Civ1 version
+  475.05. It's code, but its CivFanatics thread sometimes has prose
+  explanations.
+REMOVED:  GitHub: https://github.com/rajko-horvat/OpenCiv1
+NEW SOURCE LINK: https://codeberg.org/rhorvat/OpenCivOne
+  Forum:  https://forums.civfanatics.com/threads/openciv1-project-open-source-rewrite-of-the-original-civilization-1-game-designed-by-sid-meier-and-bruce-shelley-in-year-1991.682623/page-2
+
+* The 1991 strategy book "Rome on 640K a Day" also covers some AI
+  rules, though it has misprints (noted here):
+  https://github.com/civ-clone/web-renderer/issues/125

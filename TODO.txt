@@ -4,7 +4,45 @@ Add a list of (known) AIs on the game screen with some basic info
 
 --- MILESTONES ---
 
-Milestone 5, adding resources and trade
+Each milestone includes the AI's use of what it adds, so the computer players keep up.
+Ideas for the AI: documentation/civ1-civ2-ai-analysis-sources.txt and OpenCivOne
+(https://codeberg.org/rhorvat/OpenCivOne).
+
+Before milestone 5: make room in bank 5
+- Move most of the minimap's characters into the tile store's row padding (CLAUDE.md,
+  "When bank 5 fills up", step 1). Frees room for about five more tiles; 12 of 14 are used now.
+- Decide how to get past the 1.4 KB left in the program region before milestone 6: more
+  tables and strings to attic, or the MAP-register banking ("Growing past 32 KB", step 3)
+
+Milestone 5: more terrain
+- New terrain tiles: plains, forest, desert, floodplain/river valley (for grain)
+- Teach mapgen.py to place them; terrain_name[] in game.c
+- Terrain values are still tile numbers, so new terrain goes before the non-terrain tiles
+  (or add the terrain-to-tile table)
+
+Milestone 6: yields and city growth
+- Food, shields and trade per terrain, replacing the production stand-in in city.c
+- City size, food box, growth; cities work tiles (size 1 = centre + one tile, as now)
+- Builder improvements: irrigation, mine, road. The AI's rule 5 continues from here
+- City screen shows food/shields/trade and the worked tiles
+- Dedicated AI pass afterwards: Civ 1's city production priorities and per-continent policy
+
+Milestone 7: resources
+- Grain, fishing, cattle, wine & olive oil, cedar, copper, tin, purple dye (vision.md section 2)
+- Decide where the resource layer lives first: a 4 KB layer doesn't fit in highram (about
+  2.7 KB free); a sparse list or spare bits in map_tile might
+- mapgen.py places them; drawn as overlays on the terrain; they add to yields
+- Copper + tin gate a bronze unit, so strategic goods matter from the start
+
+Milestone 8: basic diplomacy
+- Contact between peoples; peace, war, ceasefire; an attitude value per pair
+- Computer players declare war (and make peace) themselves
+- Letters in the Amarna formulas (vision.md section 3), as templates in attic texts
+- The list of known AIs (the OPEN item above) as the first new information screen
+
+Milestone 9: trade
+- Start with gift exchange of goods through the letters
+- Later: merchant ships (need cedar), physical trade fleets, emporia
 
 --- DONE ---
 

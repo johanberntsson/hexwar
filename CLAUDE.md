@@ -704,6 +704,18 @@ and told apart by the hover readout ("Hittite Warrior", "Barbarian
 Warrior") and on the minimap by colour: the human white, then red,
 purple and orange, and the barbarians brown.
 
+**Before improving the AI, read what Civ 1's actually does.**
+`documentation/civ1-civ2-ai-analysis-sources.txt` lists the write-ups,
+the best being tupi's CivFanatics posts, which come from disassembling
+the game: city production priorities, the per-continent policy that
+switches every city on a landmass at once, wonders, government, taxes.
+**OpenCivOne** (<https://codeberg.org/rhorvat/OpenCivOne>, formerly
+`rajko-horvat/OpenCiv1` on GitHub, which is gone) is a rewrite of DOS
+Civ 1 475.05 from its disassembly, so it is the original's rules as
+code. Take ideas from it, not code: it is C# for a PC, and anything
+here has to fit the byte-array, per-turn style of `src/ai.c` and its
+own `.c` file for the eventual banking (see **Growing past 32 KB**).
+
 **Combat is `src/combat.c`** (milestone 4), after Civilization: attack
 against defence (`unit_kind_attack[]`, `unit_kind_defence[]`: warriors
 1/1, settlers and builders 0/1), the attacker winning with probability

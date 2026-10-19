@@ -49,13 +49,13 @@ static byte loaded;             // from a saved game: no opening popup
 word game_turn;
 word game_year;
 
-// Frames since the game began, counted by game_run(), and the last click on
-// one of the player's cities: a second click on the same hexagon within
-// DOUBLE_CLICK frames opens it. Longer than the click debounce in input.c.
-#define DOUBLE_CLICK 25
-static word frame;
-static word click_frame;
-static byte click_ax = 0xff, click_ay;
+// **Tile select**, Civilization's keyboard stand-in for the mouse: Tab puts
+// a ring on a hexagon, the cursor keys (or the unit's moving keys) move it,
+// Return does what a click on it would, and Tab or Esc puts it away. While
+// it is up the ring blinks rather than the active unit.
+static byte selecting;
+static byte sel_ax, sel_ay;
+static byte sel_hidden;         // the ring's half of the blink
 
 // The active unit blinks: BLINK_FRAMES drawn, BLINK_FRAMES not, half a
 // second each at 50 Hz. Each change is a whole redraw, which is what a held
@@ -208,7 +208,13 @@ static void draw_hover(void)
     byte ax, ay, c, u, x;
 
     line_clear();
-    if (pointer_hex(&ax, &ay) || minimap_hex(input_x, input_y, &ax, &ay)) {
+    // While tile select is up the readout follows the ring, not the arrow.
+    if (selecting) {
+        ax = sel_ax;
+        ay = sel_ay;
+    }
+    if (selecting || pointer_hex(&ax, &ay)
+        || minimap_hex(input_x, input_y, &ax, &ay)) {
         if (!MAP_IS_EXPLORED(ax, ay)) {
             line_add("Unexplored");
         } else {
@@ -428,26 +434,38 @@ static void found_city(void)
 // The keypad in xemu, as res/xemu-keymap.cfg delivers it: 7 9 4 6 1 3.
 static const byte pad_dir[] = { DIR_NW, DIR_NE, DIR_W, DIR_E, DIR_SW, DIR_SE };
 
-static void unit_key(byte key)
+// The direction a moving key stands for, or DIR_NONE.
+static byte key_dir(byte key)
 {
-    byte u = unit_active;
-
-    if (!input_real_hw && key >= KEY_PAD_FIRST && key <= KEY_PAD_LAST) {
-        move_active(pad_dir[(byte)(key - KEY_PAD_FIRST)]);
-        return;
-    }
+    if (!input_real_hw && key >= KEY_PAD_FIRST && key <= KEY_PAD_LAST)
+        return pad_dir[(byte)(key - KEY_PAD_FIRST)];
 
     switch (key) {
     // The same pattern as q e / a d / z c, on the right of the keyboard
     // beside the cursor keys. The key left of = is : unshifted and [
     // shifted, so both are taken.
-    case '0': move_active(DIR_NW); break;
-    case '-': move_active(DIR_NE); break;
-    case 'p': move_active(DIR_W); break;
-    case '*': move_active(DIR_E); break;
+    case '0': return DIR_NW;
+    case '-': return DIR_NE;
+    case 'p': return DIR_W;
+    case '*': return DIR_E;
     case ':':
-    case '[': move_active(DIR_SW); break;
-    case '=': move_active(DIR_SE); break;
+    case '[': return DIR_SW;
+    case '=': return DIR_SE;
+    }
+    return DIR_NONE;
+}
+
+static void unit_key(byte key)
+{
+    byte u = unit_active;
+    byte dir = key_dir(key);
+
+    if (dir != DIR_NONE) {
+        move_active(dir);
+        return;
+    }
+
+    switch (key) {
     case 'b': found_city(); break;
     case KEY_SPACE:                         // no orders this turn
         unit_moves[u] = 0;
@@ -554,14 +572,48 @@ static void menu_command(byte command)
     dirty = 1;
 }
 
-// A click on a hexagon next to the unit with orders moves it there. A click
-// on one of the player's own units that still has moves gives it the orders
-// instead, waking it if it was fortified. Anywhere else on the map, or on
-// the minimap, centres the view there; elsewhere, with the turn over, it
-// ends the turn.
+// A click on hexagon (ax, ay) of the map, by the arrow or by Return in tile
+// select. Next to the unit with orders it moves the unit there; on one of
+// the player's cities it opens the city screen; on one of the player's own
+// units that still has moves it gives that unit the orders, waking it if it
+// was fortified. Anywhere else it centres the view there.
+static void click_hex(byte ax, byte ay)
+{
+    byte u, dir, c;
+
+    if (unit_active != UNIT_NONE) {
+        dir = map_direction(unit_ax[unit_active], unit_ay[unit_active],
+                            ax, ay);
+        if (dir != DIR_NONE) {
+            move_active(dir);
+            return;
+        }
+    }
+    c = city_at(ax, ay);
+    if (c != CITY_NONE && city_owner[c] == PLAYER_HUMAN) {
+        open_city(c);
+        return;
+    }
+    if (unit_active != UNIT_NONE
+        && unit_ax[unit_active] == ax && unit_ay[unit_active] == ay) return;
+    for (u = 0; u < MAX_UNITS; ++u) {
+        if (unit_kind[u] != KIND_NONE && unit_owner[u] == PLAYER_HUMAN
+            && unit_ax[u] == ax && unit_ay[u] == ay && unit_moves[u]) {
+            unit_orders[u] = ORDERS_NONE;
+            unit_active = u;
+            dirty = 1;
+            draw_orders();
+            return;
+        }
+    }
+    centre_on(ax, ay);
+}
+
+// A click of the mouse or fire: on the menu bar, the minimap or the map, or
+// elsewhere, with the turn over, it ends the turn.
 static void click(void)
 {
-    byte ax, ay, u, dir, c, own;
+    byte ax, ay;
 
     if ((byte)(input_y >> 3) == 0) {
         set_orders_menu();
@@ -576,42 +628,89 @@ static void click(void)
         if (unit_active == UNIT_NONE && !game_over) end_turn();
         return;
     }
+    click_hex(ax, ay);
+}
 
-    // A double click on one of the player's cities opens it. The first
-    // click of the two does what a click does, except that it never centres
-    // the view -- which would move the city out from under the second.
-    c = city_at(ax, ay);
-    own = c != CITY_NONE && city_owner[c] == PLAYER_HUMAN;
-    if (own && ax == click_ax && ay == click_ay
-        && (word)(frame - click_frame) < DOUBLE_CLICK) {
-        click_ax = 0xff;
-        open_city(c);
-        return;
-    }
-    click_ax = own ? ax : 0xff;
-    click_ay = ay;
-    click_frame = frame;
+// ------------------------------------------------------------- tile select
+
+// Tab: the ring goes on the unit with orders, or the middle of the view.
+static void select_begin(void)
+{
+    word cx = off_x + VIEW_COLUMNS / 2;
 
     if (unit_active != UNIT_NONE) {
-        dir = map_direction(unit_ax[unit_active], unit_ay[unit_active],
-                            ax, ay);
-        if (dir != DIR_NONE) {
-            move_active(dir);
-            return;
-        }
-        if (unit_ax[unit_active] == ax && unit_ay[unit_active] == ay) return;
+        sel_ax = unit_ax[unit_active];
+        sel_ay = unit_ay[unit_active];
+    } else {
+        if (cx >= MAP_WIDTH_CHARS) cx -= MAP_WIDTH_CHARS;
+        map_cell_at(cx, off_y + VIEW_ROWS / 2, &sel_ax, &sel_ay);
     }
-    for (u = 0; u < MAX_UNITS; ++u) {
-        if (unit_kind[u] != KIND_NONE && unit_owner[u] == PLAYER_HUMAN
-            && unit_ax[u] == ax && unit_ay[u] == ay && unit_moves[u]) {
-            unit_orders[u] = ORDERS_NONE;
-            unit_active = u;
-            dirty = 1;
-            draw_orders();
-            return;
-        }
+    selecting = 1;
+    message("Tile select:", "Tab to leave");
+    dirty = 1;
+    hover_dirty = 1;
+}
+
+static void select_end(void)
+{
+    selecting = 0;
+    message("", "");
+    dirty = 1;
+    hover_dirty = 1;
+}
+
+// One hexagon in direction dir, bringing it into view. Off the top or
+// bottom of the map it stays where it is.
+static void select_move(byte dir)
+{
+    byte nx, ny;
+
+    if (!map_neighbour(sel_ax, sel_ay, dir, &nx, &ny)) return;
+    sel_ax = nx;
+    sel_ay = ny;
+    if (!in_view(nx, ny)) centre_on(nx, ny);
+    dirty = 1;
+    hover_dirty = 1;
+}
+
+// A key while tile select is up. Returns 0 for one it leaves to the usual
+// handling -- the unit's orders, the menus, HELP.
+static byte select_key(byte key)
+{
+    byte dir = key_dir(key);
+    // Odd columns sit half a hexagon lower, so going straight up or down
+    // zigzags between a column and the one east of it, and back the same
+    // way: every hexagon can be reached with the four cursor keys.
+    byte odd = sel_ax & 1;
+
+    switch (key) {
+    case KEY_LEFT: dir = DIR_W; break;
+    case KEY_RIGHT: dir = DIR_E; break;
+    case KEY_UP: dir = odd ? DIR_NW : DIR_NE; break;
+    case KEY_DOWN: dir = odd ? DIR_SW : DIR_SE; break;
+    case KEY_RETURN: click_hex(sel_ax, sel_ay); return 1;
+    case KEY_TAB:
+    case KEY_ESC: select_end(); return 1;
     }
-    if (!own) centre_on(ax, ay);
+    if (dir == DIR_NONE) return 0;
+    select_move(dir);
+    return 1;
+}
+
+// Where view_redraw() is to draw the ring, if it is to draw one: one
+// hexagon row and a column of the window that may be off either side of
+// it, which view_draw_tile() clips.
+static void place_mark(void)
+{
+    int x;
+
+    view_mark_hy = 0xff;
+    if (!selecting || sel_hidden) return;
+    x = (int)(MAP_CELL_X(sel_ax) + MAP_WIDTH_CHARS - off_x);
+    if (x >= MAP_WIDTH_CHARS) x -= MAP_WIDTH_CHARS;
+    if (x > MAP_WIDTH_CHARS - TILE_EXPANDED_COLUMNS) x -= MAP_WIDTH_CHARS;
+    view_mark_x = x;
+    view_mark_hy = 2 * sel_ay + (sel_ax & 1);
 }
 
 // --------------------------------------------------------------- the game
@@ -652,7 +751,7 @@ void game_init(void)
     city_reset();
     combat_reset();
     game_over = quit = retired = loaded = 0;
-    click_ax = 0xff;
+    selecting = 0;
 
     // START_OFF_X / START_OFF_Y are what let a headless run check
     // scrolling: `make START_OFF_X=41` against a plain build must shift the
@@ -709,6 +808,7 @@ byte game_run(void)
     // has no popup to get in their way either.
 #ifndef NO_TITLE
     view_wait_for_redraw();
+    place_mark();
     view_redraw(off_x, off_y);
     minimap_frame(off_x, off_y);
     dirty = 0;
@@ -723,19 +823,23 @@ byte game_run(void)
         // also what makes one trip round this loop one frame, which
         // input_poll() counts on.
         view_wait_for_redraw();
-        ++frame;
         // Anything that changed the view shows the active unit at once and
         // starts its blink again, so that it is there to see as soon as it
-        // has moved or been selected, and while the view is scrolled.
+        // has moved or been selected, and while the view is scrolled. In
+        // tile select the ring blinks instead, and the unit stays.
         if (dirty) {
             unit_hidden = 0;
+            sel_hidden = 0;
             blink = 0;
-        } else if (unit_active != UNIT_NONE && ++blink == BLINK_FRAMES) {
-            unit_hidden ^= 1;
+        } else if ((selecting || unit_active != UNIT_NONE)
+                   && ++blink == BLINK_FRAMES) {
+            if (selecting) sel_hidden ^= 1;
+            else unit_hidden ^= 1;
             blink = 0;
             dirty = 1;
         }
         if (dirty) {
+            place_mark();
             view_redraw(off_x, off_y);
             minimap_frame(off_x, off_y);
             dirty = 0;
@@ -755,6 +859,7 @@ byte game_run(void)
             quit = 1;
             continue;
         }
+        if (selecting && select_key(key)) continue;
 
         // Two characters a step across and one row down, because that is
         // the same distance on the glass: at H640/V200 a character is twice
@@ -788,6 +893,9 @@ byte game_run(void)
             break;
         case KEY_CLICK:
             click();
+            break;
+        case KEY_TAB:
+            select_begin();
             break;
         case KEY_HELP:
             open_help();

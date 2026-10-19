@@ -22,6 +22,7 @@
 // Key codes as the MEGA65's own keyboard buffer at $D610 delivers them: ASCII
 // for the printable keys, PETSCII's control codes for the rest.
 #define KEY_RUNSTOP 3
+#define KEY_TAB 9
 #define KEY_RETURN 13
 #define KEY_DOWN 17
 #define KEY_ESC 27

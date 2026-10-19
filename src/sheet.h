@@ -49,7 +49,7 @@
 #define TILE_TUNDRA 5
 // Not terrain: these are drawn over a terrain tile, never instead of one.
 #define TILE_CITY 6
-#define TILE_SELECT 7           // a ring, unused since the active unit blinks
+#define TILE_SELECT 7           // a ring: the tile-select cursor (Tab)
 #define TILE_SETTLER 8
 #define TILE_WARRIOR 9
 #define TILE_BUILDER 10

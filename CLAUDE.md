@@ -254,7 +254,8 @@ and the byline, 99.2% (about 260 bytes free) after save and load
 (about 900 bytes, a fifth of it `_Stub_write`), and **97.4% (855 bytes
 free) once the help screen became a text in attic RAM** (see **Texts**),
 95.8% (1370 bytes free) once the title, setup screens and intro
-followed it, and **92.2% (2549 bytes free) once `civ.c`'s names did**,
+followed it, and **92.2% (2549 bytes free) once `civ.c`'s names did**
+(93.6% after tile select),
 with milestones 1-4, the minimap, the city and help screens, the menu
 bar, save and load and the quit-time register restore in it, and
 `highram` 66.8% full.
@@ -858,12 +859,24 @@ puts `SPRPTRADR` back before returning to BASIC.
 
 Controls: the mouse or a joystick in either port moves the arrow, and the
 button or fire is `KEY_CLICK`. A click next to the active unit moves it
-there (or attacks, if another player holds the hexagon), on one of the player's units hands it the orders, elsewhere on the
-map centres the view (but not on the player's own city, so that a second
-click lands on it too), on the minimap centres the view there, and on the
-panel at the end of a turn ends it. **A double click on one of the
-player's cities opens the city screen** — two clicks on the same hexagon
-within `DOUBLE_CLICK` (25) frames, counted by `game_run()`. Keys:
+there (or attacks, if another player holds the hexagon), on one of the
+player's cities opens the city screen, on one of the player's units hands
+it the orders, elsewhere on the map centres the view, on the minimap
+centres the view there, and on the panel at the end of a turn ends it
+(`click()` and `click_hex()` in `src/game.c`). A city comes before a unit
+in it, so a fortified unit in a city can no longer be woken by a click.
+**Everything must be possible from the keyboard alone**, since not every
+MEGA65 has a mouse and the joystick is slow: **Tab is tile select**, as in
+Civilization — a yellow ring (`TILE_SELECT`) on the active unit or the
+middle of the view, moved by the cursor keys or the unit's moving keys,
+and Return does what a click on its hexagon would; Tab or Esc puts it
+away. The cursor keys go up and down by zigzagging between a column and
+the one east of it, so all four reach every hexagon. While it is up the
+ring blinks instead of the active unit, the hover readout follows the
+ring, and other keys (`b`, `f`, the menus, HELP) work as usual.
+`view_redraw()` draws the ring with the cities and units of its hexagon
+row (`view_mark_hy`/`view_mark_x`, set by `place_mark()`), so it costs
+the beam race nothing. Keys:
 `0 - p * : =` move the active unit NW, NE, W, E, SW, SE — the `q e a d z c`
 pattern on the right of the keyboard, by the cursor keys, so that those
 letters are free for other orders (`:` is also taken as `[`, its shifted
@@ -1128,8 +1141,7 @@ in xemu by building once with `input_real_hw = 1` forced in
 `res/tiles.fci` is 48x4 characters — twelve 4x4 tiles side by side, in the
 order `tiles/Makefile` lists the PNGs: six terrains (desert hill, grass,
 mountain, ocean, shallow ocean, tundra), then the city, a selection ring
-that nothing draws any more (the active unit blinks instead; it keeps its
-place because the order is the numbering),
+(the tile-select cursor),
 three units (settler, warrior, builder) and the black hexagon of unexplored
 land; `TILE_*` in `src/sheet.h`. The
 terrain, city and unit art is OpenCiv's, under CC BY 4.0

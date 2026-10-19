@@ -56,8 +56,10 @@ Milestones 1-4 of `TODO.txt` are in:
   leaves out;
 - saving and loading a game: Game/Save Game, and Load Saved Game on the
   title screen;
-- settlers that found cities, and a city screen (double-click a city)
+- settlers that found cities, and a city screen (click a city)
   where it is told to build warriors or builders;
+- keyboard-only play: Tab puts a cursor on the map, the cursor keys move
+  it and Return clicks;
 - three computer players that found cities, guard them, build and explore;
 - combat after Civilization's rules: move onto an enemy to attack, and
   move into an empty enemy city to take it. Attacking another people

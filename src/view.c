@@ -129,6 +129,9 @@ void view_draw_tile(int x, int y, byte tile)
 // beam race nothing.
 #define MAX_PENDING 16      // a window row holds at most 16 cells
 
+byte view_mark_hy = 0xff;
+int view_mark_x;
+
 static byte pending_n[2];
 static byte pending_ax[2][MAX_PENDING];
 static int pending_tx[2][MAX_PENDING];
@@ -146,6 +149,9 @@ static void draw_overlays(byte hy, int ty)
             view_draw_tile(pending_tx[list][i], ty, tiles[k]);
     }
     pending_n[list] = 0;
+    // The cursor's ring with them: only the row below overlaps its tile,
+    // and that row's terrain is already down.
+    if (hy == view_mark_hy) view_draw_tile(view_mark_x, ty, TILE_SELECT);
 }
 
 // The patch in painter's order, top row first, and where each tile goes in

@@ -16,9 +16,11 @@
 {key}Return{tab 10}{text}end the turn
 {at 42 3}{head}The map
 {key}cursor{tab 10}{text}scroll the view
-{key}click{tab 10}{text}a unit: give it orders
+{key}click{tab 10}{text}a city: city screen
+{tab 10}a unit: give it orders
 {tab 10}elsewhere: centre there
-{key}2 clicks{tab 10}{text}on a city: city screen
+{key}Tab{tab 10}{text}select a hexagon: cursor
+{tab 10}keys move, Return clicks
 {key}minimap{tab 10}{text}click to centre there
 
 {head}The game

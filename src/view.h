@@ -86,6 +86,13 @@ void view_draw_tile(int x, int y, byte tile);
 // immediately before it.
 void view_redraw(word off_x, word off_y);
 
+// **The tile-select cursor** (Tab in src/game.c): view_redraw() draws
+// TILE_SELECT over hexagon row view_mark_hy at window column view_mark_x,
+// with that row's cities and units, so it is on top of them. view_mark_hy
+// is 0xff for no cursor. Set them before each redraw.
+extern byte view_mark_hy;
+extern int view_mark_x;
+
 // **The city screen's picture**: hexagon (ax, ay) and its six neighbours on
 // black, with the cities and units on them, in the VIEW_PATCH_COLUMNS x
 // VIEW_PATCH_ROWS of the store from window cell (col, row). The rest of the

@@ -60,7 +60,8 @@ Milestones 1-4 of `TODO.txt` are in:
   where it is told to build warriors or builders;
 - keyboard-only play: Tab puts a cursor on the map, the cursor keys move
   it and Return clicks;
-- three computer players that found cities, guard them, build and explore;
+- three computer players that found cities, guard them, build, explore
+  and send out settlers to found more;
 - combat after Civilization's rules: move onto an enemy to attack, and
   move into an empty enemy city to take it. Attacking another people
   declares war on it. Lose your last city and the game is over;

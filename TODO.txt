@@ -8,6 +8,10 @@ Milestone 5, adding resources and trade
 
 --- DONE ---
 
+AI now builds settlers and found multiple cities
+
+TAB select hexagon select mode
+
 Put longs texts in attic to save PRG mem
 
 Save/restore implemented

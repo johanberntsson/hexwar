@@ -192,19 +192,19 @@ BASIC ROM and is the program's once `src/bank.s` has banked BASIC out, before
 | \$0002-\$0039 | 0.1 | Calypsi's pseudo registers, in zero page |
 | \$1600-\$1790 | 0.4 | the popup's text (the `zpsave` section, `LOW_FREE`) |
 | \$1791-\$1eff | 1.9 | free |
-| \$2001-\$26d0 | 1.7 | BASIC stub, startup code, constant data and the short strings |
-| \$26d1-\$904f | 26.4 | code |
-| \$9050-\$924f | 0.5 | C stack |
-| \$9250-\$960d | 0.9 | BSS: buffers and small state |
-| \$960e-\$9fff | 2.5 | free |
+| \$2001-\$2712 | 1.8 | BASIC stub, startup code, constant data and the short strings |
+| \$2713-\$948c | 27.4 | code, and 16 bytes of initialised data |
+| \$948d-\$968c | 0.5 | C stack |
+| \$968d-\$9a4d | 0.9 | BSS: buffers and small state |
+| \$9a4e-\$9fff | 1.4 | free |
 | \$a000-\$b561 | 5.3 | `highbss` (`HIGH_BSS`): the map's terrain layer `map_tile`, the unit and city arrays, the sprite blocks, the AI's headings, and the texts' staging and line buffers |
 | \$b562-\$bfff | 2.7 | free |
 
 The long texts and the names are not in this table at all: they are in
 TEXT.PAK, read into Attic RAM at start-up, which is most of why the
-constant data went from 3.7 KB on 18 October to 1.7 KB.
+constant data went from 3.7 KB on 18 October to 1.8 KB.
 
-The PRG is everything up to \$904f; the C stack and the BSS are not stored in
+The PRG is everything up to \$948c; the C stack and the BSS are not stored in
 the file, only reserved after it. Nothing initialised may go above \$9fff,
 because the PRG is loaded while BASIC is still mapped there, so only BSS
 marked `HIGH_BSS` is put in the window. BASIC is banked back in as the last
@@ -364,7 +364,7 @@ terrain is drawn, and their overlays are drawn after the next row's terrain.
 | -- |  ---- |
 | Orders | each of the player's units that has moves left and no standing orders is selected in turn (`unit_next`) and brought into view |
 | End of turn | with no unit left, the panel shows "End of turn"; Return, or a click on the panel, goes on |
-| Computer players | `ai_turn` for each of the three: what each city builds, and every unit's move |
+| Computer players | `ai_turn` for each of the three: what each city builds, and every unit's move. A player with two warriors, one fortified, and a builder has a city build a settler, which founds a new city on the nearest good site within six hexagons, at least four from any other city, up to four cities |
 | Barbarians | `ai_barbarians`: perhaps a new band, then every barbarian's move |
 | Production | every city adds its shields (its own hexagon's, at least 1, plus its best neighbour's); one that reaches the cost of what it is building puts the unit on its hexagon and keeps the surplus |
 | New turn | the turn number goes up, the year moves on ten years from 1600 BC, and every unit gets its moves back |
@@ -384,10 +384,18 @@ The orders a unit can be given are:
 | w | wait: ask again after the other units |
 | f | fortify: no orders until woken |
 
-A click on a hexagon next to the selected unit moves the unit there, and a
-click on one of the player's own units selects that unit, waking it if it was
-fortified. A click anywhere else on the map centres the view on that hexagon.
-The cursor keys scroll the view, HELP (F1 in xemu) lists the keys, and ESC
+A click on a hexagon next to the selected unit moves the unit there, a click
+on one of the player's cities opens the city screen, and a click on one of
+the player's own units selects that unit, waking it if it was fortified. A
+click anywhere else on the map centres the view on that hexagon.
+
+Everything can be done from the keyboard alone, since not every MEGA65 has
+a mouse. Tab starts tile select, as in Civilization: a blinking yellow ring
+on a hexagon, which the cursor keys (or the moving keys) move, and Return
+does what a click on that hexagon would. Tab or ESC ends it. MEGA (Alt in
+xemu) and a menu title's first letter opens that menu.
+
+Otherwise the cursor keys scroll the view, HELP (F1 in xemu) lists the keys, and ESC
 or RUN/STOP quits. In xemu, keypad 7, 9, 4, 6, 1 and 3 move a unit as well.
 
 ## Combat

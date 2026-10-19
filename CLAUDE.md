@@ -186,7 +186,7 @@ buffers at the default `$FF80000` and corrupts the display.
 
 | Address | Size | Contents |
 |---|---|---|
-| `$2001-$9FFF` | 32 KB | program, data, BSS, C stack. About 30.2 KB used, 2.5 KB free |
+| `$2001-$9FFF` | 32 KB | program, data, BSS, C stack. About 30.6 KB used, 1.4 KB free |
 | `$A000-$BFFF` | 8 KB | `highram`, under the BASIC ROM, banked out by `src/bank.s`: `map_tile`, the unit and city arrays, the sprite blocks, the AI's headings, the texts' staging and line buffers; about 2.7 KB free — `HIGH_BSS` in `src/mega65.h` moves a variable there, and **the startup does not clear it** |
 | `$1600-$1EFF` | 2304 | `zpsave`: the popup's 400-byte text, the rest free — `LOW_FREE` in `src/mega65.h` moves a variable there |
 | `$12000` | 4000 | screen RAM, 80x25 cells of 2 bytes |
@@ -254,10 +254,10 @@ and the byline, 99.2% (about 260 bytes free) after save and load
 (about 900 bytes, a fifth of it `_Stub_write`), and **97.4% (855 bytes
 free) once the help screen became a text in attic RAM** (see **Texts**),
 95.8% (1370 bytes free) once the title, setup screens and intro
-followed it, and **92.2% (2549 bytes free) once `civ.c`'s names did**
-(93.6% after tile select),
-with milestones 1-4, the minimap, the city and help screens, the menu
-bar, save and load and the quit-time register restore in it, and
+followed it, and **92.2% (2549 bytes free) once `civ.c`'s names did**,
+93.6% after tile select and **95.6% (1458 bytes free) after the
+computer players' settlers**, with milestones 1-4, the minimap, the city
+and help screens, the menu bar, tile select, save and load and the quit-time register restore in it, and
 `highram` 66.8% full.
 Milestone 4 alone was about 2 KB, paid for in part by taking `puts` out of
 `fatal()` (1.1 KB). The region was 89.9% before
@@ -682,7 +682,17 @@ that is where rule 5 stops. Each city builds a warrior if the player has
 none, then a builder if it has none, then warriors, until the player has
 `AI_UNIT_CAP` (6) units, when it builds nothing (`city_build` =
 `KIND_NONE`), so that three computer players cannot fill the 64 unit slots
-everyone shares. Its random numbers are a xorshift with a fixed seed, so a
+everyone shares. **They expand**: once a player has two military units,
+one of them fortified, and a builder, and no settler, the first of its
+cities with a site within `SETTLE_RANGE` (6) builds a settler, which is
+not held back by the cap. A site (`find_site()`) is grassland or hills,
+off the two edge rows, with at least `SITE_LAND` (3) land neighbours and
+at least `CITY_SPACING` (4) hexagons from every city; the settler makes
+for the nearest one from where it stands and founds there, and explores
+if there is none in reach. `AI_CITY_CAP` (4) cities each, so the unit cap
+still covers a guard per city, and `MAX_CITIES` (32) is shared with the
+human. In a 150-turn headless game this took the world from 3 cities to
+14, none closer than 4. Its random numbers are a xorshift with a fixed seed, so a
 headless run is deterministic (`rnd()`, in `src/combat.c` since milestone
 4). Since milestone 4 a warrior first attacks an enemy next to it if the
 odds are good enough (`AI_ODDS`), then goes home if its city has nobody

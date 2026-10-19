@@ -2,7 +2,9 @@
 // plays. Each one founds a city with its settler, builds a warrior, then a
 // builder, then warriors that explore; the first warrior home stays to
 // guard the city, and a builder goes to a hexagon next to its city and
-// stays there until there are improvements to make.
+// stays there until there are improvements to make. With two military
+// units, one fortified, and a builder, a city builds a settler, which
+// founds a new city on the nearest good site.
 //
 // Milestone 4: a warrior attacks an enemy next to it when the odds are
 // good, goes home when its city has nobody guarding it, and otherwise

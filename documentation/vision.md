@@ -166,8 +166,9 @@ The machine has 384 KB of chip RAM and 8 MB of attic RAM, which is far more
 than this game will ever need. What it does **not** have is more than **32 KB
 of 16-bit addressable space** — `$2001-$9FFF`, which holds all code, all
 initialised data, the BSS and the C stack. That single region is the budget
-everything competes for, and it is 92.2% full (19 Oct 2026) with the
-display engine, milestones 1-4, the menus, and saving and loading in it,
+everything competes for, and it is 95.6% full (19 Oct 2026) with the
+display engine, milestones 1-4, the menus, tile select, saving and loading
+and the computer players' settlers in it,
 after the long texts and the names moved out to attic RAM
 (`build/sevenships.lst` is where the real figure is written down).
 

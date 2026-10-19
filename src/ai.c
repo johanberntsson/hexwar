@@ -15,6 +15,19 @@
 // them cannot fill the 64 slots every player shares.
 #define AI_UNIT_CAP 6
 
+// Expansion. A player builds a settler -- one at a time, and not counted
+// against AI_UNIT_CAP, since it is gone again once it has founded -- when
+// it has two military units, one of them fortified, and a builder, and a
+// city of its has a site within SETTLE_RANGE hexagons: grassland or hills,
+// SITE_LAND land neighbours or more, and at least CITY_SPACING hexagons
+// from every city. No more than AI_CITY_CAP cities, which with the unit
+// cap leaves a guard for each, a builder and an explorer; and MAX_CITIES
+// is shared with the human.
+#define SETTLE_RANGE 6
+#define CITY_SPACING 4
+#define SITE_LAND 3
+#define AI_CITY_CAP 4
+
 // Odds, as combat_worth() takes them: a computer player's warrior attacks
 // when its attack is at least 3/4 of the defence, a barbarian at 1/4 --
 // which is anything. Each makes for an enemy no further than its range.
@@ -94,6 +107,45 @@ static word nearest(byte me, byte ax, byte ay)
         }
     }
     return best;
+}
+
+// The nearest site for a city within SETTLE_RANGE of (fx, fy), in
+// (site_x, site_y); 0 if there is none. (fx, fy) itself may be occupied --
+// by the settler looking -- and anywhere else may not.
+static byte site_x, site_y;
+
+static byte find_site(byte fx, byte fy)
+{
+    int dx, dy, y;
+    byte x, c, t, ok;
+    word d, best = 0xffff;
+
+    for (dy = -(SETTLE_RANGE / 2 + 1); dy <= SETTLE_RANGE / 2 + 1; ++dy) {
+        y = (int)fy + dy;
+        if (y < 2 || y > MAP_ROWS - 3) continue;    // as ai_place()
+        // A hexagon east is two columns.
+        for (dx = -2 * SETTLE_RANGE; dx <= 2 * SETTLE_RANGE; ++dx) {
+            x = (byte)((int)fx + dx + MAP_COLUMNS) & (MAP_COLUMNS - 1);
+            d = distance(fx, fy, x, (byte)y);
+            if (d > SETTLE_RANGE || d >= best) continue;
+            t = MAP_TERRAIN(x, y);
+            if (t != TILE_GRASS && t != TILE_DESERT_HILL) continue;
+            if ((map_tile[y][x] & MAP_OCCUPIED) && d) continue;
+            if (land_neighbours(x, (byte)y) < SITE_LAND) continue;
+            ok = 1;
+            for (c = 0; c < city_count; ++c)
+                if (distance(x, (byte)y, city_ax[c], city_ay[c])
+                    < CITY_SPACING) {
+                    ok = 0;
+                    break;
+                }
+            if (!ok) continue;
+            best = d;
+            site_x = x;
+            site_y = (byte)y;
+        }
+    }
+    return best != 0xffff;
 }
 
 void ai_place(void)
@@ -231,8 +283,18 @@ static void move_unit(byte u)
     switch (unit_kind[u]) {
     case KIND_SETTLER:
         // 1. With no city, found one where it stands; it was put on good
-        // land. If there is a city already, wander until settlers are for
-        // founding more.
+        // land. A settler built later makes for the nearest site and
+        // founds a city there, or explores if there is none in reach.
+        if (home(u) != CITY_NONE) {
+            if (!find_site(ax, ay)) {
+                explore(u);
+                return;
+            }
+            if (site_x != ax || site_y != ay) {
+                approach(u, site_x, site_y);
+                return;
+            }
+        }
         if (city_found(unit_owner[u], ax, ay) != CITY_NONE) {
             unit_remove(u);
             return;
@@ -276,18 +338,36 @@ static void move_unit(byte u)
 
 void ai_turn(byte p)
 {
-    byte c, u;
+    byte c, u, settle;
     byte units = unit_count_kind(p, KIND_NONE);
+    byte military = 0, fortified = 0, cities = 0;
 
     if (!player_alive(p)) return;
     unit_begin_turn(p);
 
-    // 2. No military, build some; 3. no builder, build one; then warriors
-    // to explore -- up to the cap. Changing keeps the shields, so a city
-    // half way through a warrior that is now a builder loses nothing.
+    for (u = 0; u < MAX_UNITS; ++u) {
+        if (unit_kind[u] == KIND_NONE || unit_owner[u] != p) continue;
+        if (!unit_kind_attack[unit_kind[u]]) continue;
+        ++military;
+        if (unit_orders[u] == ORDERS_FORTIFY) ++fortified;
+    }
+    for (c = 0; c < city_count; ++c)
+        if (city_owner[c] == p) ++cities;
+    settle = military >= 2 && fortified
+             && unit_count_kind(p, KIND_BUILDER)
+             && !unit_count_kind(p, KIND_SETTLER) && cities < AI_CITY_CAP;
+
+    // A settler from the first city with room near it, if it is time for
+    // one. Otherwise: 2. no military, build some; 3. no builder, build one;
+    // then warriors to explore -- up to the cap. Changing keeps the
+    // shields, so a city half way through a warrior that is now a builder
+    // loses nothing.
     for (c = 0; c < city_count; ++c) {
         if (city_owner[c] != p) continue;
-        if (units >= AI_UNIT_CAP)
+        if (settle && find_site(city_ax[c], city_ay[c])) {
+            city_build[c] = KIND_SETTLER;
+            settle = 0;
+        } else if (units >= AI_UNIT_CAP)
             city_build[c] = KIND_NONE;
         else if (unit_count_kind(p, KIND_WARRIOR) == 0)
             city_build[c] = KIND_WARRIOR;

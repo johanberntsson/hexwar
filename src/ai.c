@@ -34,7 +34,7 @@
 
 // Which way each exploring warrior is heading, DIR_*. Kept between turns so
 // that it walks somewhere rather than jittering on the spot.
-HIGH_BSS static byte heading[MAX_UNITS];
+HIGH_BSS byte ai_heading[MAX_UNITS];
 
 // Hexagons between two cells, round the east-west wrap. In doubled
 // coordinates that is dy, plus whatever of dx the diagonal steps do not
@@ -135,12 +135,12 @@ static byte step(byte u, byte dir)
 // round when that is blocked. Nowhere to go is a turn spent standing still.
 static void explore(byte u)
 {
-    byte d = heading[u] % 6, i, r = rnd();     // HIGH_BSS: not cleared
+    byte d = ai_heading[u] % 6, i, r = rnd();     // HIGH_BSS: not cleared
 
     if ((r & 3) == 0) d = (byte)((d + ((r & 4) ? 1 : 5)) % 6);
     for (i = 0; i < 6; ++i, d = (byte)((d + 1) % 6)) {
         if (step(u, d)) {
-            heading[u] = d;
+            ai_heading[u] = d;
             return;
         }
     }

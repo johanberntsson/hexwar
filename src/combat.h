@@ -12,6 +12,7 @@
 #define SEVENSHIPS_COMBAT_H
 
 #include "mega65.h"
+#include "unit.h"
 
 // Every player is at war with the barbarians and they with everyone. Between
 // the peoples it is peace until somebody declares war, which for now only
@@ -21,6 +22,11 @@ void declare_war(byte a, byte b);
 
 // Peace all round, for a new game.
 void combat_reset(void);
+
+// Bit q of combat_war[p]: p is at war with q. And the state of rnd(). For
+// save.c; everything else goes through at_war() and rnd().
+extern byte combat_war[PLAYERS];
+extern word combat_seed;
 
 // Who holds (ax, ay): the owner of the unit or city there.
 byte combat_holder(byte ax, byte ay);

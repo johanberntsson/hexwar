@@ -85,6 +85,10 @@ most important routines included in each source file.
 | &nbsp;&nbsp;&nbsp;_ai\_turn_ | one computer player's turn |
 | &nbsp;&nbsp;&nbsp;_ai\_barbarians_ | the barbarians' turn: new bands, and every barbarian's move |
 |  |  |
+| save.c | saving and loading a game: every state array, written out as it stands |
+| &nbsp;&nbsp;&nbsp;_save\_write_ | writes SEVENSHIPS.SAV, replacing the last one (Game/Save Game) |
+| &nbsp;&nbsp;&nbsp;_save\_read_ | reads it back over a freshly set-up game |
+|  |  |
 | combat.c | combat, war and peace, and whether a player is still in the game |
 | &nbsp;&nbsp;&nbsp;_combat\_attack_ | one unit attacks a neighbouring hexagon |
 |  |  |
@@ -143,16 +147,19 @@ The C65 ROM boots AUTOBOOT.C65 automatically. `main()` then:
    tall, and copied into the expanded sheet in bank 5 (`sheet_load`);
 3. reads SEVENSHIPS.MAP into `map_tile` (`map_load`);
 4. sets up the pointer sprites (`input_init`) and runs the title menu
-   (`title_run`): Start Game, Load Saved Game (not implemented yet) or Quit.
+   (`title_run`): Start Game, Load Saved Game or Quit.
    Start Game then asks for a people (Mycenaeans, Hittites, Egyptians or
    Canaanites) and one of five difficulty levels. Each menu has a
    once-a-frame loop of its own, like the main loop's, so that the mouse and
    joystick can pick an item;
 5. clears the screen, writes the map window's character numbers into screen
-   RAM, once (`view_init`), and places the player's settler (`game_init`);
+   RAM, once (`view_init`), and places the player's settler (`game_init`) --
+   or, for Load Saved Game, reads SEVENSHIPS.SAV over what `game_init` set
+   up (`game_load`), going back to step 4 if there is none;
 6. clears the tile store and enters the main loop (`game_run`).
 
-All disk access is finished by the end of step 3. The KERNAL stays available
+Apart from saving and loading a game, all disk access is finished by the
+end of step 3. The KERNAL stays available
 throughout, because the only part of the ROM the program banks out is BASIC,
 at \$a000-\$bfff, and that before `main()` starts.
 

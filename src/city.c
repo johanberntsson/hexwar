@@ -28,14 +28,14 @@ HIGH_BSS byte city_build[MAX_CITIES];
 HIGH_BSS word city_shields[MAX_CITIES];
 
 // How many cities each player has named, so the next gets the next name.
-static byte named[PLAYERS];
+byte city_named[PLAYERS];
 
 void city_reset(void)
 {
     byte p;
     city_count = 0;
     city_founded = 0;
-    for (p = 0; p < PLAYERS; ++p) named[p] = 0;
+    for (p = 0; p < PLAYERS; ++p) city_named[p] = 0;
 }
 
 byte city_at(byte ax, byte ay)
@@ -53,7 +53,7 @@ byte city_found(byte owner, byte ax, byte ay)
     city_founder[c] = owner;
     city_ax[c] = ax;
     city_ay[c] = ay;
-    city_name[c] = named[owner]++;
+    city_name[c] = city_named[owner]++;
     city_founded |= (byte)(1 << owner);
     ++city_count;
     city_capture(c, owner);

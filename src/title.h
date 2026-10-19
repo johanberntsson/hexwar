@@ -15,11 +15,12 @@
 // go. Call before the disk is read, so there is something to look at.
 void title_show(void);
 
-// Run the menu until the player quits or starts a game, and return
-// TITLE_QUIT or TITLE_START. Start Game goes on to choose a people and a
-// difficulty level, which it leaves in player_civ[] and game_level (civ.h);
-// Esc there goes back. Load Saved Game is not implemented yet and only says
-// so. Needs input_init(). Leaves its last screen up; the caller clears it.
-byte title_run(void);
+// Run the menu until the player quits, starts a game or loads one, and
+// return TITLE_QUIT, TITLE_START or TITLE_LOAD. Start Game goes on to
+// choose a people and a difficulty level, which it leaves in player_civ[]
+// and game_level (civ.h); Esc there goes back. The loading is the
+// caller's, and if it failed, `load_failed` says so on the way back in.
+// Needs input_init(). Leaves its last screen up; the caller clears it.
+byte title_run(byte load_failed);
 
 #endif // SEVENSHIPS_TITLE_H

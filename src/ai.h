@@ -16,11 +16,15 @@
 #define SEVENSHIPS_AI_H
 
 #include "mega65.h"
+#include "unit.h"
 
 // Put each computer player's settler on grassland with land round it, as
 // far from every other settler as a few hundred tries can find. After the
 // human's settler is placed.
 void ai_place(void);
+
+// Which way each exploring warrior is heading, DIR_* modulo 6; for save.c.
+extern byte ai_heading[MAX_UNITS];
 
 // Player p's turn: moves back, what each city builds, and every unit's
 // move. Production itself is end_turn()'s, for every player at once.

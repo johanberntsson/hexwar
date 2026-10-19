@@ -245,8 +245,10 @@ when a 15th tile or another full-colour surface needs room:
 (6.5 KB, and growing a KB a tile) and now comes off the disk, and
 `map_tile`'s 4 KB has moved to `$A000`. At the last measurement (19 Oct
 2026, after the rename and the blinking unit) `build/sevenships.lst`
-reported the region **93.0% full (about 2.2 KB free)**, and 94.3% after
-the menus' keyboard control, with milestones 1-4, the minimap, the city and help screens, the menu
+reported the region **93.0% full (about 2.2 KB free)**, 94.3% after
+the menus' keyboard control, 96.3% after the menu changes, Play 50 Turns
+and the byline, and **99.2% (about 260 bytes free) after save and load**
+(about 900 bytes, a fifth of it `_Stub_write`), with milestones 1-4, the minimap, the city and help screens, the menu
 bar and the quit-time register restore in it, and `highram` 63.3% full.
 Milestone 4 alone was about 2 KB, paid for in part by taking `puts` out of
 `fatal()` (1.1 KB). The region was 89.9% before
@@ -541,7 +543,7 @@ settler, founding a city), 2 (the city screen and building units), 3
 
 **The title screen comes first** (`src/title.c`): `title_show()` puts the
 title up before the disk is read, and `title_run()` runs the menu — Start
-Game, Load Saved Game (only says it is not implemented yet), Quit — after
+Game, Load Saved Game, Quit — after
 `input_init()`. Start Game goes on to two more screens, the people and the
 difficulty level, and Esc on either goes back one. All three are the one
 `menu_run()`: the arrow selects an item by hovering and a click picks it;
@@ -575,7 +577,7 @@ Alt to MEGA, so there it is Alt+G after all. **Compare a `KEY_MEGA` code
 from a byte variable** (`menu_hotkey()`): they are all above 127, and the
 first version, comparing against `(byte)(c + 0x60)`, met the sign
 extension bug below and opened nothing.
-Game has **Retire**, which asks "Do you want to quit this game?" with
+Game has **Save Game** (see **Saving** below) and **Retire**, which asks "Do you want to quit this game?" with
 `popup_ask()` (Yes/No buttons, `y`/`n`, Esc for No, or the cursor keys to move the highlight — No to begin with — and Return) and on Yes goes back
 to the title screen. **Orders is filled in for the active unit** just
 before a menu opens (`set_orders_menu()` in `src/game.c`, through
@@ -609,6 +611,33 @@ dropdown is drawn over the minimap and puts it back with
 reaches them); it hides the minimap's outline sprites, and the caller's
 redraw puts them back. Nothing restores panel text, so **a dropdown must
 end above row 11**, where the panel starts.
+
+**Saving** (`src/save.c`) is one file, `SEVENSHIPS.SAV` on drive 8, and
+**it is the game's memory written out as it stands**: a table of
+`{address, size}` for every state array and counter — the map with its
+explored and occupied bits, the unit and city arrays, the AI's headings,
+the wars, `rnd()`'s seed, the peoples, the level, the turn and the year —
+after a header of `"SSV"` and `SAVE_VERSION`. **Anything added to a
+game's state goes in that table, and a change to it means a new
+`SAVE_VERSION`**, or an old file is read into the wrong places. Left out
+because they are worked out again: the active unit, the panel, and the
+view, which centres on whoever wants orders. Game → Save Game writes it
+with `_Stub_write`, opening `"@0:SEVENSHIPS.SAV,S,W"` — `@0:` replaces an
+earlier save, `,S,W` makes a SEQ file open for writing — and says "Game
+saved" or "Could not save" in the panel; a full disk is not noticed,
+since that is in the error channel. Load Saved Game on the title screen
+returns `TITLE_LOAD`, and `main()` runs `game_init()` as for a new game
+and then `game_load()`, which reads the file over it in 128-byte pieces
+(the `_Stub_read` page bug) and makes `game_run()` skip the opening
+popup. If there is no file or the header is wrong, `main()` goes round to
+the title, and `title_run(1)` says "No saved game could be loaded". The
+statics the table needs were exported under module prefixes:
+`combat_war`, `combat_seed`, `city_named`, `ai_heading`, `game_turn`,
+`game_year`. Checked headlessly: the whole of `highram` is byte-identical
+between a dump taken after saving and one after loading, and a second
+save replaces the first (`c1541 -attach … -list` shows one file). To test
+a load, run the saving build against a copy of the d81 and the loading
+build against a copy of that, since a rebuild remakes `build/`'s image.
 
 **The peoples are `src/civ.c`**: Mycenaeans, Hittites, Egyptians and
 Canaanites (vision.md §3), each a name for the menu, an adjective for the
@@ -968,8 +997,8 @@ and a screenshot shows the result. Menu item *i* is at sprite y `92 + 16i`
 (`{40,160,108,KEY_CLICK}` clicks the second), and **an item the arrow
 has hovered over stays selected after it leaves**, so a script that clicks
 somewhere and then comes back to a menu has to select with the cursor keys
-before pressing Return. The Game menu's title is at `{…,4,4,KEY_CLICK}`
-and Retire at `{…,8,20,KEY_CLICK}`, or MEGA+G is `{…,0,0,199}` (O 207, D 196,
+before pressing Return. The Game menu's title is at `{…,4,4,KEY_CLICK}`,
+Save Game at `{…,8,20,KEY_CLICK}` and Retire at `{…,8,28,KEY_CLICK}`, or MEGA+G is `{…,0,0,199}` (O 207, D 196,
 W 215, H 200) (the
 script skips `$D611`, so it cannot test the CTRL path); Debug at `{…,52,4,KEY_CLICK}` and
 Show Map at `{…,56,20,KEY_CLICK}`; `make NO_TITLE=1` skips all

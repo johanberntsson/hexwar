@@ -29,6 +29,10 @@ static void fatal(const char *message)
 
 int main(void)
 {
+#ifndef NO_TITLE
+    byte choice, load_failed = 0;
+#endif
+
     mega65_io_enable();
     screen_save();
     screen_init();
@@ -56,12 +60,20 @@ int main(void)
         // straight into a new game after a retire.
 #ifndef NO_TITLE
         title_show();
-        if (title_run() == TITLE_QUIT) break;
+        choice = title_run(load_failed);
+        if (choice == TITLE_QUIT) break;
         screen_clear();
 #endif
 
         view_init();
         game_init();
+#ifndef NO_TITLE
+        load_failed = 0;
+        if (choice == TITLE_LOAD && !game_load()) {
+            load_failed = 1;
+            continue;
+        }
+#endif
 
         // The store starts blank; after that view_redraw() covers every byte
         // of it and deliberately does not clear, so that it can stay ahead of

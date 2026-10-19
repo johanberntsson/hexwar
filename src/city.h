@@ -3,6 +3,7 @@
 #define SEVENSHIPS_CITY_H
 
 #include "mega65.h"
+#include "unit.h"
 
 #define MAX_CITIES 32
 #define CITY_NONE 0xff
@@ -20,6 +21,8 @@ extern word city_shields[MAX_CITIES];   // towards it, of unit_kind_cost[]
 // Bit p: player p has founded a city, so losing the last one is the end
 // (combat.c:player_alive()).
 extern byte city_founded;
+// How many cities each player has named, so the next gets the next name.
+extern byte city_named[PLAYERS];
 
 // No cities, and every player's names unused, for a new game.
 void city_reset(void);

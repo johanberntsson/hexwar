@@ -26,8 +26,8 @@ static const byte menu_x[MENUS] = { 0, 5, 12, 18 };
 #endif
 
 // Each menu's items and what they ask for. An empty menu does not open.
-static const char *const game_items[] = { "Retire" };
-static const byte game_commands[] = { MENU_RETIRE };
+static const char *const game_items[] = { "Save Game", "Retire" };
+static const byte game_commands[] = { MENU_SAVE, MENU_RETIRE };
 
 // Orders depends on the unit that has them, and menu_orders() fills it in.
 static const char *orders_items[1];
@@ -54,7 +54,7 @@ static const byte *const menu_commands[MENUS] = {
     game_commands, orders_commands, debug_commands, world_commands,
     help_commands
 };
-static byte menu_count[MENUS] = { 1, 0, 2, 1, 1 };
+static byte menu_count[MENUS] = { 2, 0, 2, 1, 1 };
 #else
 static const char *const *const menu_items[MENUS] = {
     game_items, orders_items, world_items, help_items
@@ -62,7 +62,7 @@ static const char *const *const menu_items[MENUS] = {
 static const byte *const menu_commands[MENUS] = {
     game_commands, orders_commands, world_commands, help_commands
 };
-static byte menu_count[MENUS] = { 1, 0, 1, 1 };
+static byte menu_count[MENUS] = { 2, 0, 1, 1 };
 #endif
 
 #define ORDERS 1                // Orders' index in the tables above

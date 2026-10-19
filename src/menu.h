@@ -15,6 +15,7 @@
 #define MENU_TOP_CITIES 5
 #define MENU_KEYS 6
 #define MENU_PLAY_50 7
+#define MENU_SAVE 8
 
 // What the Orders menu offers, for the unit that has the orders: one of
 // MENU_FOUND_CITY or MENU_FORTIFY, or MENU_NONE for nothing, when Orders

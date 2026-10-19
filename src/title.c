@@ -19,6 +19,7 @@
 #define HEADING_ROW 5
 #define SUBTITLE_ROW 8
 #define MENU_ROW 11             // the first item; they are two rows apart
+#define BYLINE_ROW 18           // on the title screen
 #define NOTE_ROW 21
 #define QUOTE_ROW 23            // two rows, on the title screen
 #define HINT_ROW 24             // on the others
@@ -188,6 +189,7 @@ static void draw_title(void)
     heading("Seven Ships of the Enemy");
     centre(SUBTITLE_ROW, "The eastern Mediterranean, 1600 BC",
            COLOR_LIGHTGREY);
+    centre(BYLINE_ROW, "By Johan Berntsson in 2026", COLOR_LIGHTGREY);
     centre(QUOTE_ROW, "\"The seven ships of the enemy that came have "
            "inflicted much damage upon us.\"", COLOR_LIGHTGREY);
     centre(QUOTE_ROW + 1, "Ammurapi, king of Ugarit, c. 1185 BC",
@@ -257,18 +259,19 @@ void title_show(void)
     centre(MENU_ROW, "Loading...", TEXT_COLOUR);
 }
 
-byte title_run(void)
+byte title_run(byte load_failed)
 {
     byte pick = TITLE_START;
+
+    if (load_failed) {
+        centre(NOTE_ROW, "No saved game could be loaded", COLOR_YELLOW);
+        pick = TITLE_LOAD;
+    }
 
     for (;;) {
         pick = menu_run(title_items, 0, TITLE_ITEMS, "slq", pick);
         if (pick == MENU_BACK || pick == TITLE_QUIT) return TITLE_QUIT;
-        if (pick == TITLE_LOAD) {
-            centre(NOTE_ROW, "Saved games are not implemented yet",
-                   COLOR_YELLOW);
-            continue;
-        }
+        if (pick == TITLE_LOAD) return TITLE_LOAD;
         if (new_game()) return TITLE_START;
         draw_title();
     }

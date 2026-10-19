@@ -82,6 +82,7 @@ SRCS     = src/sevenships.c \
            src/cityscreen.c \
            src/help.c \
            src/topcities.c \
+           src/save.c \
            src/game.c \
            src/ai.c \
            src/combat.c \

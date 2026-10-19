@@ -4,8 +4,8 @@
 #include "sheet.h"
 #include "unit.h"
 
-// Bit q of war[p]: p is at war with q. Kept both ways round.
-static byte war[PLAYERS];
+// Bit q of combat_war[p]: p is at war with q. Kept both ways round.
+byte combat_war[PLAYERS];
 
 byte combat_owner;
 byte combat_kind;
@@ -13,32 +13,32 @@ byte combat_city;
 byte news;
 byte news_owner;
 
-static word seed = 0x2a6d;
+word combat_seed = 0x2a6d;
 
 byte rnd(void)
 {
-    seed ^= seed << 7;
-    seed ^= seed >> 9;
-    seed ^= seed << 8;
-    return (byte)seed;
+    combat_seed ^= combat_seed << 7;
+    combat_seed ^= combat_seed >> 9;
+    combat_seed ^= combat_seed << 8;
+    return (byte)combat_seed;
 }
 
 byte at_war(byte a, byte b)
 {
     if (a == PLAYER_BARBARIAN || b == PLAYER_BARBARIAN) return 1;
-    return war[a] & (byte)(1 << b);
+    return combat_war[a] & (byte)(1 << b);
 }
 
 void declare_war(byte a, byte b)
 {
-    war[a] |= (byte)(1 << b);
-    war[b] |= (byte)(1 << a);
+    combat_war[a] |= (byte)(1 << b);
+    combat_war[b] |= (byte)(1 << a);
 }
 
 void combat_reset(void)
 {
     byte p;
-    for (p = 0; p < PLAYERS; ++p) war[p] = 0;
+    for (p = 0; p < PLAYERS; ++p) combat_war[p] = 0;
     news = NEWS_NONE;
 }
 

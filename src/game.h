@@ -17,4 +17,12 @@ void game_init(void);
 // Play until the player quits, retires or the game is over.
 byte game_run(void);
 
+// After game_init(), read the saved game over it (save.c); non-zero if it
+// went. game_run() then carries on from there, without the opening popup.
+byte game_load(void);
+
+// The turn, from 1, and the year, BC; for save.c.
+extern word game_turn;
+extern word game_year;
+
 #endif // SEVENSHIPS_GAME_H

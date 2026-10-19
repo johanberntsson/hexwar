@@ -14,6 +14,7 @@
 #include "city.h"
 #include "cityscreen.h"
 #include "topcities.h"
+#include "save.h"
 #include "civ.h"
 #include "combat.h"
 #include "sevenships.h"
@@ -43,8 +44,9 @@ static byte hover_dirty;        // the readout of what is under the arrow
 static byte game_over;
 static byte quit;
 static byte retired;            // quit by Game/Retire, for the title screen
-static word turn;
-static word year;
+static byte loaded;             // from a saved game: no opening popup
+word game_turn;
+word game_year;
 
 // Frames since the game began, counted by game_run(), and the last click on
 // one of the player's cities: a second click on the same hexagon within
@@ -143,12 +145,12 @@ static void draw_frame(void)
 static void draw_status(void)
 {
     line_clear();
-    line_add_num(year);
+    line_add_num(game_year);
     line_add(" BC");
     panel_text(ROW_YEAR, line, TEXT_COLOUR);
     line_clear();
     line_add("Turn ");
-    line_add_num(turn);
+    line_add_num(game_turn);
     panel_text(ROW_TURN, line, TEXT_COLOUR);
 }
 
@@ -286,7 +288,7 @@ static void end_turn(void)
     message("", "");
     news = NEWS_NONE;
     for (c = PLAYER_FIRST_AI; c < PLAYERS; ++c) ai_turn(c);
-    ai_barbarians(turn);
+    ai_barbarians(game_turn);
     for (c = 0; c < city_count; ++c) {
         kind = city_produce(c);
         if (kind != KIND_NONE && city_owner[c] == PLAYER_HUMAN) {
@@ -309,8 +311,8 @@ static void end_turn(void)
     }
     dirty = 1;
     hover_dirty = 1;
-    ++turn;
-    year -= YEARS_PER_TURN;
+    ++game_turn;
+    game_year -= YEARS_PER_TURN;
     unit_begin_turn(PLAYER_HUMAN);
     draw_status();
     select_unit(UNIT_NONE);
@@ -531,6 +533,10 @@ static void menu_command(byte command)
         autoplay(AUTOPLAY_TURNS);
         break;
 #endif
+    case MENU_SAVE:
+        message("Saving", "");
+        message(save_write() ? "Game saved" : "Could not save", "");
+        break;
     case MENU_FOUND_CITY:
         unit_key('b');
         break;
@@ -644,7 +650,7 @@ void game_init(void)
     unit_reset();
     city_reset();
     combat_reset();
-    game_over = quit = retired = 0;
+    game_over = quit = retired = loaded = 0;
     click_ax = 0xff;
 
     // START_OFF_X / START_OFF_Y are what let a headless run check
@@ -663,13 +669,18 @@ void game_init(void)
     unit_create(KIND_SETTLER, PLAYER_HUMAN, ax, ay);
     ai_place();
 
-    turn = 1;
-    year = START_YEAR;
+    game_turn = 1;
+    game_year = START_YEAR;
     dirty = 1;
     hover_dirty = 1;
 }
 
 // The popup a new game opens with.
+byte game_load(void)
+{
+    return loaded = save_read();
+}
+
 static void intro(void)
 {
     byte civ = player_civ[PLAYER_HUMAN];
@@ -703,7 +714,7 @@ byte game_run(void)
     view_redraw(off_x, off_y);
     minimap_frame(off_x, off_y);
     dirty = 0;
-    intro();
+    if (!loaded) intro();
 #endif
 
     while (!quit) {

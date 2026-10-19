@@ -164,50 +164,49 @@ records only the constraints the *game* design has to respect.
 
 The machine has 384 KB of chip RAM and 8 MB of attic RAM, which is far more
 than this game will ever need. What it does **not** have is more than **32 KB
-of 16-bit addressable space** — `$2001-$9FFF`, which holds all code, all
-initialised data, the BSS and the C stack. That single region is the budget
-everything competes for, and it is 95.6% full (19 Oct 2026) with the
-display engine, milestones 1-4, the menus, tile select, saving and loading
-and the computer players' settlers in it,
-after the long texts and the names moved out to attic RAM
-(`build/sevenships.lst` is where the real figure is written down).
+of 16-bit addressable space**, `$2001-$9FFF`, for code, initialised data,
+the BSS and the C stack. Since 19 Oct 2026 that is split: **24 KB is
+resident** (`$2001-$5FFF` and `$8000-$9FFF`), and `$6000-$7FFF` is a
+**code window** that the 4510's MAP points at one 8 KB region of code at a
+time (`src/region.h`). Region 0 is the PRG's own `$6000-$7FFF`; regions 1
+and up are loaded from the disk into bank 1. `build/sevenships.lst` is
+where the real figures are written down.
 
 | Where | Size | What can live there | Cost to reach |
 |---|---|---|---|
-| `$2001-$9FFF` | 32 KB | code, hot data, C stack | free (normal C) |
-| `$1600-$1EFF` | 2304 B | one or two hot tables (`LOW_FREE`) | free |
-| `$A000-$BFFF` | 8 KB | BSS under the banked-out BASIC ROM (`HIGH_BSS`): the map, units, cities; about 2.7 KB free | free |
+| `$2001-$5FFF`, `$8000-$9FFF` | 24 KB | resident code, hot data, C stack; 2.7 KB free | free (normal C) |
+| `$6000-$7FFF`, region 0 | 8 KB | code that is rarely run: the screens, menus, save, the sheet loader; 1.5 KB free | a stub call |
+| `$13000-$1EFFF`, regions 1-6 | 6 x 8 KB | banked code: region 1 is the computer players (4.9 KB free), 2-6 are empty | a stub call |
+| `$1600-$1EFF` | 2304 B | scratch buffers (`LOW_FREE`); 1.5 KB free | free |
+| `$A000-$BFFF` | 8 KB | BSS under the banked-out BASIC ROM (`HIGH_BSS`): the map, units, cities; about 2.3 KB free | free |
 | `$8000000-$87FFFFF` | 8 MB | texts (already: `TEXT.PAK`), cold data, per-turn scratch | DMA block, or `__huge` |
 
-Bank 5 (`$50000-$5FFFF`) is full: the expanded tile sheet, room for two more
-tiles, and the minimap. `CLAUDE.md` ("When bank 5 fills up") has what to do
-next.
+Bank 5 (`$50000-$5FFFF`) holds the expanded tile sheet, with room for four
+more tiles, and the minimap, most of whose characters are in the tile
+store's row padding. `CLAUDE.md` ("When bank 5 fills up") has what to do
+after that. Bank 1 is screen RAM at `$12000` and the code regions above it,
+and `$20000-$3FFFF` is the C65 ROM, which this program deliberately never
+banks out (see `sevenships.scm`).
 
-`$10000-$1FFFF` is not usable — screen RAM sits at `$12000` and BASIC 65 owns
-most of the rest — and `$20000-$3FFFF` is the C65 ROM, which this program
-deliberately never banks out (see `sevenships.scm`).
-
-**Consequence for the design:** cheap to add, in this order — more map layers,
-more unit records, more tables of any kind, since data goes far or attic almost
-for free. Expensive to add: more *code*. Every new subsystem (map generator,
-A* pathfinder, trade-route solver, diplomacy, the Crisis phase, save/load, the
-city screen) spends the scarce 32 KB. Text is the exception: anything long
-that is only read — screens, popups, names, the Civilopedia — goes to attic
-RAM as a text (`res/text/`), which costs nothing in the 32 KB. When the region
-fills up again with nothing of that kind left to move, the project has to
-adopt Calypsi's MAP-register regions and a dispatch stub
-(Dan Sanderson, *Calypsi part 3*): code is then split into 24 KB windows with
-`#pragma clang section`, called through a resident trampoline. It works, but it
-costs `--no-cross-call`, forces shared data into a common section, and breaks
-string literals across regions — so subsystems should each get their own `.c`
-file from the start, which is what makes that split a one-line change per file
-later.
+**Consequence for the design:** data is cheap — more map layers, more unit
+records, more tables of any kind go to `HIGH_BSS` or attic almost for free,
+and anything long that is only read (screens, popups, names, the
+Civilopedia) goes to attic RAM as a text (`res/text/`). Code is affordable
+too now, but only in a region: every new subsystem (map generator, A*
+pathfinder, trade-route solver, diplomacy, the Crisis phase) gets its own
+`.c` file and goes into a region from the start, and the 24 KB of
+resident space is kept for what must be there. A region's code reaches
+resident code and data directly; other regions it reaches through their
+stubs, and data of its own (a string literal, a const table) is only
+readable while it is mapped, so it must not be handed to resident code to
+keep.
 
 **The redraw path must never be dispatched.** `view_redraw` runs in 13.6 ms
 against a 19.97 ms frame and stays ahead of the raster beam by about 100 lines;
-that slack is what stops the map tearing. View, sheet, screen and DMA code stay
-resident. Only per-turn code — AI, generation, pathfinding — goes in a banked
-region, where a trampoline call is free.
+that slack is what stops the map tearing. View, screen and DMA code and the
+once-a-frame loop stay resident. Per-turn code — AI, generation, pathfinding,
+diplomacy — goes in a banked region, where a stub call costs nothing that
+matters.
 
 ### Map & data structures
 
@@ -220,13 +219,16 @@ attic on its own and so that a scan over one attribute is a linear byte walk.
 
 Planned layers, and where each belongs:
 
-* **Hot** (needed by the redraw, so near or `LOW_FREE`): terrain — `map_tile`,
+* **Hot** (needed by the redraw, so in 16-bit space): terrain — `map_tile`,
+  in `HIGH_BSS`,
   which already exists. Its bit 7 already says "a city or unit is here", which
   is all the redraw needs, so a unit-id layer does not have to be hot.
-* **Warm** (`__far`, bank 5): resource, feature/improvement, owner, city id,
-  unit id. Bank 5 is kept for the expanded tile sheet and the rest of
-  the minimap at `$5F000` -- so these go to attic RAM with the cold
-  ones — fine for anything not read during a redraw.
+* **Warm** (attic, or packed): resource, feature/improvement, owner, city
+  id, unit id. Bank 5 is kept for the expanded tile sheet and the minimap,
+  and a full 4096-byte layer no longer fits in `HIGH_BSS` (about 2.3 KB
+  free), so these go to attic RAM with the cold ones — fine for anything
+  not read during a redraw — unless one packs into spare bits of
+  `map_tile` or a sparse list small enough for `HIGH_BSS`.
 * **Cold** (attic, paged in per turn): AI influence maps, supply/trade
   reachability, fog-of-war per civ.
 

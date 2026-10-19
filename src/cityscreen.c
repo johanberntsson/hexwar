@@ -7,6 +7,10 @@
 // into. So nothing new is allocated; the price is that game.c has to put
 // the whole map screen back on the way out, which it does in a frame.
 
+// In region 0 (src/region.h): called through the stubs in src/dispatch.s,
+// under these names here.
+#define city_screen city_screen_r0
+
 #include "cityscreen.h"
 #include "city.h"
 #include "input.h"
@@ -14,6 +18,8 @@
 #include "screen.h"
 #include "unit.h"
 #include "view.h"
+
+#pragma clang section text="r0text" rodata="r0rodata"
 
 #define TEXT_COLOUR COLOR_LIGHTGREEN
 #define BORDER_COLOUR COLOR_LIGHTGREY

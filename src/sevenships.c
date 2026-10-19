@@ -9,6 +9,7 @@
 #include "game.h"
 #include "input.h"
 #include "map.h"
+#include "region.h"
 #include "mega65.h"
 #include "screen.h"
 #include "sheet.h"
@@ -34,6 +35,7 @@ int main(void)
     byte choice, load_failed = 0;
 #endif
 
+    region_init();
     mega65_io_enable();
     screen_save();
     screen_init();
@@ -47,6 +49,10 @@ int main(void)
     // is something to look at while the rest loads.
     if (!text_load()) fatal("cannot read " TEXT_FILE_NAME
                             " or it is not the one this build expects");
+    // The code regions in bank 1 (src/region.h), before anything can call
+    // into them; the title screen is region 0, which came with the PRG.
+    if (!region_load()) fatal("cannot read " REGION_FILE_NAME
+                              " or it is not the one this build expects");
 #ifndef NO_TITLE
     title_show();
 #endif

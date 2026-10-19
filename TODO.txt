@@ -13,9 +13,10 @@ Before milestone 5: make room in bank 5
   (CLAUDE.md, "When bank 5 fills up", step 1). Room for 16 tiles now, 12 used.
 - DONE: cleared out the program region from 1.4 KB to 2.8 KB free (DMA lists as initialised
   data, C stack 512 -> 256, scratch buffers to LOW_FREE/HIGH_BSS; CLAUDE.md, "Memory map")
-- Still to decide before milestone 6, which 2.8 KB will not carry: the short messages in
-  game.c/cityscreen.c/menu.c to a text list (a few hundred bytes), or the MAP-register banking
-  ("Growing past 32 KB", step 3)
+- DONE: MAP-register code banking (src/region.h; CLAUDE.md, "Growing past 32 KB", step 3).
+  An 8 KB window at $6000-$7FFF; region 0 in the PRG (screens, menus, save, sheet loader),
+  region 1 in bank 1 (ai.c). Works on a real MEGA65. New subsystems go into a region from the
+  start: resident space is 2.7 KB, with room for five more 8 KB regions in bank 1.
 
 Milestone 5: more terrain
 - New terrain tiles: plains, forest, desert, floodplain/river valley (for grain)

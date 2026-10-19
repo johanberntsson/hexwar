@@ -1,9 +1,17 @@
+// In region 1 (src/region.h): called through the stubs in src/dispatch.s,
+// under these names here.
+#define ai_place ai_place_r1
+#define ai_turn ai_turn_r1
+#define ai_barbarians ai_barbarians_r1
+
 #include "ai.h"
 #include "city.h"
 #include "combat.h"
 #include "map.h"
 #include "sheet.h"
 #include "unit.h"
+
+#pragma clang section text="r1text" rodata="r1rodata"
 
 // How far apart the starting settlers should be, in hexagons, and how many
 // tries each spacing gets before the next, closer one is accepted.

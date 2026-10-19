@@ -18,9 +18,10 @@ make clean
 ```
 
 **The game is the disk, not the PRG.** `build/sevenships.d81` holds the program
-(as `autoboot.c65`), the tile sheet (`tiles.fci`) and the map (`sevenships.map`,
-made at build time by `tools/mapgen.py`), and the program reads the last two
-from drive 8 at start-up.
+(as `autoboot.c65`), the texts (`text.pak`), a region of code that runs from
+bank 1 (`sevenships.r1`), the tile sheet (`tiles.fci`) and the map
+(`sevenships.map`, made at build time by `tools/mapgen.py`), and the program
+reads the last four from drive 8 at start-up.
 
 The board support — the C65-mode startup, the KERNAL stubs and the linker
 rules — comes from [hth313/Calypsi-6502-Commodore][bsp], which ships inside the

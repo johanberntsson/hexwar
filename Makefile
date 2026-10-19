@@ -54,7 +54,11 @@ ifeq ($(DEBUG),1)
 CFLAGS  += -DDEBUG_MENU
 endif
 ASFLAGS  = $(TARGET)
-LDFLAGS  = $(TARGET) --output-format=prg
+# Raw, one file a memory, since the windows' regions share addresses;
+# tools/packprg.py makes the PRG and the region files from them. --hosted
+# keeps initialised data loaded in place, as the prg format does.
+LDFLAGS  = $(TARGET) --output-format=raw --raw-multiple-memories \
+           --no-merge-raw-memories --hosted
 LINKFILE = sevenships.scm
 
 # The C stack. The tool chain's default is 4096, which is many times what this
@@ -93,16 +97,25 @@ SRCS     = src/sevenships.c \
            src/civ.c \
            src/popup.c \
            src/menu.c \
-           src/title.c
+           src/title.c \
+           src/region.c
 
-# Assembly: only src/bank.s, which banks BASIC out before main().
-ASRCS    = src/bank.s
+# The files whose code is in a MAP window region (src/region.h), compiled
+# without the shared instruction fragments that could be called across one.
+BANKED   = src/title.c src/cityscreen.c src/topcities.c src/save.c \
+           src/sheet.c src/help.c src/menu.c src/ai.c
+
+# Assembly: src/bank.s, which banks BASIC out before main(), and
+# src/dispatch.s, the MAP window and the calls into it.
+ASRCS    = src/bank.s src/dispatch.s
 
 OBJS     = $(patsubst src/%.c,$(BUILD)/%.o,$(SRCS)) \
            $(patsubst src/%.s,$(BUILD)/%.o,$(ASRCS))
 
 ELF      = $(BUILD)/sevenships.elf
 PRG      = $(BUILD)/sevenships.prg
+# The code regions loaded into bank 1, one file each (src/region.h).
+REGION_FILES = $(BUILD)/sevenships.r1
 
 # The map, made by tools/mapgen.py and read off the disk at start-up. Same seed,
 # same map: `make MAP_SEED=7` is how to look at another one, and MAP_LAND is the
@@ -187,6 +200,9 @@ $(MAP): tools/mapgen.py $(MAP_STAMP) | $(BUILD)
 $(TEXT_PAK) $(TEXT_IDS) &: $(TEXTS) tools/mktext.py | $(BUILD)
 	python3 tools/mktext.py $(TEXT_PAK) $(TEXT_IDS) $(TEXTS)
 
+$(patsubst src/%.c,$(BUILD)/%.o,$(BANKED)): \
+    CFLAGS += --no-cross-call --no-interprocedural-cross-jump
+
 $(BUILD)/%.o: src/%.c $(HDRS) Makefile $(STAMP) | $(BUILD)
 	cc6502 $(CFLAGS) -c -o $@ $<
 
@@ -197,16 +213,21 @@ $(BUILD)/%.o: src/%.s Makefile | $(BUILD)
 # is written down -- worth reading after any change that might have pushed it
 # towards $9FFF.
 #
-# **ln6502 -o names the ELF, not the PRG.** The PRG is written beside it under
-# the same stem; linking straight to a .prg name silently produces an ELF file
-# that the MEGA65 then tries to RUN as BASIC. Hence the grouped target (&:,
-# GNU make 4.3): one link makes both. It used to be a separate `$(PRG):
-# $(ELF)` with no recipe, and make never looks at the time of a target it
-# has no recipe for, so a relinked PRG left the disk image stale: `make`
-# then `make release` shipped the Debug menu (19 Oct 2026).
-$(ELF) $(PRG) &: $(OBJS) $(LINKFILE)
+# **ln6502 -o names the ELF, not the PRG.** The raw files are written beside
+# it, the first under the same stem and the rest under their memories'
+# names, and tools/packprg.py makes the PRG and the region files out of
+# them (src/region.h). The raw files are removed first, so that a memory
+# left empty by this link cannot be packed from the last one. One grouped
+# target (&:, GNU make 4.3) for all of it: it used to be a separate
+# `$(PRG): $(ELF)` with no recipe, and make never looks at the time of a
+# target it has no recipe for, so a relinked PRG left the disk image stale:
+# `make` then `make release` shipped the Debug menu (19 Oct 2026).
+$(ELF) $(PRG) $(REGION_FILES) &: $(OBJS) $(LINKFILE) tools/packprg.py
+	rm -f $(BUILD)/*.raw
 	ln6502 $(LDFLAGS) --cstack-size $(CSTACK) --heap-size $(HEAP) \
 	    --list-file $(BUILD)/sevenships.lst -o $(ELF) $(LINKFILE) $(OBJS)
+	python3 tools/packprg.py $(BUILD)/sevenships.lst $(BUILD)/sevenships \
+	    $(PRG) $(BUILD)/sevenships
 
 # The disk image, which is how the program gets onto a real MEGA65 and where it
 # finds its map and its tile sheet (res/tiles.fci, which tiles/Makefile
@@ -226,12 +247,12 @@ $(ELF) $(PRG) &: $(OBJS) $(LINKFILE)
 # opens them by name whatever their type.
 d81: $(D81)
 
-$(D81): $(PRG) $(MAP) $(RES)/tiles.fci $(TEXT_PAK) tools/diskutil.rb
+$(D81): $(PRG) $(REGION_FILES) $(MAP) $(RES)/tiles.fci $(TEXT_PAK) tools/diskutil.rb
 	rm -f $@
 	cp $(PRG) $(BUILD)/autoboot.c65
 	ruby tools/diskutil.rb $@ -name sevenships -id ss \
 	    -writeprg -copyf1 $(BUILD)/autoboot.c65 \
-	    -writeseq -copyf1 $(MAP) $(RES)/tiles.fci $(TEXT_PAK)
+	    -writeseq -copyf1 $(MAP) $(RES)/tiles.fci $(TEXT_PAK) $(REGION_FILES)
 
 # The disk image as it is handed out. Plain `make release` after a test build
 # is safe, since the config stamp sees the flags change and rebuilds; what is

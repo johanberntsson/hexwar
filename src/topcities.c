@@ -3,9 +3,15 @@
 // Plain text over every cell of the screen, as the help screen is, so
 // game.c puts the map screen back on the way out.
 
+// In region 0 (src/region.h): called through the stubs in src/dispatch.s,
+// under these names here.
+#define top_cities_screen top_cities_screen_r0
+
 #include "topcities.h"
 #include "input.h"
 #include "screen.h"
+
+#pragma clang section text="r0text" rodata="r0rodata"
 
 #define TITLE "Top Five Cities"
 #define BUTTON_EXIT (ATTR_REVERSE | COLOR_RED)

@@ -49,6 +49,10 @@ most important routines included in each source file.
 |  |  |
 | bank.s | banks BASIC out of \$a000-\$bfff before `main`, and back in after |
 |  |  |
+| region.c | loads the code regions into bank 1 at start-up |
+| dispatch.s | the code window: maps a region in, and the stubs that call into one |
+| &nbsp;&nbsp;&nbsp;_set\_region_ | every change of the window, kept in step with the KERNAL's copy |
+|  |  |
 | title.c | the title screen and the new-game screens |
 | &nbsp;&nbsp;&nbsp;_title\_run_ | the title menu, then the people and the difficulty |
 | &nbsp;&nbsp;&nbsp;_menu\_run_ | one menu, picked by pointer or keyboard, once round per frame |
@@ -131,7 +135,7 @@ drive.
 ## Startup
 
 The build produces a disk image, `sevenships.d81` (`make release` copies it
-to `release/`), holding three files:
+to `release/`), holding five files:
 
 | **File** |  **Contents** |
 | -- |  ---- |
@@ -139,13 +143,15 @@ to `release/`), holding three files:
 | TILES.FCI | the tile sheet: a palette and 12 tiles of 4x4 full colour characters |
 | SEVENSHIPS.MAP | the map: a 16-byte header and one 4096-byte layer of terrain |
 | TEXT.PAK | the texts -- the title, help and new-game screens, the opening popup, and the lists of names -- with their markup |
+| SEVENSHIPS.R1 | code region 1, the computer players: a header and the code, run at \$6000 from bank 1 |
 
 The C65 ROM boots AUTOBOOT.C65 automatically. `main()` then:
 
 1. keeps the VIC registers as BASIC left them (`screen_save`), switches the
    VIC-IV to 80x25 16-bit text mode with full colour characters
-   (`screen_init`), reads TEXT.PAK into Attic RAM (`text_load`), and puts
-   up the title screen, which is one of those texts (`title_show`);
+   (`screen_init`), reads TEXT.PAK into Attic RAM (`text_load`) and
+   SEVENSHIPS.R1 into bank 1 (`region_load`), and puts up the title
+   screen, which is one of those texts (`title_show`);
 2. reads TILES.FCI, a character at a time. Each character is widened to twice
    its width, because a pixel of this screen mode is half as wide as it is
    tall, and copied into the expanded sheet in bank 5 (`sheet_load`);
@@ -184,7 +190,9 @@ The program, its data, the BSS and the C stack all have to fit in
 scarce resource: there is plenty of RAM elsewhere, but code cannot run from
 it without banking -- plus the 8 KB at \$a000-\$bfff, which is RAM under the
 BASIC ROM and is the program's once `src/bank.s` has banked BASIC out, before
-`main()` runs. The figures below are from the linker's listing,
+`main()` runs. **\$6000-\$7fff of the 32 KB is a code window** (see
+*Code banking* below): resident code lives on either side of it, and the
+window shows one region of code at a time. The figures below are from the linker's listing,
 `build/sevenships.lst`, for the build of 19 October 2026.
 
 | **Address range** | **KB** |  **Usage** |
@@ -193,20 +201,21 @@ BASIC ROM and is the program's once `src/bank.s` has banked BASIC out, before
 | \$1600-\$1637 | 0.05 | `zpsave`: BASIC's zero page \$02-\$39, saved at start-up and put back on exit |
 | \$1638-\$18e0 | 0.7 | the `lowfree` section (`LOW_FREE`): the popup's text and the scratch buffers of the view and the minimap |
 | \$18e1-\$1eff | 1.5 | free |
-| \$2001-\$2712 | 1.8 | BASIC stub, startup code, constant data and the short strings |
-| \$2713-\$9292 | 26.9 | code, and the DMA lists as initialised data (111 bytes) |
-| \$9293-\$9392 | 0.25 | C stack |
-| \$9393-\$94d5 | 0.3 | BSS: small state |
-| \$94d6-\$9fff | 2.8 | free |
-| \$a000-\$b640 | 5.6 | `highbss` (`HIGH_BSS`): the map's terrain layer `map_tile`, the unit and city arrays, the sprite blocks, the AI's headings, the texts' staging and line buffers, the sheet loader's buffers and the saved VIC registers |
-| \$b641-\$bfff | 2.4 | free |
+| \$2001-\$5285 | 12.6 | BASIC stub, startup and resident code |
+| \$5286-\$52f2 | 0.1 | initialised data: the DMA lists |
+| \$52f3-\$53f2 | 0.25 | C stack |
+| \$53f3-\$5535 | 0.3 | BSS: small state |
+| \$5536-\$5fff | 2.7 | free |
+| \$6000-\$7fff | 8 | the code window; region 0 as loaded (6.5 KB used) |
+| \$8000-\$9ff9 | 8 | resident constant data and code |
+| \$a000-\$b6c0 | 5.7 | `highbss` (`HIGH_BSS`): the map's terrain layer `map_tile`, the unit and city arrays, the sprite blocks, the AI's headings, the staging buffers of the texts and the regions, the texts' line buffers, the sheet loader's buffers and the saved VIC registers |
+| \$b6c1-\$bfff | 2.3 | free |
 
 The long texts and the names are not in this table at all: they are in
 TEXT.PAK, read into Attic RAM at start-up, which is most of why the
 constant data went from 3.7 KB on 18 October to 1.8 KB.
 
-The PRG is everything up to \$9292; the C stack and the BSS are not stored in
-the file, only reserved after it. Nothing initialised may go above \$9fff,
+The PRG is everything from \$2001 to \$9ff9, gaps and all. Nothing initialised may go above \$9fff,
 because the PRG is loaded while BASIC is still mapped there, so only BSS
 marked `HIGH_BSS` is put in the window. BASIC is banked back in as the last
 thing `main()` does before it returns.
@@ -230,6 +239,30 @@ When the free space runs low, the order of things to try is written down in
 tables into Attic RAM, as the long texts already are, or with `__far` --
 then more BSS into the window at \$a000-\$bfff, and only then split the
 code into MAP-banked regions.
+
+## Code banking
+
+There is more code than resident space, so part of it runs through a
+window. The 45GS02's MAP instruction can make the CPU's \$6000-\$7fff
+show any 8 KB of the first megabyte, and the program keeps several
+*regions* of code there, all linked to run at \$6000: region 0 is the
+PRG's own \$6000-\$7fff, and regions 1 and up are loaded from their own
+files (SEVENSHIPS.R1, ...) into bank 1 from \$13000 at start-up. That is
+BASIC 65's variable area, unused while the game runs. Region 0 holds the
+screens that are not the map -- title, setup, city, Top Five, help --
+with the menus, save and load and the tile sheet's loader; region 1 holds
+the computer players.
+
+Resident code calls a function in a region through a stub of the same
+name (`src/dispatch.s`), which maps the region in, makes the call, and
+maps the caller's region back, so the callers are unchanged; inside its
+own file the function is renamed. The window has to be in the lower
+half of the address space, since the KERNAL is mapped into the upper
+half, and every change of it is also written to \$011c-\$011f, where the
+C65 KERNAL keeps its copy of the map in force: the KERNAL maps back to
+that after its own MAP changes, in interrupts and disk calls, and
+without it the window was switched off within a frame. The redraw path
+and the main loop stay resident, where a call costs nothing.
 
 ## Chip RAM and the rest of the machine
 

@@ -5,10 +5,16 @@
 // screen. Nothing in the tile store is touched. **What it says is
 // res/text/help.txt**, read from attic RAM by text_show().
 
+// In region 0 (src/region.h): called through the stubs in src/dispatch.s,
+// under these names here.
+#define help_screen help_screen_r0
+
 #include "help.h"
 #include "input.h"
 #include "screen.h"
 #include "text.h"
+
+#pragma clang section text="r0text" rodata="r0rodata"
 
 void help_screen(void)
 {

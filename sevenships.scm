@@ -21,10 +21,19 @@
 ;;; The old cc65 build had this as the #else branch of a #if on the view size
 ;;; (setup_view in old-cc65/src/graphics.c). It is now the only branch.
 ;;;
-;;; **$2001-$9FFF is 32 KB for everything**: code, data, BSS, C stack and heap.
-;;; The tile sheet and the map both come off the disk, and map_tile is in
-;;; highram, not here. build/sevenships.lst is the only place the real figure is written
-;;; down and is worth reading after anything that might have grown it.
+;;; **$2001-$9FFF is 32 KB, and $6000-$7FFF of it is a code window**
+;;; (src/region.h). resLo and resHi are the resident program: code, data,
+;;; BSS, C stack and heap, everything that has to be visible whatever the
+;;; window shows -- which includes the redraw path. win0 is region 0, the
+;;; PRG's own $6000-$7FFF; win1 is region 1, linked at the same addresses
+;;; but loaded into bank 1 at $13000 from its own file. **Only sections
+;;; named rNtext and rNrodata go into a window**, through #pragma clang
+;;; section in the banked files; a window memory has no (type ...), so the
+;;; linker never puts anything else there. The link is raw, one file a
+;;; memory, and tools/packprg.py makes the PRG and the region files from
+;;; them. build/sevenships.lst is the only place the real figures are
+;;; written down and is worth reading after anything that might have grown
+;;; them.
 ;;;
 ;;; **$A000-$BFFF is the 8 KB under the BASIC ROM**, which src/bank.s banks
 ;;; out before main() and back in before it returns. HIGH_BSS (src/mega65.h)
@@ -50,9 +59,12 @@
 ;;; naming `zdata` in this memory instead -- which is what hexgame does --
 ;;; would move the *whole* BSS down here, and map.tile alone does not fit.
 (define memories
-  '((memory program
-            (address (#x2001 . #x9fff)) (type any)
+  '((memory resLo
+            (address (#x2001 . #x5fff)) (type any)
             (section (programStart #x2001) (startup #x200e)))
+    (memory win0 (address (#x6000 . #x7fff)) (section r0text r0rodata))
+    (memory resHi (address (#x8000 . #x9fff)) (type any))
+    (memory win1 (address (#x6000 . #x7fff)) (section r1text r1rodata))
     (memory zeroPage (address (#x2 . #x7f)) (type ram) (qualifier zpage)
             (section (registers #x2)))
     (memory highram

@@ -57,15 +57,20 @@ Needs `cc6502`/`as6502`/`ln6502` (Calypsi 5.18+), Python 3, Ruby (for
 faster from a real floppy) and `xemu-xmega65`. Pillow only if the tile art
 changes, since `res/tiles.fci` is checked in.
 
-**The program reads its tile sheet and its map from drive 8**, so it needs
-the d81 mounted: `make run` does that, and a bare `-prg` boot stops at
-`cannot read TILES.FCI`.
+**The program reads its texts, its code region, its tile sheet and its
+map from drive 8** (`TEXT.PAK`, `SEVENSHIPS.R1`, `TILES.FCI`,
+`SEVENSHIPS.MAP`, in that order), so it needs the d81 mounted: `make run`
+does that, and a bare `-prg` boot stops at `cannot read TEXT.PAK`.
 
 There are no tests. Verification is running it — see **Verifying a change**.
 
-**`ln6502 -o` names the ELF, not the PRG.** The PRG is written beside it under
-the same stem. Linking straight to a `.prg` name silently produces an ELF file
-that the MEGA65 then tries to RUN as BASIC.
+**`ln6502 -o` names the ELF, not the PRG.** Linking straight to a `.prg`
+name silently produces an ELF file that the MEGA65 then tries to RUN as
+BASIC. **The link is raw, not prg** (19 Oct 2026, the code banking under
+**Growing past 32 KB**): two memories share `$6000-$7FFF`, which the prg
+format refuses, so ln6502 writes one raw file a memory beside the ELF and
+`tools/packprg.py` makes `build/sevenships.prg` and the region files
+(`build/sevenships.r1`, `SEVENSHIPS.R1` on the disk) out of them.
 
 **`build/sevenships.lst` is the memory map and the only place the program's real
 size is written down.** Worth reading after anything that might have grown it.
@@ -125,6 +130,20 @@ kernel killed it, made the desktop crawl, and left the binary from the
 *previous* script in place (18 Oct 2026). A headless run that ignores the
 end of its script is the symptom; `build/config.stamp` should be a few
 hundred bytes.
+
+**Comparing a build against the last one** is how the code banking and the
+memory clean-ups were checked, and it catches what a screenshot cannot:
+build `HEAD` in a scratch `git worktree` and the change in the tree, both
+with the same `FAKE_KEYS` script (the long one used on 19 Oct 2026 goes
+through the city screen, CHANGE, help, the menus, Save Game, Play 50 Turns,
+Top Five, Retire, Load Saved Game and 50 more turns), `-dumpmem` both,
+and compare `map_tile` and the unit and city arrays at the addresses each
+build's listing gives (`unit_kind = 0000a280` and so on, at their real
+lengths: 64 units, 32 cities). The game is deterministic, so they must be
+byte-identical; the screenshots can differ only where a unit blinks.
+**A quit is tested with a `DIM` at READY** (see **Quitting**), and BASIC
+on its own with `-importbas FILE` (a BASIC 65 program as text, typed in
+and RUN by xemu; `EDMA` fills memory from BASIC).
 
 ## The display
 
@@ -186,8 +205,10 @@ buffers at the default `$FF80000` and corrupts the display.
 
 | Address | Size | Contents |
 |---|---|---|
-| `$2001-$9FFF` | 32 KB | program, data, BSS, C stack. About 29.4 KB used, 2.8 KB free |
-| `$A000-$BFFF` | 8 KB | `highram`, under the BASIC ROM, banked out by `src/bank.s`: `map_tile`, the unit and city arrays, the sprite blocks, the AI's headings, the texts' staging and line buffers, the sheet loader's buffers, the saved VIC registers; about 2.4 KB free — `HIGH_BSS` in `src/mega65.h` moves a variable there, and **the startup does not clear it** |
+| `$2001-$5FFF`, `$8000-$9FFF` | 24 KB | the resident program: code, data, BSS, C stack. 2.7 KB free, all at `$5536-$5FFF` |
+| `$6000-$7FFF` | 8 KB | the code window (`src/region.h`); as loaded, region 0 — the title, setup, city, Top Five and help screens, the menus, save and load, the sheet loader. 1.5 KB free |
+| `$13000-$14FFF` | 8 KB | region 1, from `SEVENSHIPS.R1`: the computer players. 4.9 KB free; room for regions 2-6 up to `$1EFFF` |
+| `$A000-$BFFF` | 8 KB | `highram`, under the BASIC ROM, banked out by `src/bank.s`: `map_tile`, the unit and city arrays, the sprite blocks, the AI's headings, the staging buffers of the texts and the regions, the texts' line buffers, the sheet loader's buffers, the saved VIC registers; about 2.3 KB free — `HIGH_BSS` in `src/mega65.h` moves a variable there, and **the startup does not clear it** |
 | `$1600-$1EFF` | 2304 | `zpsave` (56 bytes, BASIC's zero page during the run), then `lowfree`: the popup's 400-byte text and the scratch buffers of the view and the minimap, 1.6 KB free — `LOW_FREE` in `src/mega65.h` moves a variable there |
 | `$12000` | 4000 | screen RAM, 80x25 cells of 2 bytes |
 | `$40000-$56FFF` | 94208 | the view's tile store, 23 rows of 4096: 3840 for the window, then 256 holding four of the minimap's characters |
@@ -247,7 +268,11 @@ attic RAM instead and does not count. It has room for 16 tiles of sheet,
    put back by hand. hexgame's `design.md` (*Putting the write protection
    back*) is the account of what went wrong there.
 
-**The 32 KB is what to watch.** The tile sheet used to be linked in
+**The 32 KB is what to watch** — or since the code banking (19 Oct 2026),
+**the 24 KB of it that is resident**, `$2001-$5FFF` and `$8000-$9FFF`,
+with the window between: see **Growing past 32 KB**, step 3, for its
+figures. What follows is the history of the whole 32 KB before that.
+The tile sheet used to be linked in
 (6.5 KB, and growing a KB a tile) and now comes off the disk, and
 `map_tile`'s 4 KB has moved to `$A000`. At the last measurement (19 Oct
 2026, after the rename and the blinking unit) `build/sevenships.lst`
@@ -333,8 +358,8 @@ not. Take these in order and stop as soon as it fits:
    memories. **Do not use `bank45` as shipped** — `(#x40000 . #x5ffff)` sits
    straight on top of the tile store and the expanded sheet. Trim it to
    nothing: bank 5 is now the sheet, 8 KB kept for its next four tiles, and the
-   rest of the minimap at `$5F000`. Leave bank 1 alone too: screen RAM is at `$12000` and BASIC 65 owns
-   most of the rest. Attic RAM (`$8000000` up: the texts at the bottom,
+   rest of the minimap at `$5F000`. Leave bank 1 alone too: screen RAM is at `$12000`, and `$13000-$1EFFF`
+   is for code regions (step 3). Attic RAM (`$8000000` up: the texts at the bottom,
    since the expanded sheet moved to bank 5) is the real reservoir,
    reached by DMA or `__huge`.
 2. **Bank BASIC out and put BSS at `$A000-$BFFF`** — *done, see below.*
@@ -349,12 +374,12 @@ not. Take these in order and stop as soon as it fits:
    loaded from the PRG has to go above `$9FFF`. The KERNAL stays in, and BASIC
    goes back before returning to it. `map_tile` is the obvious first tenant.
    TITAN Fall's C64 build does the same on the C64 (`$0801-$BFFF`).
-3. **MAP-register regions plus a dispatch stub**, per part 3: 24 KB windows at
-   `$2000-$7FFF`, one `#pragma clang section text="r1Text" ...` per file, and a
-   resident trampoline in the `$1600-$1EFF` common area. This is the expensive
-   one — it forces `--no-cross-call --no-interprocedural-cross-jump`, pushes
-   shared data into a common section, and string literals do not survive a MAP
-   change.
+3. **MAP-register regions plus a dispatch stub**, per part 3 — *done, as
+   an 8 KB window at `$6000-$7FFF`; see below.* The article has 24 KB
+   windows at `$2000-$7FFF`, one `#pragma clang section text="r1Text" ...`
+   per file, and a resident trampoline in the `$1600-$1EFF` common area.
+   It forces `--no-cross-call --no-interprocedural-cross-jump`, and string
+   literals do not survive a MAP change.
 4. **Major modes reloaded from disk.** Unbounded, and not needed.
 
 **Where banked code can live: bank 1, `$13000-$1F5FF`, 49.5 KB (50688 bytes)** (surveyed
@@ -386,24 +411,57 @@ worked at READY. And since the resident program already fills
 layout does not fit as it stands: deciding where the window goes, and
 what moves out of its way, is the first job of the proof of concept.
 
-**Two rules for when step 3 arrives.** First, **the redraw path must stay
+**A code window works with the KERNAL kept, if every MAP change also
+updates the KERNAL's copy of the map at `$011C-$011F`** (found 19 Oct
+2026, xemu, ROM 920413). MAP cannot be read back, so the C65 KERNAL keeps
+the map in force there and maps back to it after its own MAP changes
+(`LDQ $011C : MAP` at `$F26E`; `$0110-$0113` is BASIC's map, `$0114` the
+DOS's). During the game `$011C` holds `00 E0 00 83`: the lower half
+identity, the upper half block 7 only, offset `$30000` — the KERNAL at
+`$3E000`. A window set with MAP alone was switched off again within a
+frame by the KERNAL's interrupt and by the first disk access; with
+`STA/STX/STY/STZ $011C-$011F` before the `MAP` it held through 250 frames
+of interrupts, `printf` and a file read (the throwaway test is
+`maptest.d81`). So **the window must be in the lower half**, since the
+upper half carries the KERNAL; the map routine should take Y and Z from
+`$011E/$011F` rather than hard-coding them, and **leave Z at 0**, which
+compiled code assumes. **Confirmed on a real MEGA65** (ROM 920413, the
+same as xemu's) the same day; another ROM version may keep the copy
+elsewhere.
+
+**Two rules for banked code.** First, **the redraw path must stay
 resident and undispatched** — `view_redraw` is 13.6 ms against a 19.97 ms frame
 and stays ahead of the beam by about 100 lines; a trampoline in that inner loop
 would spend the slack and bring the tearing back (see **Tearing**). View,
-sheet, screen and DMA code stay in the common/resident region. Only per-turn
+screen and DMA code stay resident, and so does the once-a-frame loop. Only per-turn
 code — map generation, AI, pathfinding, diplomacy, the Crisis phase — goes in a
 banked region, where a dispatch call costs nothing that matters. Second,
-**give every new subsystem its own `.c` file now**, because that is what makes
-the eventual split a one-line pragma per file instead of a rewrite.
+**give every new subsystem its own `.c` file**, because that is what makes
+banking it a pragma and a few stubs instead of a rewrite.
+
+**Step 3 is done** (19 Oct 2026), as an 8 KB window rather than the
+article's 24 KB, since the KERNAL's map takes the upper half and the
+resident program the rest of the lower: `src/region.h` is the scheme and
+its rules, `src/dispatch.s` the MAP and the stubs, `tools/packprg.py` the
+packing. `ai.c` runs from bank 1 as region 1; the screens, the menus,
+save and the sheet loader are region 0. Checked headlessly against the
+build before it, byte for byte: a scripted game through the city screen,
+help, the menus, save, 100 turns, retire and load left every unit and
+city array and the map identical, and `DIM` still works at READY after
+quitting. **Confirmed on a real MEGA65** the same day: title and setup,
+the city screen, the menus by mouse and MEGA+letter, HELP, Play 50 Turns,
+save, retire and load, and `DIM` after quitting. **Resident space is what to watch now**: 2.7 KB of it, against
+1.5 KB in region 0 and 4.9 KB in region 1 plus five empty regions, so new
+subsystems go into a region from the start, per-turn ones especially.
+`--no-cross-call --no-interprocedural-cross-jump` are on for the banked
+files only (the Makefile's `BANKED`).
 
 **Step 2 is done** for `map_tile` (18 Oct 2026; see **Memory map**), with
 about 2.7 KB of the window left for the next BSS that moves. **So is step 1
 for text** (19 Oct 2026): the long texts and the names are in attic RAM
-(see **Texts**), which took the region from 99.2% back to 92.2%. Before
-reaching for step 3, look for more of that kind — big read-only tables
-and strings that can be texts or attic data. Step 3 is the one to put off:
-revisit when the region is near full again with nothing of that kind left
-to move, and `highram` is full.
+(see **Texts**), which took the region from 99.2% back to 92.2%. Moves of
+that kind — big read-only tables and strings to texts or attic data —
+are still the cheaper way to resident space, where they apply.
 `~/commodore/mega65/hexgame/tools/mkprg.py` (exomizer, one file) is the other
 known trick if the *loaded* size rather than the addressable size is what gets
 tight.
@@ -1180,7 +1238,7 @@ lists them, **and the order there is the numbering**: `mktext.py` packs
 them into `build/text.pak` (`TEXT.PAK` on the disk) and writes
 `build/textid.h` with `TEXT_HELP` and the rest, rewriting it only when
 the numbering changes, so editing what a text says remakes the pack and
-the disk and compiles nothing. `text_load()`, **first of the three loads
+the disk and compiles nothing. `text_load()`, **first of the loads
 at boot because the title screen is a text**, reads the pack's body into attic RAM at `$8000000` through a 128-byte
 `HIGH_BSS` staging buffer (pieces under 256 for the `_Stub_read` bug; not
 `LOW_FREE`, which the KERNAL's disk buffers share), and refuses a pack

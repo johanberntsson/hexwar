@@ -1,8 +1,14 @@
+// In region 0 (src/region.h): called through the stubs in src/dispatch.s,
+// under these names here.
+#define sheet_load sheet_load_r0
+
 #include <fcntl.h>
 #include <calypsi/stubs.h>
 
 #include "sheet.h"
 #include "screen.h"
+
+#pragma clang section text="r0text" rodata="r0rodata"
 
 // FCI header, nine bytes.
 #define FCI_MAGIC0 'f'

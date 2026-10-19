@@ -1,8 +1,17 @@
+// In region 0 (src/region.h): called through the stubs in src/dispatch.s,
+// under these names here.
+#define menu_orders menu_orders_r0
+#define menu_draw menu_draw_r0
+#define menu_click menu_click_r0
+#define menu_key menu_key_r0
+
 #include "menu.h"
 #include "input.h"
 #include "minimap.h"
 #include "screen.h"
 #include "view.h"
+
+#pragma clang section text="r0text" rodata="r0rodata"
 
 #define BAR_COLOUR COLOR_LIGHTGREEN
 #define ITEM_COLOUR COLOR_WHITE

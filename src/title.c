@@ -9,11 +9,18 @@
 // It all runs on the plain text screen, before view_init() writes the map
 // window's character numbers, so nothing here has to keep out of the window.
 
+// In region 0 (src/region.h): called through the stubs in src/dispatch.s,
+// under these names here.
+#define title_show title_show_r0
+#define title_run title_run_r0
+
 #include "title.h"
 #include "civ.h"
 #include "input.h"
 #include "screen.h"
 #include "text.h"
+
+#pragma clang section text="r0text" rodata="r0rodata"
 
 #define TEXT_COLOUR COLOR_LIGHTGREEN
 

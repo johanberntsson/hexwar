@@ -1,3 +1,8 @@
+// In region 0 (src/region.h): called through the stubs in src/dispatch.s,
+// under these names here.
+#define save_write save_write_r0
+#define save_read save_read_r0
+
 #include <fcntl.h>
 #include <string.h>
 #include <calypsi/stubs.h>
@@ -10,6 +15,8 @@
 #include "game.h"
 #include "map.h"
 #include "unit.h"
+
+#pragma clang section text="r0text" rodata="r0rodata"
 
 // Everything a game is, in file order. The map goes with its explored and
 // occupied bits; the terrain in it is the loaded map's, which is the same

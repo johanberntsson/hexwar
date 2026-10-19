@@ -190,8 +190,9 @@ BASIC ROM and is the program's once `src/bank.s` has banked BASIC out, before
 | **Address range** | **KB** |  **Usage** |
 | -- |  - | ---- |
 | \$0002-\$0039 | 0.1 | Calypsi's pseudo registers, in zero page |
-| \$1600-\$18a8 | 0.7 | the `zpsave` section (`LOW_FREE`): the popup's text and the scratch buffers of the view and the minimap |
-| \$18a9-\$1eff | 1.6 | free |
+| \$1600-\$1637 | 0.05 | `zpsave`: BASIC's zero page \$02-\$39, saved at start-up and put back on exit |
+| \$1638-\$18e0 | 0.7 | the `lowfree` section (`LOW_FREE`): the popup's text and the scratch buffers of the view and the minimap |
+| \$18e1-\$1eff | 1.5 | free |
 | \$2001-\$2712 | 1.8 | BASIC stub, startup code, constant data and the short strings |
 | \$2713-\$9292 | 26.9 | code, and the DMA lists as initialised data (111 bytes) |
 | \$9293-\$9392 | 0.25 | C stack |

@@ -23,6 +23,14 @@ ROM_BASIC:  .equ 0x10
             .section code, text
             .public __low_level_init, bank_basic_in
 
+; **BASIC's zero page has to be saved and put back.** The C pseudo
+; registers are $02-$39, which BASIC 65 uses for its own pointers. The
+; SDK's preserve_zero_page.s has the startup copy them to zpsave first and
+; _Stub_exit copy them back after main() returns, but only if something
+; asks for it, and nothing did until 19 Oct 2026: BASIC came back to
+; READY on whatever the program had left there, and the next DIM hung.
+            .require __preserve_zp
+
 __low_level_init:
             lda     ROMMAP
             sta     rom_d030

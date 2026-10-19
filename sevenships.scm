@@ -36,10 +36,17 @@
 ;;; freeSpace, a name and a section and nothing else, it takes the named
 ;;; section and never becomes one.
 ;;;
-;;; **$1600-$1EFF is 2304 bytes of ordinary chip RAM the rules hand to a
-;;; section called `zpsave`, which nothing in this program uses.** It is
-;;; near-addressable, so putting a table there costs nothing per access.
-;;; Mark a variable with LOW_FREE (src/mega65.h) to move it. Note that
+;;; **$1600-$1EFF is 2304 bytes of ordinary chip RAM.** Its first 56 bytes
+;;; are `zpsave`, where the startup saves BASIC's zero page $02-$39 before
+;;; the C pseudo registers take it over, and from where _Stub_exit puts it
+;;; back after main() returns (the SDK's preserve_zero_page.s, pulled in by
+;;; src/bank.s). **zpsave must start at $1600**, since the copy loops
+;;; address it by .sectionStart. The rest is `lowfree`: near-addressable,
+;;; so a table there costs nothing per access. Mark a variable with
+;;; LOW_FREE (src/mega65.h) to move it. Until 19 Oct 2026 LOW_FREE *was*
+;;; zpsave and the save was not linked at all, so BASIC got the pseudo
+;;; registers' last values back for its zero page: READY came up, but DIM
+;;; then hung, on a real MEGA65 and in xemu. Note that
 ;;; naming `zdata` in this memory instead -- which is what hexgame does --
 ;;; would move the *whole* BSS down here, and map.tile alone does not fit.
 (define memories
@@ -52,5 +59,6 @@
             (address (#xa000 . #xbfff))
             (section highbss))
     (memory stackPage (address (#x100 . #x1ff)) (type ram))
-    (memory freeSpace (address (#x1600 . #x1eff)) (section zpsave))
+    (memory freeSpace (address (#x1600 . #x1eff))
+            (section (zpsave #x1600) lowfree))
     ))

@@ -18,14 +18,14 @@ typedef uint32_t dword;
 #define POKE(A, V) (*(volatile uint8_t *)(A) = (V))
 #define PEEK(A) (*(volatile uint8_t *)(A))
 
-// Put a variable in the 2304 bytes of chip RAM at $1600-$1EFF that the linker
-// rules hand to a section called `zpsave`, which nothing here uses. It is
+// Put a variable in the chip RAM at $1600-$1EFF, after the 56 bytes of
+// `zpsave` where BASIC's zero page is kept during the run (sevenships.scm). It is
 // ordinary near-addressable RAM, so this costs nothing per access -- it is
 // simply room that is not part of the 32 KB at $2001. See sevenships.scm.
 //
 // It sits below $2001 where the C65 ROM keeps its own buffers, so nothing that
 // has to survive a KERNAL call belongs in it.
-#define LOW_FREE __attribute__((section("zpsave")))
+#define LOW_FREE __attribute__((section("lowfree")))
 
 // **Put a variable in the 8 KB of RAM under the BASIC ROM, $A000-$BFFF**,
 // which src/bank.s banks in before main() and sevenships.scm hands to a section

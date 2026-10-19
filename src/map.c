@@ -6,7 +6,9 @@
 #include "minimap.h"
 
 HIGH_BSS byte map_tile[MAP_ROWS][MAP_COLUMNS];
+#ifdef DEBUG_MENU
 byte map_show;
+#endif
 
 // The file's header; tools/mapgen.py documents the whole layout.
 #define MAP_HEADER_SIZE 16
@@ -51,7 +53,9 @@ byte map_direction(byte ax, byte ay, byte bx, byte by)
 void map_reset(void)
 {
     byte ax, ay;
+#ifdef DEBUG_MENU
     map_show = 0;
+#endif
     for (ay = 0; ay < MAP_ROWS; ++ay)
         for (ax = 0; ax < MAP_COLUMNS; ++ax)
             map_tile[ay][ax] &= MAP_TERRAIN_MASK;

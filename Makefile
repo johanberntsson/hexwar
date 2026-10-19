@@ -43,6 +43,16 @@ endif
 ifneq ($(NO_TITLE),)
 CFLAGS  += -DNO_TITLE
 endif
+# The Debug menu -- Show Map and Play 50 Turns -- and everything behind it.
+# On for ordinary builds, off for `make release`, which saves the bytes;
+# `make DEBUG=0` builds without it otherwise.
+ifneq ($(filter release,$(MAKECMDGOALS)),)
+DEBUG ?= 0
+endif
+DEBUG ?= 1
+ifeq ($(DEBUG),1)
+CFLAGS  += -DDEBUG_MENU
+endif
 ASFLAGS  = $(TARGET)
 LDFLAGS  = $(TARGET) --output-format=prg
 LINKFILE = sevenships.scm
@@ -155,15 +165,17 @@ $(BUILD)/%.o: src/%.s Makefile | $(BUILD)
 # The list file is the memory map, and the only place the program's real size
 # is written down -- worth reading after any change that might have pushed it
 # towards $9FFF.
-$(ELF): $(OBJS) $(LINKFILE)
-	ln6502 $(LDFLAGS) --cstack-size $(CSTACK) --heap-size $(HEAP) \
-	    --list-file $(BUILD)/sevenships.lst -o $@ $(LINKFILE) $(OBJS)
-
+#
 # **ln6502 -o names the ELF, not the PRG.** The PRG is written beside it under
-# the same stem, so this rule exists only to make the dependency explicit;
-# linking straight to a .prg name silently produces an ELF file that the
-# MEGA65 then tries to RUN as BASIC.
-$(PRG): $(ELF)
+# the same stem; linking straight to a .prg name silently produces an ELF file
+# that the MEGA65 then tries to RUN as BASIC. Hence the grouped target (&:,
+# GNU make 4.3): one link makes both. It used to be a separate `$(PRG):
+# $(ELF)` with no recipe, and make never looks at the time of a target it
+# has no recipe for, so a relinked PRG left the disk image stale: `make`
+# then `make release` shipped the Debug menu (19 Oct 2026).
+$(ELF) $(PRG) &: $(OBJS) $(LINKFILE)
+	ln6502 $(LDFLAGS) --cstack-size $(CSTACK) --heap-size $(HEAP) \
+	    --list-file $(BUILD)/sevenships.lst -o $(ELF) $(LINKFILE) $(OBJS)
 
 # The disk image, which is how the program gets onto a real MEGA65 and where it
 # finds its map and its tile sheet (res/tiles.fci, which tiles/Makefile
@@ -198,6 +210,9 @@ RELEASE  = release
 release: $(D81)
 ifneq ($(FAKE_KEYS)$(NO_TITLE),)
 	$(error a release must not be built with FAKE_KEYS or NO_TITLE)
+endif
+ifeq ($(DEBUG),1)
+	$(error a release must not be built with DEBUG=1)
 endif
 	mkdir -p $(RELEASE)
 	cp $(D81) $(RELEASE)/

@@ -316,6 +316,23 @@ static void end_turn(void)
     select_unit(UNIT_NONE);
 }
 
+#ifdef DEBUG_MENU
+// Debug: the computer plays the human's side for `n` turns, through the
+// same ai_turn() as everybody else, or until Esc or the game is over. The
+// panel's turn and the minimap keep up as it goes; the view is redrawn
+// once, at the end, by the caller.
+#define AUTOPLAY_TURNS 50
+
+static void autoplay(byte n)
+{
+    while (n-- && !game_over) {
+        ai_turn(PLAYER_HUMAN);
+        end_turn();
+        if (input_poll() == KEY_ESC) break;
+    }
+}
+#endif
+
 // --------------------------------------------------------------- orders
 
 // The active unit u attacks (nx, ny) -- after a declaration of war, if it
@@ -501,6 +518,7 @@ static void menu_command(byte command)
             quit = 1;
         }
         break;
+#ifdef DEBUG_MENU
     case MENU_SHOW_MAP:
         // The whole minimap changes, so it is drawn again; the view is
         // redrawn below anyway.
@@ -509,6 +527,10 @@ static void menu_command(byte command)
         message(map_show ? "Map shown" : "Map hidden", "");
         hover_dirty = 1;
         break;
+    case MENU_PLAY_50:
+        autoplay(AUTOPLAY_TURNS);
+        break;
+#endif
     case MENU_FOUND_CITY:
         unit_key('b');
         break;

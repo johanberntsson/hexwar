@@ -1,5 +1,6 @@
 // The menu bar along the top row of the map screen -- Game, Orders, Debug,
 // World, Help, after civ1-reference/civ1-pic01.png -- and its dropdowns.
+// Debug is there only in a DEBUG_MENU build, which `make release` is not.
 #ifndef SEVENSHIPS_MENU_H
 #define SEVENSHIPS_MENU_H
 
@@ -13,6 +14,7 @@
 #define MENU_FORTIFY 4
 #define MENU_TOP_CITIES 5
 #define MENU_KEYS 6
+#define MENU_PLAY_50 7
 
 // What the Orders menu offers, for the unit that has the orders: one of
 // MENU_FOUND_CITY or MENU_FORTIFY, or MENU_NONE for nothing, when Orders

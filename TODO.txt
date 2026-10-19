@@ -2,8 +2,6 @@
 
 Add a list of (known) AIs on the game screen with some basic info
 
-Probably need some scripting or cheat way of testing instead of just playing for hours
-
 Milestone 4, basic warfare
 - Add barbarian as a special AI. Make barbarian units randomly appear where AI/player isn't
 - Keep track of if at war or peace for AI (but currently always at peace)
@@ -17,6 +15,9 @@ Milestone 4, basic warfare
 Milestone 5, adding resources and trade
 
 --- DONE ---
+
+Probably need some scripting or cheat way of testing instead of just playing for hours
+- added Debug/Play 50 turns
 
 Need keyboard control of the menus
 

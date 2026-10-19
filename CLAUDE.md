@@ -186,14 +186,15 @@ buffers at the default `$FF80000` and corrupts the display.
 
 | Address | Size | Contents |
 |---|---|---|
-| `$2001-$9FFF` | 32 KB | program, data, BSS, C stack. About 30.6 KB used, 1.4 KB free |
+| `$2001-$9FFF` | 32 KB | program, data, BSS, C stack. About 30.7 KB used, 1.5 KB free |
 | `$A000-$BFFF` | 8 KB | `highram`, under the BASIC ROM, banked out by `src/bank.s`: `map_tile`, the unit and city arrays, the sprite blocks, the AI's headings, the texts' staging and line buffers; about 2.7 KB free — `HIGH_BSS` in `src/mega65.h` moves a variable there, and **the startup does not clear it** |
 | `$1600-$1EFF` | 2304 | `zpsave`: the popup's 400-byte text, the rest free — `LOW_FREE` in `src/mega65.h` moves a variable there |
 | `$12000` | 4000 | screen RAM, 80x25 cells of 2 bytes |
-| `$40000-$56EFF` | 94208 | the view's tile store, 23 rows of 4096 |
+| `$40000-$56FFF` | 94208 | the view's tile store, 23 rows of 4096: 3840 for the window, then 256 holding four of the minimap's characters |
 | `$57000-$5CFFF` | 24576 | the x-expanded tile sheet, 96x4 characters |
-| `$5D000-$5DFFF` | 4096 | free: room for two more tiles of sheet |
-| `$5E000-$5FFFF` | 8192 | the minimap's 16x8 full-colour characters |
+| `$5D000-$5EFFF` | 8192 | free: room for four more tiles of sheet |
+| `$5F000-$5F8FF` | 2304 | the last 36 of the minimap's 128 full-colour characters |
+| `$5F900-$5FFFF` | 1792 | free |
 | `$8000000` | ~1 KB | attic RAM: the texts, `TEXT.PAK`'s body (`src/text.h`); the rest of the 8 MB free |
 | `$FF81000` | 4000 | colour RAM |
 
@@ -204,26 +205,28 @@ destination would have to be taken apart from a 32-bit address. At 4096 bytes
 sixteen rows fit exactly in a bank, so row `r` is at bank `4 + (r >> 4)`,
 offset `(r & 15) << 12` — both byte and word operations — and a 3840-byte row
 can never cross into the next bank. `VIEW_ROW_BANK` / `VIEW_ROW_ADDR` in
-`src/view.h`. The padding costs 5888 bytes that nothing else wanted, and buys
-back two-thirds of the drawing time; see **Tearing**.
+`src/view.h`. The padding buys back two-thirds of the drawing time (see
+**Tearing**), and its 5888 bytes are not wasted: they hold 92 of the
+minimap's characters, so **nothing may write a row past byte 3840** —
+`view_clear()` clears only the window's part of each row.
 
 `$20000-$3FFFF` is left as the C65 ROM.
 
 ### When bank 5 fills up
 
-**Bank 5 is full** (18 Oct 2026): sheet, 4 KB for two more tiles, minimap.
-This is chip RAM the *VIC* has to see — tiles, the minimap, anything else
-drawn as full-colour characters. Data the CPU alone reads goes to attic
-RAM instead and does not count. Decided, not yet done; take these in order
-when a 15th tile or another full-colour surface needs room:
+Bank 5 is chip RAM the *VIC* has to see — tiles, the minimap, anything
+else drawn as full-colour characters. Data the CPU alone reads goes to
+attic RAM instead and does not count. It has room for 16 tiles of sheet,
+12 used, plus 1792 bytes above the minimap. Take these in order when a
+17th tile or another full-colour surface needs room:
 
-1. **The tile store's row padding.** Each of the 23 rows has 256 unused
-   bytes after its 3840 (`VIEW_ROW_ADDR(r) + 3840`), 92 character slots
-   of 64 bytes in all. A full-colour character's definition can be
-   anywhere, so the minimap can take 92 of its 128 characters from there
-   and keep only 36 (2304 bytes) in bank 5 — about five more tiles of
-   room, for nothing but a less regular `pixel()` in `src/minimap.c` and
-   its screen words. The redraw never writes past 3840 in a row.
+1. **The tile store's row padding** — *done* (19 Oct 2026). Each of the
+   23 rows has 256 bytes after its 3840, 92 character slots in all, and a
+   full-colour character's definition can be anywhere, so the minimap's
+   first 92 characters are there and only 36 (2304 bytes) at `$5F000`
+   (`char_number()` in `src/minimap.c`). That took the sheet's room from
+   14 tiles to 16. Checked headlessly: pixel-identical to the old layout,
+   including after a retire and with Show Map on.
 2. **The C64 ROM, which C65 mode never runs.** A dump of the running game
    shows C64 BASIC at `$2A000` (`CBMBASIC` at `$2A004`) and the GO64
    KERNAL at `$2E000`, 16 KB together. Using them keeps the C65 KERNAL,
@@ -319,8 +322,8 @@ not. Take these in order and stop as soon as it fits:
    in `linker-rules/`, and it already declares `bank1` and `bank45` far
    memories. **Do not use `bank45` as shipped** — `(#x40000 . #x5ffff)` sits
    straight on top of the tile store and the expanded sheet. Trim it to
-   nothing: bank 5 is now the sheet, 4 KB kept for its next two tiles, and the
-   minimap at `$5E000`. Leave bank 1 alone too: screen RAM is at `$12000` and BASIC 65 owns
+   nothing: bank 5 is now the sheet, 8 KB kept for its next four tiles, and the
+   rest of the minimap at `$5F000`. Leave bank 1 alone too: screen RAM is at `$12000` and BASIC 65 owns
    most of the rest. Attic RAM (`$8000000` up: the texts at the bottom,
    since the expanded sheet moved to bank 5) is the real reservoir,
    reached by DMA or `__huge`.
@@ -832,8 +835,8 @@ the plane (checked by simulation), so any mixture covers the window. The
 hover readout says "Unexplored" there and hides city and terrain.
 
 **The minimap** (`src/minimap.c`) is the whole world in a frame at the top
-of the panel: 16x8 full-colour characters with definitions of their own at
-`$5E000`, a 128x64-pixel framebuffer in which hexagon `(hx, hy)` is pixels
+of the panel: 16x8 full-colour characters with definitions of their own — the first
+92 in the tile store's row padding, the other 36 at `$5F000` — a 128x64-pixel framebuffer in which hexagon `(hx, hy)` is pixels
 `hx` and `hx + 1` of line `hy` — two pixels by one line, square on the
 glass, and the odd rows offset by a pixel as the tiles are. Pixels are
 system palette entries 0-15 (black for unexplored, white a city, red a
@@ -1207,7 +1210,7 @@ A new tile needs all of these, and nothing checks that they agree:
    are still tile numbers, so a new terrain has to come before the
    non-terrain tiles or the map layer grows a lookup table (see `map_tile`).
 5. room: each tile is 2 KB expanded, and the sheet must stop below the
-   minimap at `$5E000` (an `#error` in `src/minimap.c`): from `$57000`,
-   **14 tiles, of which 12 are used**. The tile store's own `#error` in
+   rest of the minimap at `$5F000` (an `#error` in `src/minimap.c`): from
+   `$57000`, **16 tiles, of which 12 are used**. The tile store's own `#error` in
    `src/view.c` keeps the store and the sheet apart. Past 14 something has
    to move: see **When bank 5 fills up**.

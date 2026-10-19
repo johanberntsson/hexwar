@@ -15,6 +15,9 @@
 #if MINIMAP_STORE + MINIMAP_STORE_SIZE > 0x60000UL
 #error "the minimap runs past $60000"
 #endif
+#if MINIMAP_PAD_CHARS >= MINIMAP_COLUMNS * MINIMAP_ROWS
+#error "the minimap fits in the padding, so MINIMAP_STORE is not needed"
+#endif
 
 // Pixel values are palette indices, and 0-15 are the system colours that
 // src/sheet.c leaves alone, so these are the C64's.
@@ -73,12 +76,33 @@ static byte colour(byte ax, byte ay)
     return terrain_colour[t & MAP_TERRAIN_MASK];
 }
 
-// Offset of pixel (px, py) in the store: the characters are row-major, 16 a
-// row, and each is 8 lines of 8 bytes. In words throughout -- see the
-// narrowing-cast note in CLAUDE.md.
-static word pixel(word px, word py)
+// The character number of minimap character i (row-major, 16 a row): in the
+// tile store's row padding for the first MINIMAP_PAD_CHARS, then at
+// MINIMAP_STORE -- see src/minimap.h.
+static word char_number(byte i)
 {
-    return ((py >> 3) << 10) | ((px >> 3) << 6) | ((py & 7) << 3) | (px & 7);
+    if (i < MINIMAP_PAD_CHARS)
+        return (word)(TILE_STORE / 64)
+               + (word)(i / MINIMAP_PAD_SLOTS) * (VIEW_ROW_STRIDE / 64)
+               + VIEW_COLUMNS + i % MINIMAP_PAD_SLOTS;
+    return (word)(MINIMAP_STORE / 64) + (i - MINIMAP_PAD_CHARS);
+}
+
+// Where character i's 64 bytes are. The call is kept out of the 32-bit
+// expression, which would otherwise want _FillZPQ (CLAUDE.md).
+static dword char_address(byte i)
+{
+    word n = char_number(i);
+    return (dword)n << 6;
+}
+
+// Address of pixel (px, py): each character is 8 lines of 8 bytes. In
+// words -- see the narrowing-cast note in CLAUDE.md.
+static dword pixel(word px, word py)
+{
+    byte i = (byte)(((py >> 3) << 4) | (px >> 3));
+    dword at = char_address(i);
+    return at + (((py & 7) << 3) | (px & 7));
 }
 
 void minimap_plot(byte ax, byte ay)
@@ -87,14 +111,14 @@ void minimap_plot(byte ax, byte ay)
     word py = 2 * (word)ay + (ax & 1);
     word px = ax;
 
-    lpoke(MINIMAP_STORE + pixel(px, py), c);
+    lpoke(pixel(px, py), c);
     px = (px + 1) & (MAP_COLUMNS - 1);
-    lpoke(MINIMAP_STORE + pixel(px, py), c);
+    lpoke(pixel(px, py), c);
 }
 
 void minimap_show(void)
 {
-    byte cx, cy;
+    byte cx, cy, i;
     word charnum;
     dword at;
 
@@ -105,9 +129,10 @@ void minimap_show(void)
     // The screen words, as view_restore() writes the window's: a character
     // number of its own for every cell, and no colour or attributes, which
     // apply to full-colour characters too.
+    i = 0;
     for (cy = 0; cy < MINIMAP_ROWS; ++cy) {
-        charnum = (word)(MINIMAP_STORE / 64) + (word)cy * MINIMAP_COLUMNS;
-        for (cx = 0; cx < MINIMAP_COLUMNS; ++cx, ++charnum) {
+        for (cx = 0; cx < MINIMAP_COLUMNS; ++cx, ++i) {
+            charnum = char_number(i);
             cell[2 * cx] = (byte)charnum;
             cell[2 * cx + 1] = (byte)(charnum >> 8);
         }
@@ -119,16 +144,18 @@ void minimap_show(void)
 
 void minimap_init(void)
 {
-    byte cx, cy, x, y;
+    byte cx, cy, x, y, i;
     word px, py;
     byte *p;
+    dword at;
 
     minimap_show();
+    i = 0;
     for (cy = 0; cy < MINIMAP_ROWS; ++cy) {
         // Each character's 64 pixels, built here and sent in one job.
         // A pixel whose column parity differs from its line's is the right
         // half of the hexagon one column to the left.
-        for (cx = 0; cx < MINIMAP_COLUMNS; ++cx) {
+        for (cx = 0; cx < MINIMAP_COLUMNS; ++cx, ++i) {
             p = cell;
             for (y = 0; y < 8; ++y) {
                 py = 8 * (word)cy + y;
@@ -138,8 +165,8 @@ void minimap_init(void)
                     *p++ = colour((byte)px, (byte)(py >> 1));
                 }
             }
-            lcopy((dword)(word)cell,
-                  MINIMAP_STORE + 64 * ((word)cy * MINIMAP_COLUMNS + cx), 64);
+            at = char_address(i);
+            lcopy((dword)(word)cell, at, 64);
         }
     }
 }

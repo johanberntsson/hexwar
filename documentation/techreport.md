@@ -236,10 +236,11 @@ code into MAP-banked regions.
 | -- |  - | ---- |
 | \$12000-\$12f9f | 4 | Screen RAM, 80x25 cells of two bytes |
 | \$20000-\$3ffff | 128 | The C65 ROM, left in place |
-| \$40000-\$56fff | 92 | The tile store: the map window's character definitions |
+| \$40000-\$56fff | 92 | The tile store: the map window's character definitions, and 92 of the minimap's in the row padding |
 | \$57000-\$5cfff | 24 | The expanded tile sheet |
-| \$5d000-\$5dfff | 4 | free, for two more tiles |
-| \$5e000-\$5ffff | 8 | The minimap's character definitions |
+| \$5d000-\$5efff | 8 | free, for four more tiles |
+| \$5f000-\$5f8ff | 2.25 | The other 36 of the minimap's character definitions |
+| \$5f900-\$5ffff | 1.75 | free |
 | \$08000000- | 8192 | Attic RAM: the texts from TEXT.PAK at the bottom, the rest free |
 | \$0ff81000-\$0ff81f9f | 4 | Colour RAM |
 
@@ -255,7 +256,7 @@ Each window row is 60 characters, 3840 bytes, but rows are spaced 4096 bytes
 apart. With that spacing 16 rows fill a 64 KB bank exactly, no row crosses a
 bank boundary, and the bank and offset of a row are a shift and a mask of the
 row number, so the drawing code never takes a 32-bit address apart. The
-padding costs 5888 bytes; together with a DMA routine that sets the unchanging
+padding is 5888 bytes, and the minimap keeps most of its characters there; together with a DMA routine that sets the unchanging
 fields once per redraw (`blit_begin`), it took the redraw from 32.2 ms to
 12.8 ms.
 
@@ -268,11 +269,12 @@ window would need the ROM banked out, with everything that brings with it;
 characters, 2 KB each. It is in bank 5 rather than in Attic RAM because the
 redraw copies about 160 KB out of it, and DMA reading Attic RAM is about seven
 times slower than reading chip RAM on the real machine. All of it lies in one
-bank, so a source address is 16 bits. There is room for 14 tiles before it
+bank, so a source address is 16 bits. There is room for 16 tiles before it
 reaches the minimap.
 
 **The minimap** is the same trick at a smaller scale: 16x8 full-colour
-characters at \$5e000, each with a definition of its own, making a 128x64
+characters, each with a definition of its own -- 92 of them in the tile
+store's row padding, which nothing else uses, and 36 at \$5f000 -- making a 128x64
 framebuffer with a two-pixel hexagon per position. It is drawn in full once
 and then a hexagon at a time as the map is explored or units move; the
 outline of the view on it is two sprites, so scrolling never touches it.

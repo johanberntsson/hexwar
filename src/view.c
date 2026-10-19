@@ -44,15 +44,11 @@ void view_init(void)
 
 void view_clear(void)
 {
-    // A DMA job's count is 16 bits, so the store is more than one job.
-    dword at = TILE_STORE;
-    dword left = TILE_STORE_SIZE;
-    while (left) {
-        word chunk = (left > 0x8000UL) ? 0x8000 : (word)left;
-        lfill(at, 0, chunk);
-        at += chunk;
-        left -= chunk;
-    }
+    // Only the window's 3840 bytes of each row: the padding after them holds
+    // most of the minimap (src/minimap.h).
+    byte r;
+    for (r = 0; r < VIEW_ROWS; ++r)
+        lfill(TILE_STORE + VIEW_ROW_STRIDE * r, 0, 64 * VIEW_COLUMNS);
 }
 
 void view_wait_for_redraw(void)

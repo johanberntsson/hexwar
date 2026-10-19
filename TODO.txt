@@ -9,8 +9,8 @@ Ideas for the AI: documentation/civ1-civ2-ai-analysis-sources.txt and OpenCivOne
 (https://codeberg.org/rhorvat/OpenCivOne).
 
 Before milestone 5: make room in bank 5
-- Move most of the minimap's characters into the tile store's row padding (CLAUDE.md,
-  "When bank 5 fills up", step 1). Frees room for about five more tiles; 12 of 14 are used now.
+- DONE: moved 92 of the minimap's 128 characters into the tile store's row padding
+  (CLAUDE.md, "When bank 5 fills up", step 1). Room for 16 tiles now, 12 used.
 - Decide how to get past the 1.4 KB left in the program region before milestone 6: more
   tables and strings to attic, or the MAP-register banking ("Growing past 32 KB", step 3)
 

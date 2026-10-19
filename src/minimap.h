@@ -18,6 +18,7 @@
 #define SEVENSHIPS_MINIMAP_H
 
 #include "mega65.h"
+#include "view.h"
 
 // Where it is on the screen, in characters, inside its frame.
 #define MINIMAP_LEFT 1
@@ -25,11 +26,19 @@
 #define MINIMAP_COLUMNS 16
 #define MINIMAP_ROWS 8
 
-// Its character definitions, 16 * 8 * 64 = 8192 bytes, $5E000-$5FFFF: the
-// top of bank 5, leaving the 4 KB under it for two more tiles of expanded
-// sheet. Chip RAM, because the VIC-IV cannot fetch characters from attic RAM.
-#define MINIMAP_STORE 0x5e000UL
-#define MINIMAP_STORE_SIZE (64UL * MINIMAP_COLUMNS * MINIMAP_ROWS)
+// Its character definitions, 128 of 64 bytes, in two places. Chip RAM,
+// because the VIC-IV cannot fetch characters from attic RAM.
+//
+// **The first 92 are in the tile store's row padding**: each of the 23 rows
+// has 256 bytes after the window's 3840 that the redraw never writes, four
+// characters' worth (src/view.h). Character i of the minimap (row-major,
+// 16 a row) is slot i % 4 of store row i / 4 while i < 92, and the rest are
+// at MINIMAP_STORE, $5F000-$5F8FF, so the expanded sheet can go up to $5F000.
+#define MINIMAP_PAD_SLOTS ((VIEW_ROW_STRIDE - 64 * VIEW_COLUMNS) / 64)     // 4
+#define MINIMAP_PAD_CHARS (MINIMAP_PAD_SLOTS * VIEW_ROWS)                  // 92
+#define MINIMAP_STORE 0x5f000UL
+#define MINIMAP_STORE_SIZE \
+    (64UL * (MINIMAP_COLUMNS * MINIMAP_ROWS - MINIMAP_PAD_CHARS))         // 2304
 
 // Write the minimap's character numbers and frame into the screen and draw
 // all of it. Once, when the game screen goes up.

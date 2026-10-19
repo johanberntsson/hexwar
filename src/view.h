@@ -34,7 +34,9 @@
 // At 4096 bytes a row, sixteen rows fit exactly in a bank: row r is at bank
 // `4 + (r >> 4)`, offset `(r & 15) << 12`, and since a row is 3840 bytes it
 // can never cross into the next bank. Both are byte and word operations. The
-// padding costs 5888 bytes of RAM that nothing else wanted.
+// padding is 5888 bytes, and nothing in the view writes it: it holds 92 of
+// the minimap's characters (src/minimap.h), so a blit or fill must never
+// reach past column VIEW_COLUMNS.
 // Plain integer constants, not casts: these appear in the #if checks below,
 // where the preprocessor has no idea what a `dword` is.
 #define VIEW_ROW_STRIDE 4096UL

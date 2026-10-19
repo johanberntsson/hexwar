@@ -17,9 +17,10 @@
 
 // One source character as read from the file, and widened to two. The 128
 // bytes come out contiguous, which is the whole reason for doing it this
-// way: they are one DMA job.
-static byte source_char[64];
-static byte expanded_pair[128];
+// way: they are one DMA job. HIGH_BSS rather than LOW_FREE, since they are
+// in use between the disk reads.
+HIGH_BSS static byte source_char[64];
+HIGH_BSS static byte expanded_pair[128];
 
 // **Expand the sheet once, as it is read, not once per character drawn.**
 //

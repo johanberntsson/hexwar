@@ -186,9 +186,9 @@ buffers at the default `$FF80000` and corrupts the display.
 
 | Address | Size | Contents |
 |---|---|---|
-| `$2001-$9FFF` | 32 KB | program, data, BSS, C stack. About 30.7 KB used, 1.5 KB free |
-| `$A000-$BFFF` | 8 KB | `highram`, under the BASIC ROM, banked out by `src/bank.s`: `map_tile`, the unit and city arrays, the sprite blocks, the AI's headings, the texts' staging and line buffers; about 2.7 KB free — `HIGH_BSS` in `src/mega65.h` moves a variable there, and **the startup does not clear it** |
-| `$1600-$1EFF` | 2304 | `zpsave`: the popup's 400-byte text, the rest free — `LOW_FREE` in `src/mega65.h` moves a variable there |
+| `$2001-$9FFF` | 32 KB | program, data, BSS, C stack. About 29.4 KB used, 2.8 KB free |
+| `$A000-$BFFF` | 8 KB | `highram`, under the BASIC ROM, banked out by `src/bank.s`: `map_tile`, the unit and city arrays, the sprite blocks, the AI's headings, the texts' staging and line buffers, the sheet loader's buffers, the saved VIC registers; about 2.4 KB free — `HIGH_BSS` in `src/mega65.h` moves a variable there, and **the startup does not clear it** |
+| `$1600-$1EFF` | 2304 | `zpsave`: the popup's 400-byte text and the scratch buffers of the view and the minimap, 1.6 KB free — `LOW_FREE` in `src/mega65.h` moves a variable there |
 | `$12000` | 4000 | screen RAM, 80x25 cells of 2 bytes |
 | `$40000-$56FFF` | 94208 | the view's tile store, 23 rows of 4096: 3840 for the window, then 256 holding four of the minimap's characters |
 | `$57000-$5CFFF` | 24576 | the x-expanded tile sheet, 96x4 characters |
@@ -261,7 +261,17 @@ followed it, and **92.2% (2549 bytes free) once `civ.c`'s names did**,
 93.6% after tile select and **95.6% (1458 bytes free) after the
 computer players' settlers**, with milestones 1-4, the minimap, the city
 and help screens, the menu bar, tile select, save and load and the quit-time register restore in it, and
-`highram` 66.8% full.
+`highram` 66.8% full. Then **91.3% (2858 bytes free)** after a clear-out
+before milestone 5 (19 Oct 2026), with `highram` 69.5%: the DMA lists
+became initialised data instead of a `dma_init()` and an `if
+(!initialised)` in every call (about 520 bytes), the C stack went from 512
+to 256 (measured at about 70; see `CSTACK` in the Makefile), and the
+scratch buffers moved out — the view's and the minimap's to `LOW_FREE`,
+the sheet loader's and the saved VIC registers to `HIGH_BSS`. **A buffer
+goes to `LOW_FREE` only if it is rebuilt on every use and never in use
+across a disk call.** `--space` instead of `--speed` was tried for
+everything but `view.c` and `mega65.c` and saved 30 bytes, so it was not
+kept.
 Milestone 4 alone was about 2 KB, paid for in part by taking `puts` out of
 `fatal()` (1.1 KB). The region was 89.9% before
 `map_tile` moved, and 90.7% before the unit and city arrays and the sprite
@@ -346,6 +356,27 @@ not. Take these in order and stop as soon as it fits:
    shared data into a common section, and string literals do not survive a MAP
    change.
 4. **Major modes reloaded from disk.** Unbounded, and not needed.
+
+**Where banked code can live: bank 1, `$13000-$1F5FF`, 50.5 KB** (surveyed
+19 Oct 2026, xemu, ROM 920413). MAP needs chip RAM — attic is far too slow
+to run code from — and banks 0, 2-3 and 4-5 are taken, so this is the
+place. It is BASIC 65's variable area, empty at READY (all zero in a dump
+of a fresh boot), and BASIC is banked out for the whole run anyway. A
+throwaway build filled it with `$A5` first thing in `main()` and played a
+session with every disk operation the game does — map, texts and sheet at
+boot, Save Game, 50 turns, Retire, Load Saved Game, 50 more — then quit to
+READY: **not one byte of it was touched**, by the KERNAL, CBDOS or the
+return to BASIC. Screen RAM is below it at `$12000-$12F9F`; above it,
+`$1F600-$1F6FF` holds something at READY and `$1F800-$1FFFF` is the C65's
+colour RAM window, so neither is to be used. MAP offsets are in 256-byte
+steps, so two 24 KB regions fit (`$13000-$18FFF`, `$19000-$1EFFF`) with
+1.5 KB over. **Still to check on a real MEGA65**: the same fill-and-play
+run, and that BASIC works normally after quitting with the area full of
+code (`A=1:PRINT A`, `DIM B(1000)`), since BASIC only writes beyond its
+pointers there. And since the resident program already fills
+`$2001-$9FFF`, the 24 KB window at `$2000-$7FFF` of Dan Sanderson's
+layout does not fit as it stands: deciding where the window goes, and
+what moves out of its way, is the first job of the proof of concept.
 
 **Two rules for when step 3 arrives.** First, **the redraw path must stay
 resident and undispatched** — `view_redraw` is 13.6 ms against a 19.97 ms frame

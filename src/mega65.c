@@ -4,8 +4,8 @@
 // mega65-libc's memory.c rebuilds all fourteen fields of a single list on
 // every call; the cc65 version this replaces (old-cc65/src/dma.c) already had
 // the better arrangement, where the fields that never change for a given
-// operation are written once in dma_init() and a call stores only the four or
-// five that do. It matters here because drawing the map view is thousands of
+// operation are static initialisers, loaded with the program, and a call
+// stores only the four or five that do. It matters here because drawing the map view is thousands of
 // these in a row.
 //
 // The lists must live in the first 64 KB -- do_dma() below tells the DMAgic
@@ -50,20 +50,27 @@ struct dma_transparent {
     F018B_JOB
 };
 
-static struct dma_plain peek_list;
-static struct dma_plain poke_list;
-static struct dma_plain copy_list;
-static struct dma_plain fill_list;
-static struct dma_skip fill_skip_list;
-static struct dma_transparent copy_transparent_list;
+// The fields every job of a kind shares, as initialisers: they come in with
+// the PRG and cost nothing at run time. They used to be set by a dma_init()
+// on the first call, 249 bytes of code to store 134 constants. The enhanced
+// options: $0B F018B format, $80 and $81 the source and destination
+// megabytes, $85 the destination skip, $07 and $86 transparency.
+#define DMA_OPTIONS .option_0b = 0x0b, .option_80 = 0x80, .option_81 = 0x81
+
+static struct dma_plain peek_list = { DMA_OPTIONS, .count = 1 };
+static struct dma_plain poke_list = { DMA_OPTIONS, .count = 1 };
+static struct dma_plain copy_list = { DMA_OPTIONS };
+static struct dma_plain fill_list = { DMA_OPTIONS, .command = 0x03 };
+static struct dma_skip fill_skip_list = {
+    DMA_OPTIONS, .option_85 = 0x85, .command = 0x03
+};
+static struct dma_transparent copy_transparent_list = {
+    DMA_OPTIONS, .option_07 = 0x07, .option_86 = 0x86
+};
 
 // The single byte lpeek reads into and lpoke writes out of. It has to be
 // addressable in the first 64 KB, which a global is.
 static byte dma_byte;
-
-// Set to 1 by the first call into any of these, so a caller cannot forget.
-// mega65-libc has an explicit dma_init(); one fewer ordering rule is better.
-static byte initialised = 0;
 
 void mega65_io_enable(void)
 {
@@ -72,66 +79,6 @@ void mega65_io_enable(void)
     POKE(0xd02fU, 0x53);
     // Force to full speed (40 MHz)
     POKE(0, 65);
-}
-
-static void dma_init(void)
-{
-    initialised = 1;
-
-    peek_list.option_0b = 0x0b;
-    peek_list.option_80 = 0x80;
-    peek_list.option_81 = 0x81;
-    peek_list.dest_mb = 0x00; // dma_byte lives in the 1st MB
-    peek_list.end_of_options = 0x00;
-    peek_list.command = 0x00; // copy
-    peek_list.sub_cmd = 0x00;
-    peek_list.count = 1;
-    peek_list.dest_addr = (word)&dma_byte;
-    peek_list.dest_bank = 0;
-
-    poke_list.option_0b = 0x0b;
-    poke_list.option_80 = 0x80;
-    poke_list.source_mb = 0x00;
-    poke_list.option_81 = 0x81;
-    poke_list.end_of_options = 0x00;
-    poke_list.command = 0x00; // copy
-    poke_list.sub_cmd = 0x00;
-    poke_list.count = 1;
-    poke_list.source_addr = (word)&dma_byte;
-    poke_list.source_bank = 0;
-
-    copy_list.option_0b = 0x0b;
-    copy_list.option_80 = 0x80;
-    copy_list.option_81 = 0x81;
-    copy_list.end_of_options = 0x00;
-    copy_list.command = 0x00; // copy
-    copy_list.sub_cmd = 0x00;
-
-    fill_list.option_0b = 0x0b;
-    fill_list.option_80 = 0x80;
-    fill_list.source_mb = 0x00;
-    fill_list.option_81 = 0x81;
-    fill_list.end_of_options = 0x00;
-    fill_list.command = 0x03; // fill
-    fill_list.sub_cmd = 0x00;
-
-    fill_skip_list.option_0b = 0x0b;
-    fill_skip_list.option_80 = 0x80;
-    fill_skip_list.source_mb = 0x00;
-    fill_skip_list.option_81 = 0x81;
-    fill_skip_list.option_85 = 0x85;
-    fill_skip_list.end_of_options = 0x00;
-    fill_skip_list.command = 0x03; // fill
-    fill_skip_list.sub_cmd = 0x00;
-
-    copy_transparent_list.option_0b = 0x0b;
-    copy_transparent_list.option_07 = 0x07; // enable transparency
-    copy_transparent_list.option_80 = 0x80;
-    copy_transparent_list.option_81 = 0x81;
-    copy_transparent_list.option_86 = 0x86; // the value to treat as transparent
-    copy_transparent_list.end_of_options = 0x00;
-    copy_transparent_list.command = 0x00; // copy
-    copy_transparent_list.sub_cmd = 0x00;
 }
 
 static void do_dma(word list)
@@ -145,22 +92,13 @@ static void do_dma(word list)
 
 // The fast path. Same list shape as copy_transparent_list, kept separate so a
 // run of blits cannot be disturbed by an lpeek or an lfill in between.
-static struct dma_transparent blit_list;
+static struct dma_transparent blit_list = {
+    DMA_OPTIONS, .option_07 = 0x07, .option_86 = 0x86
+};
 
 void blit_begin(byte source_mb, byte source_bank, byte dest_mb,
                 byte transparent)
 {
-    if (!initialised) dma_init();
-
-    blit_list.option_0b = 0x0b;
-    blit_list.option_07 = 0x07;
-    blit_list.option_80 = 0x80;
-    blit_list.option_81 = 0x81;
-    blit_list.option_86 = 0x86;
-    blit_list.end_of_options = 0x00;
-    blit_list.command = 0x00;   // copy
-    blit_list.sub_cmd = 0x00;
-
     blit_list.source_mb = source_mb;
     blit_list.source_bank = source_bank;
     blit_list.dest_mb = dest_mb;
@@ -187,7 +125,7 @@ void blit(word source_addr, byte dest_bank, word dest_addr, word count)
 
 byte lpeek(dword address)
 {
-    if (!initialised) dma_init();
+    peek_list.dest_addr = (word)&dma_byte;
     peek_list.source_mb = address >> 20;
     peek_list.source_addr = address & 0xffff;
     peek_list.source_bank = (address >> 16) & 0x0f;
@@ -197,8 +135,8 @@ byte lpeek(dword address)
 
 void lpoke(dword address, byte value)
 {
-    if (!initialised) dma_init();
     dma_byte = value;
+    poke_list.source_addr = (word)&dma_byte;
     poke_list.dest_mb = address >> 20;
     poke_list.dest_addr = address & 0xffff;
     poke_list.dest_bank = (address >> 16) & 0x0f;
@@ -207,7 +145,6 @@ void lpoke(dword address, byte value)
 
 void lcopy(dword source, dword destination, word count)
 {
-    if (!initialised) dma_init();
     copy_list.source_mb = source >> 20;
     copy_list.dest_mb = destination >> 20;
     copy_list.count = count;
@@ -221,7 +158,6 @@ void lcopy(dword source, dword destination, word count)
 void lcopy_transparent(dword source, dword destination, word count,
                        byte transparent)
 {
-    if (!initialised) dma_init();
     copy_transparent_list.transparent_value = transparent;
     copy_transparent_list.source_mb = source >> 20;
     copy_transparent_list.dest_mb = destination >> 20;
@@ -235,7 +171,6 @@ void lcopy_transparent(dword source, dword destination, word count,
 
 void lfill(dword destination, byte value, word count)
 {
-    if (!initialised) dma_init();
     fill_list.dest_mb = destination >> 20;
     fill_list.count = count;
     // In a fill job the source address field holds the byte to write.
@@ -247,7 +182,6 @@ void lfill(dword destination, byte value, word count)
 
 void lfill_skip(dword destination, byte value, word count, byte skip)
 {
-    if (!initialised) dma_init();
     fill_skip_list.dest_skip = skip;
     fill_skip_list.dest_mb = destination >> 20;
     fill_skip_list.count = count;

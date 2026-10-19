@@ -58,11 +58,14 @@ LDFLAGS  = $(TARGET) --output-format=prg
 LINKFILE = sevenships.scm
 
 # The C stack. The tool chain's default is 4096, which is many times what this
-# needs: the deepest chain is main -> view_redraw -> view_draw_tile -> lcopy,
-# all of them holding bytes and longs rather than structs. There is no canary
-# to measure it with, so `make CSTACK=4096` is the thing to try if a change
-# starts behaving strangely for no reason.
-CSTACK  ?= 512
+# needs: return addresses go on the 6502's own stack in page 1, and this one
+# holds only locals and spills. Measured 19 Oct 2026 by filling it with $AA at
+# the top of main() and reading a -dumpmem after a scripted game (city screen,
+# CHANGE, help, save, Play 50 Turns): about 70 bytes used, so 256 leaves a
+# good margin. `make CSTACK=4096` is the thing to try if a change starts
+# behaving strangely for no reason, and the same measurement is cheap to
+# repeat.
+CSTACK  ?= 256
 # Nothing calls malloc. Kept nonzero because the startup wants a heap section.
 HEAP    ?= 256
 

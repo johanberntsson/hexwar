@@ -98,7 +98,9 @@ static const byte saved_regs[] = {
 #define SAVED_REGS sizeof saved_regs
 #define SAVED_REGS_LEGACY 6
 
-static byte saved_values[SAVED_REGS];
+// HIGH_BSS: written first thing in main() and read last, with every disk
+// call in between, and BASIC is still banked out at both ends.
+HIGH_BSS static byte saved_values[SAVED_REGS];
 
 void screen_save(void)
 {

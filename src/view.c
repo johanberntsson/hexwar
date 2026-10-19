@@ -9,8 +9,9 @@
 #endif
 
 // One row of the window's screen words, built here and copied out in a single
-// DMA job rather than 120 lpokes.
-static byte row_words[VIEW_COLUMNS * 2];
+// DMA job rather than 120 lpokes. LOW_FREE, like the other scratch buffers
+// here: rebuilt every time, and never in use across a disk call.
+LOW_FREE static byte row_words[VIEW_COLUMNS * 2];
 
 void view_restore(byte col, byte row, byte columns, byte rows)
 {
@@ -129,8 +130,8 @@ byte view_mark_hy = 0xff;
 int view_mark_x;
 
 static byte pending_n[2];
-static byte pending_ax[2][MAX_PENDING];
-static int pending_tx[2][MAX_PENDING];
+LOW_FREE static byte pending_ax[2][MAX_PENDING];
+LOW_FREE static int pending_tx[2][MAX_PENDING];
 
 static void draw_overlays(byte hy, int ty)
 {

@@ -190,21 +190,21 @@ BASIC ROM and is the program's once `src/bank.s` has banked BASIC out, before
 | **Address range** | **KB** |  **Usage** |
 | -- |  - | ---- |
 | \$0002-\$0039 | 0.1 | Calypsi's pseudo registers, in zero page |
-| \$1600-\$1790 | 0.4 | the popup's text (the `zpsave` section, `LOW_FREE`) |
-| \$1791-\$1eff | 1.9 | free |
+| \$1600-\$18a8 | 0.7 | the `zpsave` section (`LOW_FREE`): the popup's text and the scratch buffers of the view and the minimap |
+| \$18a9-\$1eff | 1.6 | free |
 | \$2001-\$2712 | 1.8 | BASIC stub, startup code, constant data and the short strings |
-| \$2713-\$948c | 27.4 | code, and 16 bytes of initialised data |
-| \$948d-\$968c | 0.5 | C stack |
-| \$968d-\$9a4d | 0.9 | BSS: buffers and small state |
-| \$9a4e-\$9fff | 1.4 | free |
-| \$a000-\$b561 | 5.3 | `highbss` (`HIGH_BSS`): the map's terrain layer `map_tile`, the unit and city arrays, the sprite blocks, the AI's headings, and the texts' staging and line buffers |
-| \$b562-\$bfff | 2.7 | free |
+| \$2713-\$9292 | 26.9 | code, and the DMA lists as initialised data (111 bytes) |
+| \$9293-\$9392 | 0.25 | C stack |
+| \$9393-\$94d5 | 0.3 | BSS: small state |
+| \$94d6-\$9fff | 2.8 | free |
+| \$a000-\$b640 | 5.6 | `highbss` (`HIGH_BSS`): the map's terrain layer `map_tile`, the unit and city arrays, the sprite blocks, the AI's headings, the texts' staging and line buffers, the sheet loader's buffers and the saved VIC registers |
+| \$b641-\$bfff | 2.4 | free |
 
 The long texts and the names are not in this table at all: they are in
 TEXT.PAK, read into Attic RAM at start-up, which is most of why the
 constant data went from 3.7 KB on 18 October to 1.8 KB.
 
-The PRG is everything up to \$948c; the C stack and the BSS are not stored in
+The PRG is everything up to \$9292; the C stack and the BSS are not stored in
 the file, only reserved after it. Nothing initialised may go above \$9fff,
 because the PRG is loaded while BASIC is still mapped there, so only BSS
 marked `HIGH_BSS` is put in the window. BASIC is banked back in as the last

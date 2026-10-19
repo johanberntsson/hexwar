@@ -11,8 +11,11 @@ Ideas for the AI: documentation/civ1-civ2-ai-analysis-sources.txt and OpenCivOne
 Before milestone 5: make room in bank 5
 - DONE: moved 92 of the minimap's 128 characters into the tile store's row padding
   (CLAUDE.md, "When bank 5 fills up", step 1). Room for 16 tiles now, 12 used.
-- Decide how to get past the 1.4 KB left in the program region before milestone 6: more
-  tables and strings to attic, or the MAP-register banking ("Growing past 32 KB", step 3)
+- DONE: cleared out the program region from 1.4 KB to 2.8 KB free (DMA lists as initialised
+  data, C stack 512 -> 256, scratch buffers to LOW_FREE/HIGH_BSS; CLAUDE.md, "Memory map")
+- Still to decide before milestone 6, which 2.8 KB will not carry: the short messages in
+  game.c/cityscreen.c/menu.c to a text list (a few hundred bytes), or the MAP-register banking
+  ("Growing past 32 KB", step 3)
 
 Milestone 5: more terrain
 - New terrain tiles: plains, forest, desert, floodplain/river valley (for grain)

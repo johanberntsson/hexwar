@@ -60,7 +60,8 @@ static const byte terrain_colour[] = {
 #define BOX_W 9
 #define BOX_H 9
 
-static byte cell[64];
+// Scratch, so LOW_FREE: filled afresh every time, with no disk call between.
+LOW_FREE static byte cell[64];
 
 static byte colour(byte ax, byte ay)
 {

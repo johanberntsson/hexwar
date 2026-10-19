@@ -46,6 +46,16 @@
 #define KEY_PAD_FIRST 0xf3
 #define KEY_PAD_LAST 0xf8
 
+// MEGA and a letter, which the game takes for the PC's Alt and a letter: the
+// menu bar's titles. $D610 delivers MEGA+a-z as $C1-$DA, and input_poll()
+// turns CTRL+a-z into the same codes, so either works; xemu gives the PC's
+// left Alt to MEGA, so there it is Alt+G after all. Lower case letters only:
+// KEY_MEGA('g') is the Game menu, 199 to FAKE_KEYS. **Store it in a byte
+// before comparing**: Calypsi sign-extends a (byte) cast inside a wider
+// expression, and these codes are all above 127.
+#define KEY_MEGA(C) ((C) + 0x60)
+#define KEY_IS_MEGA(K) ((K) >= KEY_MEGA('a') && (K) <= KEY_MEGA('z'))
+
 // Where the tip of the arrow is, in sprite coordinates relative to the top
 // left of the display: 0-319 across and 0-199 down. **A unit across is two
 // H640 pixels, so a character is 4 units wide and 8 tall**; see

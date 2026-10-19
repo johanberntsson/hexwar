@@ -92,11 +92,23 @@ static byte pointer_on(byte row, byte x, byte w)
     return (byte)(input_y >> 3) == row && col >= x && col < x + w;
 }
 
+#define NO_X(BX) ((BX) + ASK_WIDTH - (sizeof NO_TEXT - 1))
+
+// Draw Yes and No on row `by` from column `bx`, the one `yes` says in
+// reverse.
+static void draw_buttons(byte bx, byte by, byte yes)
+{
+    screen_putsxy(bx, by, YES_TEXT,
+                  yes ? (ATTR_REVERSE | COLOR_YELLOW) : COLOR_YELLOW);
+    screen_putsxy(NO_X(bx), by, NO_TEXT,
+                  yes ? COLOR_YELLOW : (ATTR_REVERSE | COLOR_YELLOW));
+}
+
 // Show the text with OK, or with Yes and No if `ask`, and return 1 for OK or
 // Yes, 0 for No.
 static byte show(byte ask)
 {
-    byte lines, widest, w, h, x0, y0, y, key, bx, by, answer;
+    byte lines, widest, w, h, x0, y0, y, key, bx, by, answer, yes = 0;
 
     lines = wrap(0, 0, 0, &widest);
     if (widest < ASK_WIDTH) widest = ASK_WIDTH;
@@ -113,9 +125,8 @@ static byte show(byte ask)
     by = y0 + h - 2;
     if (ask) {
         bx = x0 + (w - ASK_WIDTH) / 2;
-        screen_putsxy(bx, by, YES_TEXT, COLOR_YELLOW);
-        screen_putsxy(bx + ASK_WIDTH - (sizeof NO_TEXT - 1), by, NO_TEXT,
-                      COLOR_YELLOW);
+        draw_buttons(bx, by, yes);
+        input_moved();          // only a move from here on selects
     } else {
         screen_putsxy(x0 + (w - (sizeof OK_TEXT - 1)) / 2, by, OK_TEXT,
                       COLOR_YELLOW);
@@ -135,8 +146,19 @@ static byte show(byte ask)
             continue;
         }
         // A question needs the click on a button, since either answer
-        // matters. Return is Yes and Esc is No, as on the title screens.
-        if (key == 'y' || key == KEY_RETURN
+        // matters. From the keyboard the cursor keys move the highlight,
+        // which starts on No so that a stray Return does nothing, and
+        // Return or space picks it; y and n answer at once, Esc is No.
+        answer = yes;
+        if (input_moved()) {
+            if (pointer_on(by, bx, sizeof YES_TEXT - 1)) answer = 1;
+            if (pointer_on(by, NO_X(bx), sizeof NO_TEXT - 1)) answer = 0;
+        }
+        if (key == KEY_LEFT) answer = 1;
+        if (key == KEY_RIGHT) answer = 0;
+        if (answer != yes) draw_buttons(bx, by, yes = answer);
+        if (key == KEY_RETURN || key == KEY_SPACE) break;
+        if (key == 'y'
             || (key == KEY_CLICK
                 && pointer_on(by, bx, sizeof YES_TEXT - 1))) {
             answer = 1;
@@ -144,8 +166,7 @@ static byte show(byte ask)
         }
         if (key == 'n' || key == KEY_ESC || key == KEY_RUNSTOP
             || (key == KEY_CLICK
-                && pointer_on(by, bx + ASK_WIDTH - (sizeof NO_TEXT - 1),
-                              sizeof NO_TEXT - 1))) {
+                && pointer_on(by, NO_X(bx), sizeof NO_TEXT - 1))) {
             answer = 0;
             break;
         }

@@ -18,8 +18,9 @@ Milestone 5, adding resources and trade
 
 --- DONE ---
 
-Flash the active unit instead of using tile_select.png
+Need keyboard control of the menus
 
+Flash the active unit instead of using tile_select.png
 
 Can we detect if we run on the emulator or on the real machine?
 - Yes, according to discord:

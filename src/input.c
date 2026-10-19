@@ -15,6 +15,15 @@
 // xemu copies), handed on as KEY_HELP.
 #define KEYBOARD_HELP 0x1f
 
+// The modifier keys held now, which is near enough to when the key in $D610
+// was pressed for a scan once a frame. Needed for CTRL, whose letters arrive
+// as control codes that clash with Return, Tab and RUN/STOP's 3; MEGA's
+// arrive as $C1-$DA on their own, but are taken from here as well in case a
+// keyboard sends them plain.
+#define MODKEYS 0xd611u
+#define MOD_CTRL 0x04
+#define MOD_MEGA 0x08
+
 // Bit 5 of $D60F is set on a real MEGA65 and clear in xemu (or a VHDL
 // simulator).
 #define REALHW 0xd60fu
@@ -310,7 +319,7 @@ byte input_moved(void)
 
 byte input_poll(void)
 {
-    byte pot, joy, fire2, key, pressed;
+    byte pot, joy, fire2, key, mods, pressed;
     int dx, dy;
 
 #ifdef FAKE_KEYS
@@ -349,6 +358,11 @@ byte input_poll(void)
     key = PEEK(KEYBOARD);
     if (key) {
         POKE(KEYBOARD, 0);
+        mods = PEEK(MODKEYS);
+        if ((mods & MOD_CTRL) && key >= 1 && key <= 26)
+            return KEY_MEGA('a' - 1 + key);
+        if ((mods & MOD_MEGA) && key >= 'a' && key <= 'z')
+            return KEY_MEGA(key);
         return key == KEYBOARD_HELP ? KEY_HELP : key;
     }
 

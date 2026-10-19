@@ -51,7 +51,8 @@ static const struct help_line right_column[] = {
     { 0, "" },
     { 0, "The game" },
     { "menu bar", "click a title to open it" },
-    { "", "this screen" },                 // key drawn by help_screen()
+    { "", "Game, Orders... menu" },        // key drawn by help_screen()
+    { "", "this screen" },                 // and this one
     { "Esc", "quit to BASIC" },
     { 0, 0 },
 };
@@ -91,7 +92,8 @@ void help_screen(void)
     draw_column(RIGHT, right_column);
     keys = move_keys[input_real_hw ? 0 : 1];
     for (i = 0; i < 3; ++i) screen_putsxy(LEFT, 4 + i, keys[i], KEY_COLOUR);
-    screen_putsxy(RIGHT, 12, input_real_hw ? "HELP" : "F1", KEY_COLOUR);
+    screen_putsxy(RIGHT, 12, input_real_hw ? "MEGA+G etc" : "Alt+G etc", KEY_COLOUR);
+    screen_putsxy(RIGHT, 13, input_real_hw ? "HELP" : "F1", KEY_COLOUR);
 
     // The six keys as they sit on the keyboard, round the unit they move.
     screen_putsxy(LEFT, 18, "The moving keys sit round the unit like the "

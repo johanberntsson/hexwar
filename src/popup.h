@@ -26,8 +26,10 @@ void popup_show(void);
 
 void popup(const char *text);
 
-// A question with Yes and No buttons: 1 for Yes (the button, y or Return),
-// 0 for No (the button, n or Esc). A click anywhere else is ignored.
+// A question with Yes and No buttons: 1 for Yes, 0 for No. A click on a
+// button, y or n answer at once, and Esc is No. One button is highlighted,
+// No to begin with; cursor left and right or the arrow move that, and
+// Return or space picks it. A click anywhere else is ignored.
 byte popup_ask(const char *text);
 // The same, for a question built with popup_begin() and popup_add().
 byte popup_ask_shown(void);

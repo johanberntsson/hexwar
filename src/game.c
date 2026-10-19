@@ -13,6 +13,7 @@
 #include "ai.h"
 #include "city.h"
 #include "cityscreen.h"
+#include "topcities.h"
 #include "civ.h"
 #include "combat.h"
 #include "sevenships.h"
@@ -470,6 +471,60 @@ static void open_help(void)
     draw_screen();
 }
 
+static void open_top_cities(void)
+{
+    top_cities_screen();
+    draw_screen();
+}
+
+// Fill in the Orders menu for the unit that has the orders.
+static void set_orders_menu(void)
+{
+    byte command = MENU_NONE;
+    if (unit_active != UNIT_NONE) {
+        byte kind = unit_kind[unit_active];
+        if (kind == KIND_SETTLER) command = MENU_FOUND_CITY;
+        else if (kind == KIND_WARRIOR) command = MENU_FORTIFY;
+    }
+    menu_orders(command);
+}
+
+// Do what a menu item asks for, picked by click or by key. Whatever it
+// does, the view is redrawn afterwards, which puts back the minimap's
+// outline the dropdown hid.
+static void menu_command(byte command)
+{
+    switch (command) {
+    case MENU_RETIRE:
+        if (popup_ask("Do you want to quit this game?")) {
+            retired = 1;
+            quit = 1;
+        }
+        break;
+    case MENU_SHOW_MAP:
+        // The whole minimap changes, so it is drawn again; the view is
+        // redrawn below anyway.
+        map_show ^= MAP_EXPLORED;
+        minimap_init();
+        message(map_show ? "Map shown" : "Map hidden", "");
+        hover_dirty = 1;
+        break;
+    case MENU_FOUND_CITY:
+        unit_key('b');
+        break;
+    case MENU_FORTIFY:
+        unit_key('f');
+        break;
+    case MENU_TOP_CITIES:
+        open_top_cities();
+        break;
+    case MENU_KEYS:
+        open_help();
+        break;
+    }
+    dirty = 1;
+}
+
 // A click on a hexagon next to the unit with orders moves it there. A click
 // on one of the player's own units that still has moves gives it the orders
 // instead, waking it if it was fortified. Anywhere else on the map, or on
@@ -479,26 +534,9 @@ static void click(void)
 {
     byte ax, ay, u, dir, c, own;
 
-    // The menu bar. Whatever it does, the view is redrawn afterwards, which
-    // puts back the minimap's outline the dropdown hid.
     if ((byte)(input_y >> 3) == 0) {
-        switch (menu_click()) {
-        case MENU_RETIRE:
-            if (popup_ask("Do you want to quit this game?")) {
-                retired = 1;
-                quit = 1;
-            }
-            break;
-        case MENU_SHOW_MAP:
-            // The whole minimap changes, so it is drawn again; the view is
-            // redrawn below anyway.
-            map_show ^= MAP_EXPLORED;
-            minimap_init();
-            message(map_show ? "Map shown" : "Map hidden", "");
-            hover_dirty = 1;
-            break;
-        }
-        dirty = 1;
+        set_orders_menu();
+        menu_command(menu_click());
         return;
     }
     if (minimap_hex(input_x, input_y, &ax, &ay)) {
@@ -713,7 +751,9 @@ byte game_run(void)
             break;
         case KEY_ESC:
         case KEY_RUNSTOP:
-            quit = 1;
+            // Asked, so that a stray Esc does not end the game. Esc again
+            // is No.
+            if (popup_ask("Do you want to quit to BASIC?")) quit = 1;
             break;
         case KEY_CLICK:
             click();
@@ -722,7 +762,11 @@ byte game_run(void)
             open_help();
             break;
         default:
-            if (unit_active != UNIT_NONE) unit_key(key);
+            if (KEY_IS_MEGA(key)) {
+                set_orders_menu();
+                menu_command(menu_key(key));
+            }
+            else if (unit_active != UNIT_NONE) unit_key(key);
             else if (key == KEY_RETURN) end_turn();
             break;
         }

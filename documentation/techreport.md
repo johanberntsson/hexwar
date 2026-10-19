@@ -72,10 +72,13 @@ most important routines included in each source file.
 |  |  |
 | cityscreen.c | the city screen: the city and its neighbours, and its production |
 | help.c | the help screen: every key and click the map screen answers to |
+| topcities.c | the Top Five Cities screen, opened from World (empty so far) |
 | &nbsp;&nbsp;&nbsp;_city\_screen_ | shows a city until the player leaves it |
 |  |  |
 | menu.c | the menu bar along the top, and its dropdowns |
 | &nbsp;&nbsp;&nbsp;_menu\_click_ | opens the dropdown under the arrow and returns what was picked |
+| &nbsp;&nbsp;&nbsp;_menu\_key_ | the same for MEGA (or CTRL) and a title's first letter |
+| &nbsp;&nbsp;&nbsp;_menu\_orders_ | what the Orders menu offers the active unit |
 |  |  |
 | ai.c | the computer players and the barbarians |
 | &nbsp;&nbsp;&nbsp;_ai\_place_ | puts each one's settler on good land, well away from the others |

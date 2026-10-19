@@ -244,7 +244,8 @@ when a 15th tile or another full-colour surface needs room:
 (6.5 KB, and growing a KB a tile) and now comes off the disk, and
 `map_tile`'s 4 KB has moved to `$A000`. At the last measurement (19 Oct
 2026, after the rename and the blinking unit) `build/sevenships.lst`
-reported the region **93.0% full (about 2.2 KB free)** with milestones 1-4, the minimap, the city and help screens, the menu
+reported the region **93.0% full (about 2.2 KB free)**, and 94.3% after
+the menus' keyboard control, with milestones 1-4, the minimap, the city and help screens, the menu
 bar and the quit-time register restore in it, and `highram` 63.3% full.
 Milestone 4 alone was about 2 KB, paid for in part by taking `puts` out of
 `fatal()` (1.1 KB). The region was 89.9% before
@@ -559,12 +560,29 @@ explored and occupied bits; the terrain is as loaded), `unit_reset()`,
 state has to be reset there too. The map is the same one each time.
 `NO_TITLE` builds go straight into a new game after a retire.
 
-**The menu bar** (`src/menu.c`) is row 0: Game, Orders, Advisors, World,
-Civilopedia. A click on a title opens its dropdown, picked by hover and
+**The menu bar** (`src/menu.c`) is row 0: Game, Orders, Debug, World,
+Help. A click on a title opens its dropdown, picked by hover and
 click or the cursor keys and Return; a click elsewhere or Esc closes it.
+**MEGA and a title's first letter opens it from the keyboard**, as Alt
+does on a PC (`menu_key()`), with the first item selected; cursor left
+and right then go on to the next menu that has items. `$D610` delivers
+MEGA+a-z as `$C1`-`$DA`, and `input_poll()` turns CTRL+a-z into the same
+codes, `KEY_MEGA('g')` and so on, checking `$D611`'s CTRL bit so that
+CTRL+C is not RUN/STOP's 3 or CTRL+M Return. xemu gives the PC's left
+Alt to MEGA, so there it is Alt+G after all. **Compare a `KEY_MEGA` code
+from a byte variable** (`menu_hotkey()`): they are all above 127, and the
+first version, comparing against `(byte)(c + 0x60)`, met the sign
+extension bug below and opened nothing.
 Game has **Retire**, which asks "Do you want to quit this game?" with
-`popup_ask()` (Yes/No buttons, `y`/Return, `n`/Esc) and on Yes goes back
-to the title screen. Orders has **Show Map**, a debugging toggle that
+`popup_ask()` (Yes/No buttons, `y`/`n`, Esc for No, or the cursor keys to move the highlight — No to begin with — and Return) and on Yes goes back
+to the title screen. **Orders is filled in for the active unit** just
+before a menu opens (`set_orders_menu()` in `src/game.c`, through
+`menu_orders()`): Found City for a settler, Fortify for a warrior, and
+for anything else, or no unit wanting orders, it is empty and does not
+open; its items do what `b` and `f` do. World has **Top Five Cities**
+(`src/topcities.c`), a screen with five empty places for now, and Help
+has **Keyboard Control**, the help screen; both take over the screen and
+`draw_screen()` puts the map back, as after HELP. Debug has **Show Map**, a debugging toggle that
 lifts the fog of war: `map_show` (`src/map.h`) is `MAP_EXPLORED` or 0, and
 everything that draws ORs it into the map byte before testing the bit —
 `view_redraw()` (hoisted into a local outside the loop), the city patch,
@@ -785,9 +803,10 @@ pattern on the right of the keyboard, by the cursor keys, so that those
 letters are free for other orders (`:` is also taken as `[`, its shifted
 form); the tiles are pointy-topped, so there is no N or S; a move onto
 another player's unit or city is an attack; `b` founds a
-city with a settler; space skips the unit this turn, `w` asks again
+city with a settler; MEGA or CTRL with a menu title's first letter (`g o d w h`) opens it; space skips the unit this turn, `w` asks again
 after the others, `f` fortifies; Return ends the turn; the cursor keys
-scroll; ESC or RUN/STOP quits. `w a s d` do not scroll.
+scroll; ESC or RUN/STOP quits to BASIC, after asking with `popup_ask()`
+(Esc again is No). `w a s d` do not scroll.
 **HELP or F1 opens the help screen** (`src/help.c`), which lists all of
 this; the map screen's bottom row only says "HELP for the keys". It takes
 over the screen like the city screen, and `draw_screen()` puts the map
@@ -935,8 +954,10 @@ and a screenshot shows the result. Menu item *i* is at sprite y `92 + 16i`
 has hovered over stays selected after it leaves**, so a script that clicks
 somewhere and then comes back to a menu has to select with the cursor keys
 before pressing Return. The Game menu's title is at `{…,4,4,KEY_CLICK}`
-and Retire at `{…,8,20,KEY_CLICK}`; Orders at `{…,26,4,KEY_CLICK}` and
-Show Map at `{…,30,20,KEY_CLICK}`; `make NO_TITLE=1` skips all
+and Retire at `{…,8,20,KEY_CLICK}`, or MEGA+G is `{…,0,0,199}` (O 207, D 196,
+W 215, H 200) (the
+script skips `$D611`, so it cannot test the CTRL path); Debug at `{…,52,4,KEY_CLICK}` and
+Show Map at `{…,56,20,KEY_CLICK}`; `make NO_TITLE=1` skips all
 three screens and the popup. Frames are counted in both loops, so a `-sleepless`
 run is as deterministic as a real one. The script stops rather than wrapping, or the
 presses would replay.

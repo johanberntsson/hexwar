@@ -16,13 +16,16 @@ HIGH_BSS byte unit_work[MAX_UNITS];
 byte unit_active = UNIT_NONE;
 byte unit_hidden;
 
-const char *const unit_kind_name[] = { "", "Settler", "Warrior", "Builder" };
-const byte unit_kind_moves[] = { 0, 1, 1, 1 };
-const byte unit_kind_cost[] = { 0, 30, 10, 20 };
-const byte unit_kind_attack[] = { 0, 0, 1, 0 };
-const byte unit_kind_defence[] = { 0, 1, 1, 1 };
+// The spearman is Civilization's phalanx.
+const char *const unit_kind_name[] = {
+    "", "Settler", "Warrior", "Builder", "Spearman"
+};
+const byte unit_kind_moves[] = { 0, 1, 1, 1, 1 };
+const byte unit_kind_cost[] = { 0, 30, 10, 20, 20 };
+const byte unit_kind_attack[] = { 0, 0, 1, 0, 1 };
+const byte unit_kind_defence[] = { 0, 1, 1, 1, 2 };
 static const byte unit_kind_tile[] = {
-    0, TILE_SETTLER, TILE_WARRIOR, TILE_BUILDER
+    0, TILE_SETTLER, TILE_WARRIOR, TILE_BUILDER, TILE_SPEARMAN
 };
 
 void unit_reset(void)

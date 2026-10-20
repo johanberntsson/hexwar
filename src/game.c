@@ -633,7 +633,8 @@ static void set_orders_menu(void)
     if (unit_active != UNIT_NONE) {
         byte kind = unit_kind[unit_active];
         if (kind == KIND_SETTLER) command = MENU_FOUND_CITY;
-        else if (kind == KIND_WARRIOR) command = MENU_FORTIFY;
+        else if (kind == KIND_WARRIOR || kind == KIND_SPEARMAN)
+            command = MENU_FORTIFY;
         else if (kind == KIND_BUILDER) {
             command = MENU_IRRIGATE;
             second = MENU_MINE;

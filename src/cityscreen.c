@@ -68,8 +68,13 @@ static const byte patch_cy[7] = { 2, 2, 5, 5, 5, 8, 8 };
 
 // What a city can be told to build, in the order CHANGE lists it. A
 // settler from a city of size 1 waits at its cost until the city grows.
-static const byte buildable[] = { KIND_WARRIOR, KIND_SETTLER, KIND_BUILDER };
-#define BUILDABLE (sizeof buildable)
+// The spearman, last, only with bronze (player_bronze()); without it CHANGE
+// says what is missing, and BUILDABLE is one less.
+static const byte buildable[] = {
+    KIND_WARRIOR, KIND_SETTLER, KIND_BUILDER, KIND_SPEARMAN
+};
+static byte buildable_n;
+#define BUILDABLE buildable_n
 
 static char digits[6];
 
@@ -155,7 +160,8 @@ static void wake(byte c, byte i)
     if (i >= listed_n) return;
     u = listed[i];
     if (unit_orders[u] != ORDERS_NONE) unit_orders[u] = ORDERS_NONE;
-    else if (unit_kind[u] == KIND_WARRIOR) unit_orders[u] = ORDERS_FORTIFY;
+    else if (unit_kind[u] == KIND_WARRIOR || unit_kind[u] == KIND_SPEARMAN)
+        unit_orders[u] = ORDERS_FORTIFY;
     else return;
     draw_units(c);
 }
@@ -296,6 +302,10 @@ static byte choice_under_pointer(void)
 static void change(byte c)
 {
     byte sel = 0, i, key, was;
+    byte copper = player_has(PLAYER_HUMAN, RES_COPPER);
+    byte tin = player_has(PLAYER_HUMAN, RES_TIN);
+
+    buildable_n = sizeof buildable - !(copper && tin);
 
     for (i = 0; i < BUILDABLE; ++i)
         if (buildable[i] == city_build[c]) sel = i;
@@ -306,6 +316,13 @@ static void change(byte c)
     screen_putsxy(TEXT_LEFT(BUILD_LEFT) + 12, LIST_ROW - 1, "shields",
                   COLOR_LIGHTGREY);
     for (i = 0; i < BUILDABLE; ++i) draw_choice(i, sel);
+    if (!(copper && tin)) {
+        screen_putsxy(TEXT_LEFT(BUILD_LEFT), LIST_ROW + BUILDABLE + 1,
+                      "Spearman needs bronze:", COLOR_LIGHTGREY);
+        screen_putsxy(TEXT_LEFT(BUILD_LEFT), LIST_ROW + BUILDABLE + 2,
+                      copper ? "tin" : tin ? "copper" : "copper and tin",
+                      COLOR_LIGHTGREY);
+    }
 
     for (;;) {
         screen_wait_raster(SCREEN_ROW_LINE(SCREEN_ROWS - 1));

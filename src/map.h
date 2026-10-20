@@ -122,6 +122,12 @@ extern byte map_res_kind[MAP_RES_MAX];
 // The resource on (ax, ay), RES_NONE if none: a search of its row's few.
 byte map_resource_at(byte ax, byte ay);
 #define MAP_RESOURCE_TILE(R) (TILE_RESOURCE_FIRST - 1 + (R))
+// The tile for resource r on a hexagon whose map byte is t: copper and tin
+// with a mine on them have a picture of their own, the builder's work.
+#define RES_TILE(R, T)                                                      \
+    (((T) & MAP_MINED) && ((R) == RES_COPPER || (R) == RES_TIN)            \
+         ? TILE_COPPER_MINE + (R) - RES_COPPER                              \
+         : MAP_RESOURCE_TILE(R))
 
 // **Debug/Show Map, for debugging the computer players**: MAP_EXPLORED to
 // draw every hexagon as if explored, 0 for the fog of war. Everything that

@@ -18,6 +18,7 @@
 #define KIND_SETTLER 1
 #define KIND_WARRIOR 2
 #define KIND_BUILDER 3
+#define KIND_SPEARMAN 4         // bronze: needs copper and tin (growth.h)
 
 // Standing orders: what a unit does instead of asking for any.
 #define ORDERS_NONE 0

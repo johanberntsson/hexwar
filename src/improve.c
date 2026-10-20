@@ -12,6 +12,11 @@
 
 #pragma clang section text="r1text" rodata="r1rodata"
 
+// Copper or tin on (ax, ay): bronze, mined.
+#define STRATEGIC(AX, AY)                                                   \
+    (map_resource_at((AX), (AY)) == RES_COPPER                             \
+     || map_resource_at((AX), (AY)) == RES_TIN)
+
 // Turns of work, Civilization's.
 #define IRRIGATE_TURNS 5
 #define MINE_TURNS 10
@@ -50,15 +55,21 @@ byte improve_can(byte orders, byte ax, byte ay)
         return watered(ax, ay);
     }
     if (m & MAP_MINED) return 0;
-    return t == TILE_HILLS || t == TILE_MOUNTAIN || t == TILE_DESERT;
+    // Copper and tin can be mined wherever they are -- tin is often on
+    // tundra -- which is what makes them bronze (player_has()).
+    return t == TILE_HILLS || t == TILE_MOUNTAIN || t == TILE_DESERT
+           || STRATEGIC(ax, ay);
 }
 
 byte improve_best(byte ax, byte ay)
 {
     byte t = MAP_TERRAIN(ax, ay);
 
-    // Shields are all a city makes yet, so the hills get mines; and a
-    // hexagon with either improvement already is left alone.
+    // Copper and tin get mines first, for bronze, whatever was there.
+    // Otherwise shields are all a city makes yet, so the hills get mines;
+    // and a hexagon with either improvement already is left alone.
+    if (STRATEGIC(ax, ay) && improve_can(ORDERS_MINE, ax, ay))
+        return ORDERS_MINE;
     if (map_tile[ay][ax] & MAP_IMPROVEMENT) return ORDERS_NONE;
     if (t != TILE_HILLS && improve_can(ORDERS_IRRIGATE, ax, ay))
         return ORDERS_IRRIGATE;

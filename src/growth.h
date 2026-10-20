@@ -39,6 +39,15 @@ extern byte work_shields;
 extern byte work_trade;
 extern byte work_idle;          // citizens working no hexagon
 
+// **Bronze** (milestone 7b, vision.md section 2): whether player p has
+// resource r -- on one of its cities, or mined next to one, a builder's
+// work. Copper and tin together are bronze, which the spearman needs.
+// Tin is in a few nodes at the top and bottom of the map, so most peoples
+// will have to trade for it (milestone 9).
+byte player_has(byte p, byte r);
+#define player_bronze(P)                                                    \
+    (player_has((P), RES_COPPER) && player_has((P), RES_TIN))
+
 // What hexagon (ax, ay) yields, worked, into these.
 extern byte hex_food, hex_shields, hex_trade;
 void hex_yield(byte ax, byte ay);

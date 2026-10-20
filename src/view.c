@@ -208,7 +208,8 @@ static void draw_overlays(byte hy, int ty)
         if (x >= VIEW_COLUMNS + 8
             || !((map_tile[ay][k] | map_show) & MAP_EXPLORED))
             continue;
-        view_draw_tile((int)x - 8, ty, MAP_RESOURCE_TILE(map_res_kind[i]));
+        view_draw_tile((int)x - 8, ty,
+                       RES_TILE(map_res_kind[i], map_tile[ay][k]));
     }
 
     for (i = 0; i < pending_n[list]; ++i) {
@@ -263,7 +264,7 @@ void view_draw_patch(byte col, byte row, byte ax, byte ay, byte rings)
                            MAP_OVERLAY_TILE(t));
         if ((t & MAP_EXPLORED) && (n = map_resource_at(nx, ny)) != RES_NONE)
             view_draw_tile(col + patch_x[i], row + patch_y[i],
-                           MAP_RESOURCE_TILE(n));
+                           RES_TILE(n, t));
     }
     // The overlays after all the terrain, as view_redraw() does a row
     // behind it. The active unit does not blink here, so it is always shown.

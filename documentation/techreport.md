@@ -203,11 +203,11 @@ window shows one region of code at a time. The figures below are from the linker
 | \$1600-\$1637 | 0.05 | `zpsave`: BASIC's zero page \$02-\$39, saved at start-up and put back on exit |
 | \$1638-\$18e0 | 0.7 | the `lowfree` section (`LOW_FREE`): the popup's text and the scratch buffers of the view and the minimap |
 | \$18e1-\$1eff | 1.5 | free |
-| \$2001-\$5af7 | 14.7 | BASIC stub, startup and resident code |
-| \$5af8-\$5b20 | 0.04 | initialised data: the DMA lists |
-| \$5b21-\$5c20 | 0.25 | C stack |
-| \$5c21-\$5d97 | 0.4 | BSS: small state |
-| \$5d98-\$5fff | 0.6 | free |
+| \$2001-\$5b46 | 14.8 | BASIC stub, startup and resident code |
+| \$5b47-\$5b93 | 0.1 | initialised data: the DMA lists |
+| \$5b94-\$5c93 | 0.25 | C stack |
+| \$5c94-\$5e0c | 0.4 | BSS: small state |
+| \$5e0d-\$5fff | 0.5 | free |
 | \$6000-\$7fff | 8 | the code window; region 0 as loaded (5.7 KB used) |
 | \$8000-\$9ffe | 8 | resident constant data and code |
 | \$a000-\$b4b0 | 5.2 | `highbss` (`HIGH_BSS`): the map `map_tile` (terrain, improvements, explored and occupied bits), the unit and city arrays (the cities' size and food box among them), the sprite blocks, the AI's headings, the staging buffers of the texts and the regions, the texts' line buffers, the sheet loader's buffers and row extents, the saved VIC registers, and the resources, a list by hexagon row |
@@ -276,7 +276,7 @@ and the main loop stay resident, where a call costs nothing.
 | \$12000-\$12f9f | 4 | Screen RAM, 80x25 cells of two bytes |
 | \$13000-\$14fff | 8 | Code region 1 |
 | \$15000-\$16fff | 8 | Code region 2 |
-| \$19000-\$1efff | 24 | The expanded tile sheet's tiles 18-29: the resources, 18-26 |
+| \$19000-\$1efff | 24 | The expanded tile sheet's tiles 18-29: the resources, mined copper and tin, the spearman |
 | \$20000-\$3ffff | 128 | The C65 ROM, left in place |
 | \$40000-\$56fff | 92 | The tile store: the map window's character definitions, and in the row padding the minimap's 80 and the owners' flags |
 | \$57000-\$5ffff | 36 | The expanded tile sheet's tiles 0-17 |
@@ -304,7 +304,7 @@ the store is 94208 bytes, which leaves banks 2 and 3, the ROM, alone. A larger
 window would need the ROM banked out, with everything that brings with it;
 `src/view.h` stops the build if the store outgrows \$60000.
 
-**The expanded sheet** is the tile art as it is drawn: 27 tiles of 8x4
+**The expanded sheet** is the tile art as it is drawn: 30 tiles of 8x4
 characters, 2 KB each, stored a tile at a time. It is in chip RAM rather
 than in Attic RAM because the redraw copies about 160 KB out of it, and DMA
 reading Attic RAM is about seven times slower than reading chip RAM on the

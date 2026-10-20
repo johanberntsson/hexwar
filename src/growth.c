@@ -4,6 +4,7 @@
 #define city_grow city_grow_r1
 #define city_toggle city_toggle_r1
 #define hex_yield hex_yield_r1
+#define player_has player_has_r1
 
 #include "growth.h"
 #include "city.h"
@@ -46,6 +47,22 @@ static const byte resource_shields[RES_COUNT] = {
 static const byte resource_trade[RES_COUNT] = {
     0, 0, 0, 0, 2, 3, 0, 0, 0, 3
 };
+
+byte player_has(byte p, byte r)
+{
+    byte c, dir, nx, ny;
+
+    for (c = 0; c < city_count; ++c) {
+        if (city_owner[c] != p) continue;
+        if (map_resource_at(city_ax[c], city_ay[c]) == r) return 1;
+        for (dir = 0; dir < 6; ++dir)
+            if (map_neighbour(city_ax[c], city_ay[c], dir, &nx, &ny)
+                && (map_tile[ny][nx] & MAP_MINED)
+                && map_resource_at(nx, ny) == r)
+                return 1;
+    }
+    return 0;
+}
 
 // What hexagon (ax, ay) yields, into these: hex_yield() hands them out.
 byte hex_food, hex_shields, hex_trade;

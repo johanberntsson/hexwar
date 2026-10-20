@@ -37,7 +37,7 @@ Milestone 6: yields and city growth -- DONE but for roads (20 Oct 2026)
   (8 left in bank 1 after bank 5's 18) and roads need a map bit (a 512-byte bitmap would do)
 - Per-continent policy (attack/defend/transport) when there are boats and wars
 
-Milestone 7: resources -- DONE but for bronze (20 Oct 2026)
+Milestone 7: resources -- DONE (20 Oct 2026)
 - DONE: grain, fish, cattle, olives, wine, cedar, copper, tin, purple dye (vision.md
   section 2), nine tiles in bank 1 (code region 4 given up for them); a list by hexagon row
   in highram, not a layer; mapgen.py step 7 places them (tin only at the top and bottom
@@ -45,8 +45,14 @@ Milestone 7: resources -- DONE but for bronze (20 Oct 2026)
   readout names them; find_site() values them; saved (SAVE_VERSION 8)
 - Placeholder art to replace: res_grain, res_fish, res_cedar, res_dye (and res_olives and
   res_wine are recoloured orange trees)
-- Milestone 7b: copper + tin gate a bronze unit, so strategic goods matter from the start.
-  Needs a rule for having a resource (worked by a city, or in its radius?) and a unit tile
+- DONE 7b: bronze. A player has a resource on one of its cities or mined next to one;
+  copper + tin = bronze = the spearman (1/2, 20 shields). Mined copper and tin have their
+  own tiles (alltiles' *_improved). AI builders mine them first, round any of their
+  cities; AI guards are spearmen with bronze, and warriors they replace are disbanded.
+  Tin: 4 edge nodes plus inland hills/mountains at 2/3 of copper's rate. In 200-turn
+  autoplays one people of four had bronze on seed 1, none on seeds 3 and 7
+- The tile sheet is full (30 tiles): the next tile needs code region 3 or other room.
+  Other *_improved tiles (cattle, fish, oranges) would need it too
 
 Milestone 8: basic diplomacy
 - Contact between peoples; peace, war, ceasefire; an attitude value per pair

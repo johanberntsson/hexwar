@@ -30,7 +30,7 @@ the sheet has today:
    shallow ocean.
 7. Resources (milestone 7, vision.md section 2): tin first, a few nodes in
    the far north and south (the imports from the edge of the world), then
-   the rest by terrain, scattered at random and never next to each other;
+   the rest by terrain, a little more tin among them, scattered at random and never next to each other;
    see RESOURCE_TERRAIN.
 
 **The file layout**, which src/map.c reads; all of it little-endian:
@@ -95,13 +95,16 @@ COLOURS = {
 (NO_RESOURCE, GRAIN, FISH, CATTLE, OLIVES, WINE, CEDAR, COPPER, TIN,
  DYE) = range(10)
 # What each terrain may hold, and how likely each: (chance a hexagon has one,
-# [(resource, weight), ...]). Tin is placed separately; see resources().
+# [(resource, weight), ...]). Tin is about two thirds as common as copper
+# inland, so that bronze is possible but scarce before there is trade, and
+# resources() adds TIN_NODES more at the edges of the world.
 RESOURCE_TERRAIN = {
     FLOODPLAIN: (0.20, [(GRAIN, 1)]),
     GRASS: (0.10, [(GRAIN, 1), (CATTLE, 2)]),
     PLAINS: (0.10, [(CATTLE, 2), (WINE, 1)]),
-    HILLS: (0.16, [(CATTLE, 1), (OLIVES, 2), (WINE, 2), (COPPER, 2)]),
-    MOUNTAIN: (0.08, [(COPPER, 1)]),
+    HILLS: (0.16, [(CATTLE, 1), (OLIVES, 2), (WINE, 2), (COPPER, 2),
+                   (TIN, 1.3)]),
+    MOUNTAIN: (0.12, [(COPPER, 3), (TIN, 2)]),
     FOREST: (0.12, [(CEDAR, 1)]),
     SHALLOW_OCEAN: (0.08, [(FISH, 3), (DYE, 1)]),
 }

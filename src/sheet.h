@@ -4,7 +4,7 @@
 // **FCI** (Full Colour Image) is the format tools/png2fci.py writes. A header
 // of nine bytes, a palette of RGB triples, the marker "IMG", and then the
 // pixels as a row-major grid of 8x8 characters, 64 bytes each, one byte of
-// palette index per pixel. res/tiles.fci is 108x4 characters: 27
+// palette index per pixel. res/tiles.fci is 120x4 characters: 30
 // 4x4-character tiles side by side, in the order tiles/Makefile lists them.
 // tools/mktiles.py writes it.
 //
@@ -42,7 +42,7 @@
 #define SHEET_HIGH_TILES 12
 
 // The sheet as it is in the file.
-#define SHEET_COLUMNS 108
+#define SHEET_COLUMNS 120
 #define SHEET_ROWS 4
 
 // A tile is 4x4 characters in the file and 8x4 once expanded.
@@ -96,6 +96,11 @@
 // The resources, from here on in RES_* order (src/map.h): resource r is
 // tile TILE_RESOURCE_FIRST - 1 + r. All in bank 1.
 #define TILE_RESOURCE_FIRST 18
+// Copper and tin once mined, drawn instead of the resource (RES_TILE in
+// src/map.h); and the bronze unit. These fill bank 1.
+#define TILE_COPPER_MINE 27
+#define TILE_TIN_MINE 28
+#define TILE_SPEARMAN 29
 
 // The FCI on the disk. Capitals, because that is how diskutil.rb writes the
 // host name tiles.fci -- see MAP_FILE_NAME.

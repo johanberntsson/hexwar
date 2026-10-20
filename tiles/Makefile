@@ -25,9 +25,13 @@ OVERLAYS = overlay_irrigation.png overlay_mine.png
 # recoloured; res_grain, res_fish, res_cedar and res_dye placeholders.
 RESOURCES = res_grain.png res_fish.png res_cattle.png res_olives.png \
             res_wine.png res_cedar.png res_copper.png res_tin.png res_dye.png
+# Copper and tin mined: alltiles' tile_copper_improved and tile_iron_improved,
+# drawn instead of the resource when its hexagon has a mine (RES_TILE in
+# src/map.h). Then the bronze unit, alltiles' spearman.
+MINES = res_copper_mine.png res_tin_mine.png
 TILES = $(TERRAIN) tile_city.png tile_select.png \
         unit_settler.png unit_warrior.png unit_builder.png tile_undiscovered.png \
-        $(OVERLAYS) $(RESOURCES)
+        $(OVERLAYS) $(RESOURCES) $(MINES) unit_spearman.png
 
 all: ../res/tiles.fci
 

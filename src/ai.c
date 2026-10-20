@@ -142,23 +142,29 @@ static word nearest(byte me, byte ax, byte ay)
     return best;
 }
 
-// The resources a city on (ax, ay) would have: on it and its neighbours.
-// No two are neighbours (tools/mapgen.py), so at most three.
+// What the resources a city on (ax, ay) would have are worth, on it and
+// its neighbours: one each, and copper and tin two, for bronze. No two are
+// neighbours (tools/mapgen.py), so at most three, and six.
+static byte worth(byte ax, byte ay)
+{
+    byte r = map_resource_at(ax, ay);
+    return r == RES_NONE ? 0 : r == RES_COPPER || r == RES_TIN ? 2 : 1;
+}
+
 static byte resources_round(byte ax, byte ay)
 {
-    byte dir, nx, ny, n = map_resource_at(ax, ay) != RES_NONE;
+    byte dir, nx, ny, n = worth(ax, ay);
     for (dir = 0; dir < 6; ++dir)
-        if (map_neighbour(ax, ay, dir, &nx, &ny)
-            && map_resource_at(nx, ny) != RES_NONE)
-            ++n;
+        if (map_neighbour(ax, ay, dir, &nx, &ny)) n += worth(nx, ny);
     return n;
 }
 
 // The best site for a city within SETTLE_RANGE of (fx, fy), in
 // (site_x, site_y); 0 if there is none. (fx, fy) itself may be occupied --
 // by the settler looking -- and anywhere else may not. The nearest, but a
-// resource in reach is worth half a hexagon's walk: the score is twice the
-// distance, plus three, less the resources (resources_round()).
+// resource in reach is worth half a hexagon's walk, and copper or tin a
+// whole one: the score is twice the distance, plus six, less what the
+// resources are worth (resources_round()).
 static byte site_x, site_y;
 
 #define NO_SITE 0x7fff
@@ -189,7 +195,7 @@ static byte find_site(byte fx, byte fy)
                     break;
                 }
             if (!ok) continue;
-            d = 2 * d + 3 - resources_round(x, (byte)y);
+            d = 2 * d + 6 - resources_round(x, (byte)y);
             if (d >= best) continue;
             best = d;
             site_x = x;
@@ -429,6 +435,32 @@ static byte guards_wanted(byte c)
     return n;
 }
 
+// Whether a spearman is in city c.
+static byte spearman_in(byte c)
+{
+    byte v;
+    for (v = 0; v < MAX_UNITS; ++v)
+        if (unit_kind[v] == KIND_SPEARMAN && unit_ax[v] == city_ax[c]
+            && unit_ay[v] == city_ay[c])
+            return 1;
+    return 0;
+}
+
+// With a spearman in city c, the warriors fortified there beyond the
+// guards it wants are disbanded: the spearman has replaced them, and the
+// unit cap and the 64 places in the unit list are wanted for other things.
+static void retire(byte p, byte c)
+{
+    byte v;
+    if (!spearman_in(c)) return;
+    for (v = 0; v < MAX_UNITS; ++v)
+        if (guards(p, UNIT_NONE, c) > guards_wanted(c)
+            && unit_kind[v] == KIND_WARRIOR && unit_owner[v] == p
+            && unit_orders[v] == ORDERS_FORTIFY
+            && unit_ax[v] == city_ax[c] && unit_ay[v] == city_ay[c])
+            unit_remove(v);
+}
+
 // Attack a neighbouring enemy if the odds are `odds` or better (see
 // combat_worth()). Whether it did.
 static byte attack_near(byte u, byte odds)
@@ -455,21 +487,26 @@ static void hunt(byte u, word range)
 }
 
 // A hexagon round city c that wants improving and has nobody on it, into
-// (work_x, work_y): one the city works if there is one, as those are what
-// an improvement adds to. 0 if there is none.
+// (work_x, work_y): copper or tin to mine first, for bronze; then one the
+// city works, as those are what an improvement adds to; then any. 0 if
+// there is none.
 static byte work_x, work_y;
 
 static byte work_site(byte c)
 {
-    byte pass, dir, nx, ny;
+    byte pass, dir, nx, ny, w;
 
     city_work(c);
-    for (pass = 0; pass < 2; ++pass) {
+    for (pass = 0; pass < 3; ++pass) {
         for (dir = 0; dir < 6; ++dir) {
-            if (!pass && !((work_mask >> dir) & 1)) continue;
+            if (pass == 1 && !((work_mask >> dir) & 1)) continue;
             if (!map_neighbour(city_ax[c], city_ay[c], dir, &nx, &ny))
                 continue;
             if (map_tile[ny][nx] & MAP_OCCUPIED) continue;
+            if (!pass) {
+                w = map_resource_at(nx, ny);
+                if (w != RES_COPPER && w != RES_TIN) continue;
+            }
             if (improve_best(nx, ny) == ORDERS_NONE) continue;
             work_x = nx;
             work_y = ny;
@@ -477,6 +514,35 @@ static byte work_site(byte c)
         }
     }
     return 0;
+}
+
+// Copper or tin next to one of p's cities and not mined yet, the nearest
+// to (ax, ay), into (work_x, work_y): bronze, which any of p's builders goes
+// for before the work round its own city. Nobody may be on it but the
+// builder looking. Whether there is one.
+static byte strategic_site(byte p, byte ax, byte ay)
+{
+    byte c, dir, nx, ny, r;
+    word d, best = 0xffff;
+
+    for (c = 0; c < city_count; ++c) {
+        if (city_owner[c] != p) continue;
+        for (dir = 0; dir < 6; ++dir) {
+            if (!map_neighbour(city_ax[c], city_ay[c], dir, &nx, &ny))
+                continue;
+            r = map_resource_at(nx, ny);
+            if (r != RES_COPPER && r != RES_TIN) continue;
+            if (!improve_can(ORDERS_MINE, nx, ny)) continue;
+            if ((map_tile[ny][nx] & MAP_OCCUPIED) && (nx != ax || ny != ay))
+                continue;
+            d = distance(ax, ay, nx, ny);
+            if (d >= best) continue;
+            best = d;
+            work_x = nx;
+            work_y = ny;
+        }
+    }
+    return best != 0xffff;
 }
 
 // Builder u towards a hexagon round city c that wants improving. Whether
@@ -518,6 +584,7 @@ static void move_unit(byte u)
         explore(u);
         break;
     case KIND_WARRIOR:
+    case KIND_SPEARMAN:
         // A fair fight next to it first. Then a warrior in a city short of
         // guards (guards_wanted()) stays to guard it, and one within
         // RECALL_RANGE of it goes back; 4. the rest hunt the enemy nearby
@@ -540,10 +607,19 @@ static void move_unit(byte u)
         hunt(u, AI_RANGE);
         break;
     case KIND_BUILDER:
-        // 5. Improve the hexagons round its city (improve_best()): where it
-        // stands if it is one of them and wants something, or else the
-        // first of them that wants something and has nobody on it. With
-        // all of them done it waits next to the city.
+        // 5. Copper and tin next to any of its people's cities first, for
+        // bronze (strategic_site()). Then improve the hexagons round its
+        // city (improve_best()): where it stands if it is one of them and
+        // wants something, or else the first of them that wants something
+        // and has nobody on it. With all of them done it waits next to the
+        // city.
+        if (strategic_site(unit_owner[u], ax, ay)) {
+            if (work_x == ax && work_y == ay)
+                improve_start(u, ORDERS_MINE);
+            else
+                approach(u, work_x, work_y);
+            return;
+        }
         c = home(u);
         if (c == CITY_NONE) {
             explore(u);
@@ -569,7 +645,7 @@ static void move_unit(byte u)
 
 void ai_turn(byte p)
 {
-    byte c, u, cap, kind;
+    byte c, u, cap, kind, guard;
     byte cities = 0, settlers, builders, explorers = 0;
     byte units = unit_count_kind(p, KIND_NONE) - unit_count_kind(p, KIND_SETTLER);
 
@@ -601,13 +677,21 @@ void ai_turn(byte p)
     // settler about, and a site in reach -- settlers out and cities together no more than
     // AI_CITY_CAP; then up to the cap 3. a builder for each city that has
     // hexagons to improve, and 4. warriors to explore and fight. Changing
-    // keeps the shields, so nothing is lost by it.
+    // keeps the shields, so nothing is lost by it. With bronze the guards
+    // are spearmen, defence 2 to a warrior's 1.
+    guard = player_bronze(p) ? KIND_SPEARMAN : KIND_WARRIOR;
     for (c = 0; c < city_count; ++c) {
         if (city_owner[c] != p) continue;
+        retire(p, c);
         u = guards(p, UNIT_NONE, c);
         city_work(c);
         if (u < guards_wanted(c) && (u == 0 || units < cap)) {
-            kind = KIND_WARRIOR;
+            kind = guard;
+        } else if (guard == KIND_SPEARMAN && !spearman_in(c)) {
+            // Bronze come to a city guarded by warriors: one spearman, over
+            // the cap if need be, since the warriors it replaces go once it
+            // is in (retire()).
+            kind = KIND_SPEARMAN;
         } else if (explorers < EXPLORERS(cities) && units < cap) {
             kind = KIND_WARRIOR;
             ++explorers;

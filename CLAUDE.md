@@ -205,10 +205,10 @@ buffers at the default `$FF80000` and corrupts the display.
 
 | Address | Size | Contents |
 |---|---|---|
-| `$2001-$5FFF`, `$8000-$9FFF` | 24 KB | the resident program: code, data, BSS, C stack. 1.6 KB free, all at `$59A4-$5FFF` |
+| `$2001-$5FFF`, `$8000-$9FFF` | 24 KB | the resident program: code, data, BSS, C stack. 1.5 KB free, all at `$5A22-$5FFF` |
 | `$6000-$7FFF` | 8 KB | the code window (`src/region.h`); as loaded, region 0 — the title, setup and help screens, the menus, save and load, the sheet loader. 3.2 KB free |
-| `$13000-$14FFF` | 8 KB | region 1, from `SEVENSHIPS.R1`: the computer players, the builders' improvements, the cities' yields and growth. 3.1 KB free |
-| `$15000-$16FFF` | 8 KB | region 2, from `SEVENSHIPS.R2`: the city screen and Top Five Cities. 4.6 KB free; room for regions 3 and 4 up to `$1AFFF` |
+| `$13000-$14FFF` | 8 KB | region 1, from `SEVENSHIPS.R1`: the computer players, the builders' improvements, the cities' yields and growth. 2.5 KB free |
+| `$15000-$16FFF` | 8 KB | region 2, from `SEVENSHIPS.R2`: the city screen and Top Five Cities. 4.1 KB free; room for regions 3 and 4 up to `$1AFFF` |
 | `$1B000-$1EFFF` | 16 KB | the tile sheet's tiles 16-23, where regions 5 and 6 would have been: the overlays. 2 of 8 used |
 | `$A000-$BFFF` | 8 KB | `highram`, under the BASIC ROM, banked out by `src/bank.s`: `map_tile`, the unit and city arrays, the sprite blocks, the AI's headings, the staging buffers of the texts and the regions, the texts' line buffers, the sheet loader's buffers, the saved VIC registers; about 2.3 KB free — `HIGH_BSS` in `src/mega65.h` moves a variable there, and **the startup does not clear it** |
 | `$1600-$1EFF` | 2304 | `zpsave` (56 bytes, BASIC's zero page during the run), then `lowfree`: the popup's 400-byte text and the scratch buffers of the view and the minimap, 1.6 KB free — `LOW_FREE` in `src/mega65.h` moves a variable there |
@@ -262,7 +262,8 @@ tile or another full-colour surface needs room:
    source bank (`blit_source_bank()`) only when a tile is in the other one.
    More of bank 1 can go the same way, a region (four tiles) at a time,
    against room for code. **Confirmed on a real MEGA65** (20 Oct 2026): the
-   overlays draw from bank 1 and scrolling is still fast.
+   overlays draw from bank 1 and scrolling is still fast; and region 2,
+   at `$15000`, with city growth.
 2. **The C64 ROM, which C65 mode never runs.** A dump of the running game
    shows C64 BASIC at `$2A000` (`CBMBASIC` at `$2A004`) and the GO64
    KERNAL at `$2E000`, 16 KB together. Using them keeps the C65 KERNAL,
@@ -466,9 +467,9 @@ help, the menus, save, 100 turns, retire and load left every unit and
 city array and the map identical, and `DIM` still works at READY after
 quitting. **Confirmed on a real MEGA65** the same day: title and setup,
 the city screen, the menus by mouse and MEGA+letter, HELP, Play 50 Turns,
-save, retire and load, and `DIM` after quitting. **Resident space is what to watch now**: 1.6 KB of it (20 Oct 2026,
-after city growth), against 3.2 KB in region 0, 3.1 KB in region 1 and
-4.6 KB in region 2, plus two empty regions (5 and 6 are the tile sheet's
+save, retire and load, and `DIM` after quitting. **Resident space is what to watch now**: 1.5 KB of it (20 Oct 2026,
+after city growth and the AI pass), against 3.2 KB in region 0, 2.5 KB in
+region 1 and 4.1 KB in region 2, plus two empty regions (5 and 6 are the tile sheet's
 now). **Region 2** came with city growth, when the city screen's new box
 left region 0 with 217 bytes: it took a `win2` memory in
 `sevenships.scm`, a third entry in `dispatch.s`'s map tables (offset
@@ -535,7 +536,7 @@ hexagon rows, so 80x50 looked like 40 hexagons across by 100 down — about
 round east to west). 128x32 is 64 across by 64 down, 512 characters by 193
 rows, and a character's 1:2 aspect makes that about 1.33:1, landscape. The
 readout at the top right of the screen (`draw_hover()` in `src/game.c`, via
-`map_cell_at()`) names the terrain and the `ax,ay` of the hexagon under the
+`map_cell_at()`) names the terrain, its yield and the `ax,ay` of the hexagon under the
 arrow.
 
 Two constants in `src/map.h` carry the whole view geometry:
@@ -772,7 +773,7 @@ side through the same `ai_turn()` as the others, then the usual
 `end_turn()`, fifty times or until Esc or the game is over, and hands
 back with the next unit asking for orders. The panel's turn and the
 minimap keep up; the view is redrawn once at the end. The AI's rules
-apply to the human's side meanwhile, `AI_UNIT_CAP` and what the cities
+apply to the human's side meanwhile, the unit cap and what the cities
 build included. Debug also has **Show Map**, a debugging toggle that
 lifts the fog of war: `map_show` (`src/map.h`) is `MAP_EXPLORED` or 0, and
 everything that draws ORs it into the map byte before testing the bit —
@@ -833,31 +834,43 @@ Great King) are there too, in `game_level`, which nothing reads yet.
 `game_init()`, puts each one's settler on grassland with at least four land
 neighbours, at least 16 hexagons from every other settler (12, 8 and 4 if
 200 random tries each find nothing). `ai_turn(p)` then plays TODO.txt's
-five rules: a settler founds a city where it stands; the first warrior in
-an unguarded city fortifies there and the rest explore (on along a heading
+five rules: a settler founds a city where it stands; warriors fortify in
+a city short of guards and the rest explore (on along a heading
 kept in `heading[]`, turning now and then); a builder improves the
 hexagons round its nearest city — `improve_best()` on the one it stands
 on, if that is next to the city, or else it makes for the first neighbour
-of the city that wants something and has nobody on it, and waits next to
-the city when none does. Each city builds a warrior if the player has
-none, then a builder if it has none, then warriors, until the player has
-`AI_UNIT_CAP` (6) units, when it builds nothing (`city_build` =
-`KIND_NONE`), so that three computer players cannot fill the 64 unit slots
-everyone shares. **They expand**: once a player has two military units,
-one of them fortified, and a builder, and no settler, the first of its
-cities with a site within `SETTLE_RANGE` (6) builds a settler, which is
-not held back by the cap. A site (`find_site()`) is grassland, plains, floodplain or hills,
+of the city that wants something and has nobody on it — those the city
+works first (`work_site()`) — and waits next to the city when none does.
+**What a city builds follows Civilization 1's production rules** (milestone
+6; `GameEngine.cs` in OpenCivOne has the original), decided afresh every
+turn in `ai_turn()`: 1. a warrior while it has fewer fortified guards than
+`guards_wanted()` — one, one more for every four citizens, and one more
+with an enemy within `THREAT_RANGE` (3), Civilization's "defend" policy —
+even over the unit cap if it has none; 2. a settler, from a city of size 2
+or more with more than 1 food a turn to spare, or from the first such city
+when the player has no settler, if there is a site in reach and its
+cities and settlers come to fewer than `AI_CITY_CAP` (6); 3. a builder,
+up to one per city, if it has hexagons to improve; 4. warriors, until
+the player has `AI_UNIT_BASE` + `AI_UNITS_A_CITY` per city units (3 + 2,
+at most `AI_UNIT_MAX`, 12), settlers apart, when it builds nothing
+(`city_build` = `KIND_NONE`), so that three computer players and the
+barbarians cannot fill the 64 unit slots everyone shares. A settler takes
+a citizen, so it waits for size 2 (see **Production**). In 150-turn
+autoplays this gave 18 cities on map seed 1 and 23 on seed 7, with 41 and
+46 improvements and all four peoples alive. Before Civilization's
+grassland shields (see **Yields and growth**) it was 14 and 22, and on
+seed 1 the Egyptians died by turn 50: a capital making a shield a turn
+spent 20 turns on a settler with one guard, and the new city fell to a
+pair of barbarians. A site (`find_site()`) is grassland, plains, floodplain or hills,
 off the two edge rows, with at least `SITE_LAND` (3) land neighbours and
 at least `CITY_SPACING` (4) hexagons from every city; the settler makes
 for the nearest one from where it stands and founds there, and explores
-if there is none in reach. `AI_CITY_CAP` (4) cities each, so the unit cap
-still covers a guard per city, and `MAX_CITIES` (32) is shared with the
-human. In a 150-turn headless game this took the world from 3 cities to
-14, none closer than 4. Its random numbers are a xorshift with a fixed seed, so a
+if there is none in reach. `MAX_CITIES` (32) is shared with the human.
+Its random numbers are a xorshift with a fixed seed, so a
 headless run is deterministic (`rnd()`, in `src/combat.c` since milestone
 4). Since milestone 4 a warrior first attacks an enemy next to it if the
-odds are good enough (`AI_ODDS`), then goes home if its city has nobody
-fortified in it, then makes for the nearest enemy within `AI_RANGE`, and
+odds are good enough (`AI_ODDS`), then goes home if its city is short of
+guards, then makes for the nearest enemy within `AI_RANGE`, and
 only then explores. `approach()` takes an exploring step when no
 neighbour is nearer, which is what gets units round water. Other players'
 units and cities are drawn like the human's — only on explored hexagons —
@@ -906,7 +919,8 @@ units but no cities, outside `PLAYERS` so the peoples' arrays stay four
 long; anything indexed by owner (the minimap's colours,
 `player_adjective()`/`player_people()` in `src/civ.c`) has a fifth entry
 or a test. `ai_barbarians()` runs after the computer players: from turn
-`BARB_FIRST_TURN` (15), one turn in eight on average, two warriors appear
+`BARB_FIRST_TURN` (30; it was 15 until production came from worked
+hexagons and halved), one turn in eight on average, two warriors appear
 on empty land at least `BARB_SPACING` (6) hexagons from every unit and
 city, up to `BARB_CAP` (8) — a band can take it to 9. Every barbarian
 attacks whatever is next to it, whatever the odds, or makes for the
@@ -927,7 +941,10 @@ of the tile store that `view_draw_patch()` has cleared and drawn the seven
 hexagons into, with the select ring on each hexagon the city works.
 Under the patch a fourth box gives the size, the food box and the food a
 turn ("grows in 13 turns", "not growing" or "starving"), the shields and
-the trade. It is in region 2 with Top Five Cities. So nothing is allocated for it, and on the way out
+the trade, and how many citizens are idle. **Clicking a neighbour, or
+pressing its moving key, takes its citizen off it or puts an idle one on
+it** (`city_toggle()`, Civilization's way), which makes the city
+`CITY_MANUAL`. It is in region 2 with Top Five Cities. So nothing is allocated for it, and on the way out
 `draw_screen()` in `src/game.c` puts the whole map screen back —
 `screen_clear()`, `view_init()`, `minimap_show()` (cells only; the pixels
 were never touched) and the panel — and marks the view dirty, so the next
@@ -944,11 +961,20 @@ Civilization's. Every hexagon yields food, shields and trade by terrain:
 | trade | 0 | 0 | 0 | 2 | 2 | 0 | 0 | 0 | 0 | 1 |
 
 plus 1 food for irrigation, and for a mine 3 shields on hills, 2 on
-mountains, 1 on desert. **A city of size n works its own hexagon (at least
+mountains, 1 on desert. **Half the grassland and floodplain makes a shield
+as well**, on Civilization's fixed pattern — `((x*7 + y*11) & 2) == 0`,
+from OpenCivOne's `TerrainMapCell.cs`, applied to array cells — which is
+what gets a new city going; it is not drawn (no tile to spare), but the
+hover readout gives every hexagon's yield as food/shields/trade
+("Grassland 2/1/0 14,8") when nothing is on it, through `hex_yield()`. **A city of size n works its own hexagon (at least
 one shield) and the n best of its six neighbours**, picked by
 `city_work()` whenever they are wanted — 3×food + 2×shields + trade, or
 food above all if that leaves the city short — so nothing about them is
-stored. Radius 1 is the city screen's patch, and cities are 4 apart, so
+stored, **unless the player has set them** on the city screen: then
+`city_worked[]` holds them with `CITY_MANUAL`, growth adds the newcomer
+to the best hexagon left and shrinking (or a settler) drops the worst,
+and nothing else changes them; a captured city goes back to automatic.
+Computer players never set them. Radius 1 is the city screen's patch, and cities are 4 apart, so
 none ever share a hexagon; citizens beyond six work nothing and eat.
 Every citizen eats 2 food and the rest goes into `city_food[]`; at
 `GROWTH_BOX(size)` = (size + 1) × 10 the city grows and the box empties,
@@ -957,7 +983,8 @@ grew to 3", "famine"). **Without irrigation most cities stop at a size
 where the food a turn is exactly 0** — plains and the sea give 1 — as in
 Civilization; in a 150-turn autoplay they reached sizes 1 to 9, the
 largest ringed by irrigated grassland. Trade is shown but nothing uses it
-yet. `city_size[]` and `city_food[]` are saved (`SAVE_VERSION` 3).
+yet. `city_size[]`, `city_food[]` and `city_worked[]` are saved
+(`SAVE_VERSION` 4).
 
 **Production** (`src/city.c`) is the shields of the hexagons a city works
 (`city_production()`), so a new grassland city makes 1 or 2 a turn: a

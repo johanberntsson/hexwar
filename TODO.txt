@@ -15,17 +15,23 @@ Milestone 6: yields and city growth
   food box, growth and famine; a city works its centre and its size's best neighbours
   (radius 1, picked automatically); settlers need size 2 and cost a citizen
 - Trade is worked out but nothing uses it yet (science/gold need a later milestone)
-- The computer players build one builder each, which leaves most of their cities stuck
-  at the size where food is exactly 0. Part of the AI pass below
 - Builder improvements: DONE irrigation and mine (src/improve.c, overlays from bank 1,
   AI rule 5 improves the hexagons round its city). Irrigation does nothing until food.
-  Road still to do: needs a map bit (none left in map_tile) and road art for six
-  directions (alltiles' road_*.png are corner pieces, check whether they fit)
+  Road still to do (see below): needs a map bit (none left in map_tile) and road art for
+  six directions (alltiles' road_*.png are corner pieces, check whether they fit)
   DONE: builders on one hexagon with the same orders add up their turns
 - DONE: city screen shows size, food box, food/shields/trade and rings on the worked
   hexagons; Top Five Cities lists the largest cities seen. Both moved to code region 2
-- Choosing worked tiles by hand on the city screen (Civ 1 lets you click them)
-- Dedicated AI pass afterwards: Civ 1's city production priorities and per-continent policy
+- DONE: choosing worked tiles by hand on the city screen: click or moving key toggles a
+  neighbour; idle citizens shown
+- DONE (first pass): Civ 1's city production rules (OpenCivOne GameEngine.cs): guards
+  1 + size/4 (+1 with an enemy within 3), settlers from size >= 2 cities with food to spare,
+  a builder per city, unit cap 3 + 2 a city (max 12), 6 cities. Barbarians from turn 30
+- DONE: Civ 1's grassland shield pattern (half the grassland and floodplain, not drawn);
+  the hover readout shows food/shields/trade. All four peoples now survive seed 1
+- Roads: left for later, to be planned with milestone 7's resources, since both need
+  tiles (6 left in the sheet) and roads need a map bit (a 512-byte bitmap would do)
+- Per-continent policy (attack/defend/transport) when there are boats and wars
 
 Milestone 7: resources
 - Grain, fishing, cattle, wine & olive oil, cedar, copper, tin, purple dye (vision.md section 2)

@@ -19,6 +19,11 @@ extern byte city_build[MAX_CITIES];     // the KIND_* it is building, or
 extern word city_shields[MAX_CITIES];   // towards it, of unit_kind_cost[]
 extern byte city_size[MAX_CITIES];      // citizens, 1 and up (src/growth.h)
 extern byte city_food[MAX_CITIES];      // in the food box, of GROWTH_BOX
+// The neighbours worked, bit DIR_* each, if the player has set them by hand
+// (CITY_MANUAL); otherwise 0, and src/growth.c picks them.
+extern byte city_worked[MAX_CITIES];
+#define CITY_MANUAL 0x80
+#define CITY_WORKED 0x3f
 
 // Bit p: player p has founded a city, so losing the last one is the end
 // (combat.c:player_alive()).

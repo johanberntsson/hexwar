@@ -15,7 +15,7 @@
 #include "mega65.h"
 
 #define SAVE_FILE_NAME "SEVENSHIPS.SAV"
-#define SAVE_VERSION 3
+#define SAVE_VERSION 4
 
 // Write the game to the file, replacing the last one. Non-zero if it went.
 // A full disk is not noticed: that is in the drive's error channel, which

@@ -232,10 +232,21 @@ static void draw_hover(void)
                 line_add("  ");
             }
             line_add(terrain_name[MAP_TERRAIN(ax, ay)]);
-            c = map_tile[ay][ax] & MAP_IMPROVEMENT;
+            x = map_tile[ay][ax] & MAP_IMPROVEMENT;
             // Short, so that "Canaanite Builder  Mountains+mine 127,31"
             // still fits in the 40 columns.
-            if (c) line_add(c == MAP_IRRIGATED ? "+irr" : "+mine");
+            if (x) line_add(x == MAP_IRRIGATED ? "+irr" : "+mine");
+            // What it yields, food/shields/trade, where there is room:
+            // with nothing on it.
+            if (c == CITY_NONE && u == UNIT_NONE) {
+                hex_yield(ax, ay);
+                line_add(" ");
+                line_add_num(hex_food);
+                line_add("/");
+                line_add_num(hex_shields);
+                line_add("/");
+                line_add_num(hex_trade);
+            }
         }
         line_add(" ");
         line_add_num(ax);
@@ -458,7 +469,7 @@ static void found_city(void)
 static const byte pad_dir[] = { DIR_NW, DIR_NE, DIR_W, DIR_E, DIR_SW, DIR_SE };
 
 // The direction a moving key stands for, or DIR_NONE.
-static byte key_dir(byte key)
+byte key_dir(byte key)
 {
     if (!input_real_hw && key >= KEY_PAD_FIRST && key <= KEY_PAD_LAST)
         return pad_dir[(byte)(key - KEY_PAD_FIRST)];

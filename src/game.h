@@ -21,6 +21,10 @@ byte game_run(void);
 // went. game_run() then carries on from there, without the opening popup.
 byte game_load(void);
 
+// The DIR_* a moving key stands for -- 0 - p * : = and, in xemu, the
+// keypad -- or DIR_NONE. The city screen uses them too.
+byte key_dir(byte key);
+
 // The turn, from 1, and the year, BC; for save.c.
 extern word game_turn;
 extern word game_year;

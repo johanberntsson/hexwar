@@ -46,6 +46,7 @@ static const struct block blocks[] = {
     { city_shields, sizeof city_shields },
     { city_size, sizeof city_size },
     { city_food, sizeof city_food },
+    { city_worked, sizeof city_worked },
     { city_named, sizeof city_named },
     { combat_war, sizeof combat_war },
     { &combat_seed, sizeof combat_seed },

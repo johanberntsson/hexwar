@@ -13,6 +13,7 @@
 
 #include "cityscreen.h"
 #include "city.h"
+#include "game.h"
 #include "growth.h"
 #include "input.h"
 #include "map.h"
@@ -56,6 +57,14 @@
     || PATCH_TOP < VIEW_TOP || PATCH_TOP + VIEW_PATCH_ROWS > VIEW_TOP + VIEW_ROWS
 #error "the patch has to be inside the map window, whose cells are the store's"
 #endif
+
+// The patch's seven hexagons as view_draw_patch() draws them: which way each
+// is from the city, and the character cell of its middle on the screen.
+static const byte patch_dir[7] = {
+    DIR_NW, DIR_NE, DIR_W, DIR_NONE, DIR_E, DIR_SW, DIR_SE
+};
+static const byte patch_cx[7] = { 8, 16, 4, 12, 20, 8, 16 };
+static const byte patch_cy[7] = { 2, 2, 5, 5, 5, 8, 8 };
 
 // What a city can be told to build, in the order CHANGE lists it.
 static const byte buildable[] = { KIND_WARRIOR, KIND_BUILDER };
@@ -137,11 +146,20 @@ static void draw_info(byte c)
     byte box = GROWTH_BOX(size);
     byte eaten = 2 * size;
     byte x0 = PATCH_LEFT + 1;
-    byte x, y = INFO_TOP + 1, more;
+    byte x, y, more;
+
+    for (y = INFO_TOP + 1; y < INFO_BOTTOM; ++y)
+        screen_fill(PATCH_LEFT, y, VIEW_PATCH_COLUMNS, TEXT_COLOUR);
+    y = INFO_TOP + 1;
 
     x = x0;
     put(&x, y, "Size ", COLOR_WHITE);
     put(&x, y, number(size), TEXT_COLOUR);
+    if (work_idle) {
+        x = x0 + 13;
+        put(&x, y, "Idle ", COLOR_WHITE);
+        put(&x, y, number(work_idle), COLOR_YELLOW);
+    }
 
     x = x0;
     put(&x, ++y, "Food ", COLOR_WHITE);
@@ -280,6 +298,39 @@ static void change(byte c)
     draw_build(c);
 }
 
+// The neighbour under the arrow, as a DIR_*, or DIR_NONE: the nearest
+// middle of a hexagon, if it is within a hexagon's reach. In sprite units,
+// which are square on the glass: four a character across, eight down.
+static byte dir_under_pointer(void)
+{
+    byte i, best = DIR_NONE;
+    int dx, dy;
+    word d, best_d = 18 * 18;
+
+    for (i = 0; i < 7; ++i) {
+        dx = (int)input_x - 4 * (int)(PATCH_LEFT + patch_cx[i]);
+        dy = (int)input_y - 8 * (int)(PATCH_TOP + patch_cy[i]) - 4;
+        if (dx > 40 || dx < -40 || dy > 40 || dy < -40) continue;
+        d = (word)(dx * dx + dy * dy);
+        if (d >= best_d) continue;
+        best_d = d;
+        best = patch_dir[i];
+    }
+    return best;
+}
+
+// Neighbour `dir` worked or not, by the player; everything that depends on
+// it drawn again.
+static void toggle(byte c, byte dir)
+{
+    if (dir == DIR_NONE || !city_toggle(c, dir)) return;
+    city_work(c);
+    view_draw_patch(PATCH_LEFT - VIEW_LEFT, PATCH_TOP - VIEW_TOP,
+                    city_ax[c], city_ay[c], work_mask);
+    draw_info(c);
+    draw_build(c);
+}
+
 void city_screen(byte c)
 {
     const char *name = city_name_of(c);
@@ -307,7 +358,9 @@ void city_screen(byte c)
     draw_info(c);
     draw_units(c);
     draw_build(c);
-    screen_putsxy(0, EXIT_ROW, "c change  esc exit", COLOR_LIGHTGREY);
+    screen_putsxy(0, EXIT_ROW,
+                  "c change  click a hexagon or its moving key: work it  "
+                  "esc exit", COLOR_LIGHTGREY);
     screen_putsxy(EXIT_LEFT, EXIT_ROW, EXIT_TEXT, BUTTON_EXIT);
 
     for (;;) {
@@ -322,11 +375,15 @@ void city_screen(byte c)
             if (pointer_on(CHANGE_ROW, TEXT_LEFT(BUILD_LEFT),
                            TEXT_LEFT(BUILD_LEFT) + sizeof CHANGE_TEXT - 2))
                 change(c);
+            else
+                toggle(c, dir_under_pointer());
         } else if (key == KEY_ESC || key == KEY_RUNSTOP
                    || key == KEY_RETURN || key == 'x') {
             return;
         } else if (key == 'c') {
             change(c);
+        } else {
+            toggle(c, key_dir(key));
         }
     }
 }

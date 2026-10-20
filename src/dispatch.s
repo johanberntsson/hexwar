@@ -120,6 +120,8 @@ stub:       .macro  name, target, region
             stub    improve_turn, improve_turn_r1, 1
             stub    city_work, city_work_r1, 1
             stub    city_grow, city_grow_r1, 1
+            stub    city_toggle, city_toggle_r1, 1
+            stub    hex_yield, hex_yield_r1, 1
 
 ; Region 2: the city screen and Top Five Cities.
             stub    city_screen, city_screen_r2, 2

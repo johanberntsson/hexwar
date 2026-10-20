@@ -7,6 +7,7 @@
 #include "ai.h"
 #include "city.h"
 #include "combat.h"
+#include "growth.h"
 #include "improve.h"
 #include "map.h"
 #include "sheet.h"
@@ -20,22 +21,26 @@
 #define START_SPACING_STEP 4
 #define START_TRIES 200
 
-// A computer player stops building at this many units, so that three of
-// them cannot fill the 64 slots every player shares.
-#define AI_UNIT_CAP 6
+// A computer player stops building units, settlers apart, at AI_UNIT_BASE
+// plus AI_UNITS_A_CITY for each city, up to AI_UNIT_MAX -- a guard and a
+// builder a city and a few to explore -- so that three of them and the
+// barbarians cannot fill the 64 slots every player shares.
+#define AI_UNIT_BASE 3
+#define AI_UNITS_A_CITY 2
+#define AI_UNIT_MAX 12
 
-// Expansion. A player builds a settler -- one at a time, and not counted
-// against AI_UNIT_CAP, since it is gone again once it has founded -- when
-// it has two military units, one of them fortified, and a builder, and a
-// city of its has a site within SETTLE_RANGE hexagons: grassland, plains,
-// floodplain or hills, SITE_LAND land neighbours or more, and at least
-// CITY_SPACING hexagons from every city. No more than AI_CITY_CAP cities,
-// which with the unit cap leaves a guard for each, a builder and an
-// explorer; and MAX_CITIES is shared with the human.
+// Expansion, after Civilization's production rules: a city builds a
+// settler -- one at a time, and not counted against the unit cap, since it
+// is gone once it has founded -- when it is guarded, has a citizen to spare
+// (size 2; the settler takes one) and food to spare (more than 1 a turn),
+// or the player has no settler at all, and has a site within SETTLE_RANGE
+// hexagons: grassland, plains, floodplain or hills, SITE_LAND land
+// neighbours or more, and at least CITY_SPACING hexagons from every city.
+// No more than AI_CITY_CAP cities; MAX_CITIES is shared with the human.
 #define SETTLE_RANGE 6
 #define CITY_SPACING 4
 #define SITE_LAND 3
-#define AI_CITY_CAP 4
+#define AI_CITY_CAP 6
 
 // Odds, as combat_worth() takes them: a computer player's warrior attacks
 // when its attack is at least 3/4 of the defence, a barbarian at 1/4 --
@@ -48,7 +53,7 @@
 // Barbarians appear from this turn on, one turn in BARB_CHANCE + 1 on
 // average, no nearer anybody than BARB_SPACING, and never more than
 // BARB_CAP of them at once.
-#define BARB_FIRST_TURN 15
+#define BARB_FIRST_TURN 30
 #define BARB_CHANCE 7
 #define BARB_SPACING 6
 #define BARB_CAP 8
@@ -245,16 +250,28 @@ static byte home(byte u)
     return best;
 }
 
-// Whether another of p's units is fortified on (ax, ay).
-static byte guarded(byte u, byte ax, byte ay)
+// How many of p's units other than u are fortified in city c.
+static byte guards(byte p, byte u, byte c)
 {
-    byte v;
+    byte v, n = 0;
     for (v = 0; v < MAX_UNITS; ++v)
-        if (v != u && unit_kind[v] != KIND_NONE
-            && unit_owner[v] == unit_owner[u] && unit_ax[v] == ax
-            && unit_ay[v] == ay && unit_orders[v] == ORDERS_FORTIFY)
-            return 1;
-    return 0;
+        if (v != u && unit_kind[v] != KIND_NONE && unit_owner[v] == p
+            && unit_ax[v] == city_ax[c] && unit_ay[v] == city_ay[c]
+            && unit_orders[v] == ORDERS_FORTIFY)
+            ++n;
+    return n;
+}
+
+// Guards city c wants: one, and one more for every four citizens, as
+// Civilization's computer players keep -- and one more with an enemy
+// within THREAT_RANGE, its "defend" policy.
+#define THREAT_RANGE 3
+
+static byte guards_wanted(byte c)
+{
+    byte n = 1 + (city_size[c] >> 2);
+    if (nearest(city_owner[c], city_ax[c], city_ay[c]) <= THREAT_RANGE) ++n;
+    return n;
 }
 
 // Attack a neighbouring enemy if the odds are `odds` or better (see
@@ -282,19 +299,38 @@ static void hunt(byte u, word range)
         explore(u);
 }
 
-// Builder u towards the first hexagon round city c that wants improving
-// and has nobody on it. Whether there was one.
-static byte to_work(byte u, byte c)
+// A hexagon round city c that wants improving and has nobody on it, into
+// (work_x, work_y): one the city works if there is one, as those are what
+// an improvement adds to. 0 if there is none.
+static byte work_x, work_y;
+
+static byte work_site(byte c)
 {
-    byte dir, nx, ny;
-    for (dir = 0; dir < 6; ++dir) {
-        if (!map_neighbour(city_ax[c], city_ay[c], dir, &nx, &ny)) continue;
-        if (map_tile[ny][nx] & MAP_OCCUPIED) continue;
-        if (improve_best(nx, ny) == ORDERS_NONE) continue;
-        approach(u, nx, ny);
-        return 1;
+    byte pass, dir, nx, ny;
+
+    city_work(c);
+    for (pass = 0; pass < 2; ++pass) {
+        for (dir = 0; dir < 6; ++dir) {
+            if (!pass && !((work_mask >> dir) & 1)) continue;
+            if (!map_neighbour(city_ax[c], city_ay[c], dir, &nx, &ny))
+                continue;
+            if (map_tile[ny][nx] & MAP_OCCUPIED) continue;
+            if (improve_best(nx, ny) == ORDERS_NONE) continue;
+            work_x = nx;
+            work_y = ny;
+            return 1;
+        }
     }
     return 0;
+}
+
+// Builder u towards a hexagon round city c that wants improving. Whether
+// there was one.
+static byte to_work(byte u, byte c)
+{
+    if (!work_site(c)) return 0;
+    approach(u, work_x, work_y);
+    return 1;
 }
 
 static void move_unit(byte u)
@@ -327,12 +363,13 @@ static void move_unit(byte u)
         explore(u);
         break;
     case KIND_WARRIOR:
-        // A fair fight next to it first. Then the first warrior home in an
-        // unguarded city stays to guard it, and any other goes home to; 4.
-        // the rest hunt the enemy nearby or explore.
+        // A fair fight next to it first. Then a warrior home in a city
+        // short of guards (guards_wanted()) stays to guard it, and any
+        // other goes home too; 4. the rest hunt the enemy nearby or
+        // explore.
         if (attack_near(u, AI_ODDS)) return;
         c = home(u);
-        if (c != CITY_NONE && !guarded(u, city_ax[c], city_ay[c])) {
+        if (c != CITY_NONE && guards(unit_owner[u], u, c) < guards_wanted(c)) {
             if (ax == city_ax[c] && ay == city_ay[c]) {
                 unit_orders[u] = ORDERS_FORTIFY;
                 unit_moves[u] = 0;
@@ -373,43 +410,48 @@ static void move_unit(byte u)
 
 void ai_turn(byte p)
 {
-    byte c, u, settle;
-    byte units = unit_count_kind(p, KIND_NONE);
-    byte military = 0, fortified = 0, cities = 0;
+    byte c, u, cap, kind;
+    byte cities = 0, settlers, builders;
+    byte units = unit_count_kind(p, KIND_NONE) - unit_count_kind(p, KIND_SETTLER);
 
     if (!player_alive(p)) return;
     unit_begin_turn(p);
 
-    for (u = 0; u < MAX_UNITS; ++u) {
-        if (unit_kind[u] == KIND_NONE || unit_owner[u] != p) continue;
-        if (!unit_kind_attack[unit_kind[u]]) continue;
-        ++military;
-        if (unit_orders[u] == ORDERS_FORTIFY) ++fortified;
-    }
     for (c = 0; c < city_count; ++c)
         if (city_owner[c] == p) ++cities;
-    settle = military >= 2 && fortified
-             && unit_count_kind(p, KIND_BUILDER)
-             && !unit_count_kind(p, KIND_SETTLER) && cities < AI_CITY_CAP;
+    cap = AI_UNIT_BASE + AI_UNITS_A_CITY * cities;
+    if (cap > AI_UNIT_MAX) cap = AI_UNIT_MAX;
+    settlers = unit_count_kind(p, KIND_SETTLER);
+    builders = unit_count_kind(p, KIND_BUILDER);
 
-    // A settler from the first city with room near it, if it is time for
-    // one. Otherwise: 2. no military, build some; 3. no builder, build one;
-    // then warriors to explore -- up to the cap. Changing keeps the
-    // shields, so a city half way through a warrior that is now a builder
-    // loses nothing.
+    // What each city builds, decided afresh every turn, after Civilization:
+    // 1. guards first, while it has fewer than guards_wanted() -- with
+    // none at all even over the cap; 2. a settler from a city with a citizen and food to
+    // spare, or from the first with a citizen if there is no settler about,
+    // and a site in reach -- settlers out and cities together no more than
+    // AI_CITY_CAP; then up to the cap 3. a builder for each city that has
+    // hexagons to improve, and 4. warriors to explore and fight. Changing
+    // keeps the shields, so nothing is lost by it.
     for (c = 0; c < city_count; ++c) {
         if (city_owner[c] != p) continue;
-        if (settle && find_site(city_ax[c], city_ay[c])) {
-            city_build[c] = KIND_SETTLER;
-            settle = 0;
-        } else if (units >= AI_UNIT_CAP)
-            city_build[c] = KIND_NONE;
-        else if (unit_count_kind(p, KIND_WARRIOR) == 0)
-            city_build[c] = KIND_WARRIOR;
-        else if (unit_count_kind(p, KIND_BUILDER) == 0)
-            city_build[c] = KIND_BUILDER;
-        else
-            city_build[c] = KIND_WARRIOR;
+        u = guards(p, UNIT_NONE, c);
+        city_work(c);
+        if (u < guards_wanted(c) && (u == 0 || units < cap)) {
+            kind = KIND_WARRIOR;
+        } else if (cities + settlers < AI_CITY_CAP && city_size[c] >= 2
+                   && (work_food > 2 * city_size[c] + 1 || !settlers)
+                   && find_site(city_ax[c], city_ay[c])) {
+            kind = KIND_SETTLER;
+            ++settlers;
+        } else if (units >= cap) {
+            kind = KIND_NONE;
+        } else if (builders < cities && work_site(c)) {
+            kind = KIND_BUILDER;
+            ++builders;
+        } else {
+            kind = KIND_WARRIOR;
+        }
+        city_build[c] = kind;
     }
 
     for (u = 0; u < MAX_UNITS; ++u) {

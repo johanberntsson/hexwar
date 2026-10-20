@@ -2,13 +2,18 @@
 // milestone 6, after Civilization.
 //
 // **Every hexagon yields food, shields and trade** by its terrain (the
-// tables in growth.c), plus 1 food for irrigation and shields for a mine.
+// tables in growth.c), plus 1 food for irrigation and shields for a mine,
+// and a shield on half the grassland and floodplain, on Civilization's
+// fixed pattern.
 // **A city of size n works its own hexagon and the n best of its six
 // neighbours** -- best by three times the food, twice the shields and the
 // trade, so growth comes first, or by the food above all if that would
-// leave the city hungry -- picked afresh whenever they are asked for, so
-// nothing about them is stored or saved. Citizens beyond the six
-// work nothing but still eat. Cities are at least CITY_SPACING (4) apart,
+// leave the city hungry -- picked afresh whenever they are asked for.
+// **Unless the player has picked them** on the city screen
+// (city_toggle()): then they are kept in city_worked[], with CITY_MANUAL,
+// and only growth (the best hexagon left) and shrinking (the worst goes)
+// change them. Citizens working nothing -- beyond the six, or taken off a
+// hexagon by hand -- are idle, and still eat. Cities are at least CITY_SPACING (4) apart,
 // so two never share a hexagon.
 //
 // **Every citizen eats 2 food**, and the rest goes into the food box, which
@@ -32,10 +37,20 @@ extern byte work_mask;
 extern byte work_food;
 extern byte work_shields;
 extern byte work_trade;
+extern byte work_idle;          // citizens working no hexagon
+
+// What hexagon (ax, ay) yields, worked, into these.
+extern byte hex_food, hex_shields, hex_trade;
+void hex_yield(byte ax, byte ay);
 
 // Pick the hexagons city c works and total what they yield, into the
 // globals above.
 void city_work(byte c);
+
+// The player clicked neighbour `dir` of city c on the city screen: a worked
+// hexagon is let go, its citizen idle, and an unworked one is taken if a
+// citizen is idle. Sets the city to CITY_MANUAL. 0 if nothing changed.
+byte city_toggle(byte c, byte dir);
 
 // One turn of food for city c, at the end of the turn. GROWTH_NONE, or
 // GROWTH_GREW or GROWTH_SHRANK if its size changed.

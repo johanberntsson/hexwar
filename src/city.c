@@ -19,6 +19,7 @@ HIGH_BSS byte city_build[MAX_CITIES];
 HIGH_BSS word city_shields[MAX_CITIES];
 HIGH_BSS byte city_size[MAX_CITIES];
 HIGH_BSS byte city_food[MAX_CITIES];
+HIGH_BSS byte city_worked[MAX_CITIES];
 
 // How many cities each player has named, so the next gets the next name.
 byte city_named[PLAYERS];
@@ -59,6 +60,7 @@ byte city_found(byte owner, byte ax, byte ay)
 void city_capture(byte c, byte owner)
 {
     city_owner[c] = owner;
+    city_worked[c] = 0;
     city_build[c] = KIND_WARRIOR;
     city_shields[c] = 0;
     minimap_plot(city_ax[c], city_ay[c]);
@@ -78,6 +80,7 @@ void city_destroy(byte c)
     city_shields[c] = city_shields[last];
     city_size[c] = city_size[last];
     city_food[c] = city_food[last];
+    city_worked[c] = city_worked[last];
     unit_mark(ax, ay);
 }
 

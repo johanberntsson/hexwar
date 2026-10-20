@@ -19,6 +19,7 @@
 #include "save.h"
 #include "text.h"
 #include "civ.h"
+#include "diplomacy.h"
 #include "combat.h"
 #include "sevenships.h"
 #include "input.h"
@@ -43,6 +44,7 @@ static word off_x;
 static word off_y;
 
 static byte dirty;              // the view wants redrawing
+static byte contact;            // see whether a people has come in sight
 static byte hover_dirty;        // the readout of what is under the arrow
 static byte game_over;
 static byte quit;
@@ -116,14 +118,14 @@ static void panel_text(byte row, const char *s, byte colour)
     while (x < PANEL_WIDTH) screen_putcxy(x++, row, ' ', colour);
 }
 
-// Below the minimap and its frame, which take rows 1-10.
-#define ROW_CIV 12
-#define ROW_YEAR 13
-#define ROW_TURN 14
-#define ROW_UNIT 16
-#define ROW_MOVES 17
-#define ROW_PROMPT 19           // two rows
-#define ROW_MESSAGE 22          // two rows
+// Below the minimap and its frame, which take rows 1-7.
+#define ROW_CIV 9
+#define ROW_YEAR 10
+#define ROW_TURN 11
+#define ROW_UNIT 13
+#define ROW_MOVES 14
+#define ROW_PROMPT 16           // two rows
+#define ROW_MESSAGE 19          // two rows
 
 // Two lines of message in the panel. `second` may be `line`.
 static void message(const char *first, const char *second)
@@ -352,6 +354,7 @@ static void end_turn(void)
     }
     dirty = 1;
     hover_dirty = 1;
+    contact = 1;
     ++game_turn;
     game_year -= YEARS_PER_TURN;
     unit_begin_turn(PLAYER_HUMAN);
@@ -436,6 +439,7 @@ static void move_active(byte dir)
     unit_move_to(u, nx, ny);
     --unit_moves[u];
     dirty = 1;
+    contact = 1;
     if (unit_moves[u]) {
         if (!in_view(nx, ny)) centre_on(nx, ny);
         draw_orders();
@@ -632,6 +636,11 @@ static void menu_command(byte command)
     case MENU_TOP_CITIES:
         open_top_cities();
         break;
+    case MENU_DIPLOMACY:
+        diplomacy_contact();
+        diplomacy_screen();
+        draw_screen();
+        break;
     case MENU_KEYS:
         open_help();
         break;
@@ -818,6 +827,8 @@ void game_init(void)
     city_reset();
     combat_reset();
     game_over = quit = retired = loaded = 0;
+    diplomacy_met = 0;
+    contact = 1;
     selecting = 0;
 
     // START_OFF_X / START_OFF_Y are what let a headless run check
@@ -833,7 +844,10 @@ void game_init(void)
         ax = cx;
         ay = cy;
     }
+    // Every people starts with a settler and a warrior on its hexagon, so
+    // that there is somebody to explore from the first turn.
     unit_create(KIND_SETTLER, PLAYER_HUMAN, ax, ay);
+    unit_create(KIND_WARRIOR, PLAYER_HUMAN, ax, ay);
     ai_place();
 
     game_turn = 1;
@@ -911,6 +925,12 @@ byte game_run(void)
             minimap_frame(off_x, off_y);
             dirty = 0;
             hover_dirty = 1;
+        }
+        // After the redraw, so that whoever has come in sight is on the
+        // map behind the greeting.
+        if (contact) {
+            contact = 0;
+            diplomacy_contact();
         }
 
         key = input_poll();

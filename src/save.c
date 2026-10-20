@@ -12,6 +12,7 @@
 #include "city.h"
 #include "civ.h"
 #include "combat.h"
+#include "diplomacy.h"
 #include "game.h"
 #include "map.h"
 #include "unit.h"
@@ -35,6 +36,7 @@ static const struct block blocks[] = {
     { unit_orders, sizeof unit_orders },
     { unit_work, sizeof unit_work },
     { ai_heading, sizeof ai_heading },
+    { ai_seen, sizeof ai_seen },
     { &city_count, sizeof city_count },
     { &city_founded, sizeof city_founded },
     { city_owner, sizeof city_owner },
@@ -49,6 +51,7 @@ static const struct block blocks[] = {
     { city_worked, sizeof city_worked },
     { city_named, sizeof city_named },
     { combat_war, sizeof combat_war },
+    { &diplomacy_met, sizeof diplomacy_met },
     { &combat_seed, sizeof combat_seed },
     { &game_level, sizeof game_level },
     { player_civ, sizeof player_civ },

@@ -2,8 +2,6 @@
 
 You can irrigate and mine etc outside the city area
 
-Add a list of (known) AIs on the game screen with some basic info
-
 --- MILESTONES ---
 
 Each milestone includes the AI's use of what it adds, so the computer players keep up.
@@ -44,13 +42,25 @@ Milestone 8: basic diplomacy
 - Contact between peoples; peace, war, ceasefire; an attitude value per pair
 - Computer players declare war (and make peace) themselves
 - Letters in the Amarna formulas (vision.md section 3), as templates in attic texts
-- The list of known AIs (the OPEN item above) as the first new information screen
+- DONE ahead of it: contact (a people is met when seen; saved, with a greeting popup) and
+  Advisors/Diplomacy listing the peoples met with ruler, war/peace, cities, citizens, units
 
 Milestone 9: trade
 - Start with gift exchange of goods through the letters
 - Later: merchant ships (need cedar), physical trade fleets, emporia
 
 --- DONE ---
+
+Meeting the other peoples took 60-150 turns, or never happened (map seed 7, 150 turns).
+- Map 128x32 -> 128x20 (2560 hexagons; Civ 1's 4000 squares are for 7 peoples)
+- Explorers: warriors kept exploring (1 + 1 per 3 cities), an exploration memory per player
+  (8x4-cell blocks), going round water, no recall from further than 4 hexagons
+- Every people starts with a warrior beside its settler; no guards before the barbarians
+- First contact now (autoplay, 150 turns): seed 1 turn 45, seed 7 turn 68, seed 3 turn 90.
+  The rest are often on other landmasses, and need boats
+
+Advisors/Diplomacy: the peoples met, with some basic info; the menu bar is now
+Game, Orders, Advisors, World, Debug, Help
 
 Milestone 5: more terrain
 - New terrain tiles: plains, forest (baked over plains), desert, floodplain (for grain)

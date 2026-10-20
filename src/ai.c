@@ -7,6 +7,7 @@
 #include "ai.h"
 #include "city.h"
 #include "combat.h"
+#include "game.h"
 #include "growth.h"
 #include "improve.h"
 #include "map.h"
@@ -62,6 +63,24 @@
 // Which way each exploring warrior is heading, DIR_*. Kept between turns so
 // that it walks somewhere rather than jittering on the spot.
 HIGH_BSS byte ai_heading[MAX_UNITS];
+
+// **Where each player has been**, for its explorers: the map in blocks of
+// SEEN_COLUMNS x SEEN_ROWS cells, 16 across and 8 down, a bit each --
+// ai_seen[p][block column], bit block row. A block is seen once one of p's
+// units or cities has been in it. ai_land says which blocks have any land
+// at all, worked out by ai_place() from the map, which never changes.
+#define SEEN_COLUMNS 8
+#define SEEN_ROWS 4
+#define SEEN_X (MAP_COLUMNS / SEEN_COLUMNS)
+#if SEEN_X != 16 || MAP_ROWS / SEEN_ROWS > 8
+#error "ai_seen in ai.h is 16 bytes a player, a bit a block row"
+#endif
+HIGH_BSS byte ai_seen[PLAYERS][SEEN_X];
+HIGH_BSS static byte ai_land[SEEN_X];
+
+// An explorer that has come no nearer its block in this many turns gives
+// it up as out of reach -- over the water -- and counts it as seen.
+#define PATIENCE 12
 
 // Hexagons between two cells, round the east-west wrap. In doubled
 // coordinates that is dy, plus whatever of dx the diagonal steps do not
@@ -165,8 +184,20 @@ static byte find_site(byte fx, byte fy)
 
 void ai_place(void)
 {
-    byte p, ax, ay, tries;
+    byte p, ax, ay, tries, t;
     word spacing;
+
+    // Nobody has been anywhere yet; and where the land is.
+    for (ax = 0; ax < SEEN_X; ++ax) {
+        for (p = 0; p < PLAYERS; ++p) ai_seen[p][ax] = 0;
+        ai_land[ax] = 0;
+    }
+    for (ay = 0; ay < MAP_ROWS; ++ay)
+        for (ax = 0; ax < MAP_COLUMNS; ++ax) {
+            t = MAP_TERRAIN(ax, ay);
+            if (t != TILE_OCEAN && t != TILE_SHALLOW_OCEAN)
+                ai_land[ax / SEEN_COLUMNS] |= (byte)(1 << (ay / SEEN_ROWS));
+        }
 
     for (p = PLAYER_FIRST_AI; p < PLAYERS; ++p) {
         for (spacing = START_SPACING;; spacing -= START_SPACING_STEP) {
@@ -184,6 +215,7 @@ void ai_place(void)
         continue;
 found:
         unit_create(KIND_SETTLER, p, ax, ay);
+        unit_create(KIND_WARRIOR, p, ax, ay);   // as the human's, game.c
     }
 }
 
@@ -198,29 +230,109 @@ static byte step(byte u, byte dir)
     return 1;
 }
 
-// On along its heading, turning now and then, and trying the other ways
-// round when that is blocked. Nowhere to go is a turn spent standing still.
-static void explore(byte u)
-{
-    byte d = ai_heading[u] % 6, i, r = rnd();     // HIGH_BSS: not cleared
+static byte home(byte u);
+static void explore_out(byte u);
+static void approach(byte u, byte bx, byte by);
 
-    if ((r & 3) == 0) d = (byte)((d + ((r & 4) ? 1 : 5)) % 6);
-    for (i = 0; i < 6; ++i, d = (byte)((d + 1) % 6)) {
-        if (step(u, d)) {
-            ai_heading[u] = d;
-            return;
-        }
-    }
-    unit_moves[u] = 0;
+static void seen(byte p, byte ax, byte ay)
+{
+    ai_seen[p][ax / SEEN_COLUMNS] |= (byte)(1 << (ay / SEEN_ROWS));
 }
 
-// The step from u's hexagon that comes nearest (bx, by), if any is nearer;
-// if none is, water or somebody is in the way, and a step of exploring is
-// what gets round it.
+// The middle of the nearest block with land that p has not seen, from
+// (ax, ay), into (block_x, block_y); 0 if p has seen them all.
+static byte block_x, block_y;
+
+static byte unseen_block(byte p, byte ax, byte ay)
+{
+    byte bx, by, cx, cy;
+    word d, best = 0xffff;
+
+    for (bx = 0; bx < SEEN_X; ++bx) {
+        for (by = 0; by < MAP_ROWS / SEEN_ROWS; ++by) {
+            if (!((ai_land[bx] >> by) & 1) || ((ai_seen[p][bx] >> by) & 1))
+                continue;
+            cx = bx * SEEN_COLUMNS + SEEN_COLUMNS / 2;
+            cy = by * SEEN_ROWS + SEEN_ROWS / 2;
+            d = distance(ax, ay, cx, cy);
+            if (d < best) {
+                best = d;
+                block_x = cx;
+                block_y = cy;
+            }
+        }
+    }
+    return best != 0xffff;
+}
+
+// **To the nearest land the player has not been to**, round water on the
+// way (approach()), giving a block up after PATIENCE turns of coming no
+// nearer; unit_work[] counts them, as it does a builder's turns. With
+// everything seen, or for a barbarian, explore_out().
+static void explore(byte u)
+{
+    byte p = unit_owner[u];
+    word before;
+
+    if (p == PLAYER_BARBARIAN || !unseen_block(p, unit_ax[u], unit_ay[u])) {
+        explore_out(u);
+        return;
+    }
+    before = distance(unit_ax[u], unit_ay[u], block_x, block_y);
+    approach(u, block_x, block_y);
+    if (unit_kind[u] == KIND_NONE) return;
+    if (distance(unit_ax[u], unit_ay[u], block_x, block_y) < before) {
+        unit_work[u] = 0;
+    } else if (++unit_work[u] >= PATIENCE) {
+        seen(p, block_x, block_y);
+        unit_work[u] = 0;
+    }
+}
+
+// **Outward**: of the steps it can take, the one that goes furthest from
+// its nearest city, then the one on along its heading, then any, a random
+// one of equals -- so that it strikes out and then follows the coast,
+// rather than wandering round where it started. (A walk that only kept to
+// a heading, turning now and then, saw 139 hexagons in 100 turns of
+// autoplay.) A barbarian, with no city, keeps to its heading. Nowhere to
+// go is a turn spent standing still. What explore() falls back on, and
+// approach() when it is boxed in.
+static void explore_out(byte u)
+{
+    byte d, nx, ny, best = DIR_NONE, c = home(u), r = rnd();
+    byte heading = ai_heading[u] % 6;           // HIGH_BSS: not cleared
+    word score, best_score = 0;
+
+    for (d = 0; d < 6; ++d, r >>= 1) {
+        if (!map_neighbour(unit_ax[u], unit_ay[u], d, &nx, &ny)) continue;
+        if (unit_can_enter(unit_owner[u], nx, ny) != ENTER_OK) continue;
+        score = 1 + (r & 1);
+        if (d == heading) score += 2;
+        if (c != CITY_NONE)
+            score += 4 * distance(nx, ny, city_ax[c], city_ay[c]);
+        if (score > best_score) {
+            best_score = score;
+            best = d;
+        }
+    }
+    if (best == DIR_NONE || !step(u, best)) {
+        unit_moves[u] = 0;
+        return;
+    }
+    ai_heading[u] = best;
+}
+
+// The step from u's hexagon that comes nearest (bx, by), if any is nearer.
+// If none is, water or somebody is in the way, and **it goes round**: a
+// step that keeps the distance, the nearest to its heading and never
+// straight back, which follows a coast. Only with none of those either
+// does it explore. (Exploring at once, as it used to, led straight back
+// the way it came, and a warrior paced between two hexagons for good.)
 static void approach(byte u, byte bx, byte by)
 {
-    byte dir, nx, ny, best = DIR_NONE;
-    word d, best_d = distance(unit_ax[u], unit_ay[u], bx, by);
+    byte dir, nx, ny, best = DIR_NONE, side = DIR_NONE, turn, best_turn = 3;
+    byte heading = ai_heading[u] % 6;
+    word d, here = distance(unit_ax[u], unit_ay[u], bx, by), best_d = here;
 
     for (dir = 0; dir < 6; ++dir) {
         if (!map_neighbour(unit_ax[u], unit_ay[u], dir, &nx, &ny)) continue;
@@ -229,9 +341,22 @@ static void approach(byte u, byte bx, byte by)
         if (d < best_d) {
             best_d = d;
             best = dir;
+        } else if (d == here) {
+            // How far round from the heading, 0 to 3; 3 is back.
+            turn = (byte)((dir + 6 - heading) % 6);
+            if (turn > 3) turn = 6 - turn;
+            if (turn < best_turn) {
+                best_turn = turn;
+                side = dir;
+            }
         }
     }
-    if (best == DIR_NONE || !step(u, best)) explore(u);
+    if (best == DIR_NONE) best = side;
+    if (best == DIR_NONE || !step(u, best)) {
+        explore_out(u);
+        return;
+    }
+    ai_heading[u] = best;
 }
 
 // p's city nearest u, or CITY_NONE.
@@ -267,10 +392,23 @@ static byte guards(byte p, byte u, byte c)
 // within THREAT_RANGE, its "defend" policy.
 #define THREAT_RANGE 3
 
+// Warriors a player keeps exploring, not guarding: one, and one more for
+// every three cities. Without them the guards take every warrior built,
+// and in 100 turns of autoplay the player had seen 139 of 1100 hexagons of
+// a continent everybody shared, and met nobody.
+#define EXPLORERS(CITIES) (1 + (CITIES) / 3)
+#define RECALL_RANGE 4
+
+// **None before the barbarians come** (BARB_FIRST_TURN) unless an enemy is
+// near: until then nobody attacks, and the warrior every people starts
+// with explores instead of standing in its first city.
 static byte guards_wanted(byte c)
 {
     byte n = 1 + (city_size[c] >> 2);
-    if (nearest(city_owner[c], city_ax[c], city_ay[c]) <= THREAT_RANGE) ++n;
+    if (nearest(city_owner[c], city_ax[c], city_ay[c]) <= THREAT_RANGE)
+        ++n;
+    else if (game_turn < BARB_FIRST_TURN)
+        n = 0;
     return n;
 }
 
@@ -363,13 +501,17 @@ static void move_unit(byte u)
         explore(u);
         break;
     case KIND_WARRIOR:
-        // A fair fight next to it first. Then a warrior home in a city
-        // short of guards (guards_wanted()) stays to guard it, and any
-        // other goes home too; 4. the rest hunt the enemy nearby or
-        // explore.
+        // A fair fight next to it first. Then a warrior in a city short of
+        // guards (guards_wanted()) stays to guard it, and one within
+        // RECALL_RANGE of it goes back; 4. the rest hunt the enemy nearby
+        // or explore. Further out they do not come back: the city builds
+        // its own guard, or every explorer would be called home as soon as
+        // a city grew.
         if (attack_near(u, AI_ODDS)) return;
         c = home(u);
-        if (c != CITY_NONE && guards(unit_owner[u], u, c) < guards_wanted(c)) {
+        if (c != CITY_NONE
+            && distance(ax, ay, city_ax[c], city_ay[c]) <= RECALL_RANGE
+            && guards(unit_owner[u], u, c) < guards_wanted(c)) {
             if (ax == city_ax[c] && ay == city_ay[c]) {
                 unit_orders[u] = ORDERS_FORTIFY;
                 unit_moves[u] = 0;
@@ -411,11 +553,17 @@ static void move_unit(byte u)
 void ai_turn(byte p)
 {
     byte c, u, cap, kind;
-    byte cities = 0, settlers, builders;
+    byte cities = 0, settlers, builders, explorers = 0;
     byte units = unit_count_kind(p, KIND_NONE) - unit_count_kind(p, KIND_SETTLER);
 
     if (!player_alive(p)) return;
     unit_begin_turn(p);
+
+    for (u = 0; u < MAX_UNITS; ++u)
+        if (unit_kind[u] != KIND_NONE && unit_owner[u] == p)
+            seen(p, unit_ax[u], unit_ay[u]);
+    for (c = 0; c < city_count; ++c)
+        if (city_owner[c] == p) seen(p, city_ax[c], city_ay[c]);
 
     for (c = 0; c < city_count; ++c)
         if (city_owner[c] == p) ++cities;
@@ -423,12 +571,17 @@ void ai_turn(byte p)
     if (cap > AI_UNIT_MAX) cap = AI_UNIT_MAX;
     settlers = unit_count_kind(p, KIND_SETTLER);
     builders = unit_count_kind(p, KIND_BUILDER);
+    for (u = 0; u < MAX_UNITS; ++u)
+        if (unit_kind[u] == KIND_WARRIOR && unit_owner[u] == p
+            && unit_orders[u] != ORDERS_FORTIFY)
+            ++explorers;
 
     // What each city builds, decided afresh every turn, after Civilization:
     // 1. guards first, while it has fewer than guards_wanted() -- with
-    // none at all even over the cap; 2. a settler from a city with a citizen and food to
-    // spare, or from the first with a citizen if there is no settler about,
-    // and a site in reach -- settlers out and cities together no more than
+    // none at all even over the cap; then explorers, warriors that are not
+    // guarding, up to EXPLORERS(); 2. a settler from a city with a citizen
+    // and food to spare, or from the first with a citizen if there is no
+    // settler about, and a site in reach -- settlers out and cities together no more than
     // AI_CITY_CAP; then up to the cap 3. a builder for each city that has
     // hexagons to improve, and 4. warriors to explore and fight. Changing
     // keeps the shields, so nothing is lost by it.
@@ -438,6 +591,9 @@ void ai_turn(byte p)
         city_work(c);
         if (u < guards_wanted(c) && (u == 0 || units < cap)) {
             kind = KIND_WARRIOR;
+        } else if (explorers < EXPLORERS(cities) && units < cap) {
+            kind = KIND_WARRIOR;
+            ++explorers;
         } else if (cities + settlers < AI_CITY_CAP && city_size[c] >= 2
                    && (work_food > 2 * city_size[c] + 1 || !settlers)
                    && find_site(city_ax[c], city_ay[c])) {

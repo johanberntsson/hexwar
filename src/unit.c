@@ -43,6 +43,7 @@ byte unit_create(byte kind, byte owner, byte ax, byte ay)
             unit_ay[u] = ay;
             unit_moves[u] = unit_kind_moves[kind];
             unit_orders[u] = ORDERS_NONE;
+            unit_work[u] = 0;
             unit_mark(ax, ay);
             if (owner == PLAYER_HUMAN) map_explore(ax, ay);
             return u;

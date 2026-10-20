@@ -1,6 +1,5 @@
-// The Top Five Cities screen, opened from World on the menu bar. Only the
-// frame so far: the five places are empty until cities have something to
-// be ranked by.
+// The Top Five Cities screen, opened from World on the menu bar: the five
+// largest cities the player has seen.
 #ifndef SEVENSHIPS_TOPCITIES_H
 #define SEVENSHIPS_TOPCITIES_H
 

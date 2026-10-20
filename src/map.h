@@ -12,19 +12,23 @@
 // That halves neatly into a rectangular array: array cell (ax, ay) is the
 // hexagon (ax, 2*ay + (ax & 1)).
 //
-// **128x32, not Civilization 1's 80x50**, because in this layout a visual row
+// **128x20, not Civilization 1's 80x50**, because in this layout a visual row
 // of hexagons is every *other* column and an array row is *two* hexagon rows.
 // 80x50 looked like 40 hexagons across by 100 down -- about 1:1.9 on the
-// glass, portrait. 128x32 is 64 across by 64 down, 512 characters by 193 rows,
-// which a character's 1:2 aspect makes about 1.33:1, landscape. One layer is
-// 4096 bytes, near enough what 80x50 cost.
+// glass, portrait. 128x20 is 64 across by 40 down, 512 characters by 121
+// rows, which a character's 1:2 aspect makes about 2.1:1: a wide band, as
+// the Mediterranean is. **It was 128x32 until 20 Oct 2026**, 4096 hexagons:
+// Civilization's 4000 squares are for seven peoples and these are four, and
+// a hexagon map feels the larger of the two, so the peoples took a hundred
+// turns and more to meet. 2560 now. The width stays a power of two, which
+// the wrap's `& (MAP_COLUMNS - 1)` relies on.
 #ifndef SEVENSHIPS_MAP_H
 #define SEVENSHIPS_MAP_H
 
 #include "mega65.h"
 
 #define MAP_COLUMNS 128
-#define MAP_ROWS 32
+#define MAP_ROWS 20
 
 // Where a map cell is drawn, in screen characters, relative to the map's own
 // top left. **These are the two numbers the whole view geometry rests on.**
@@ -133,7 +137,7 @@ void map_explore(byte ax, byte ay);
 // which is the bytes of ASCII "SEVENSHIPS.MAP", and Calypsi passes literals
 // through unchanged.
 #define MAP_FILE_NAME "SEVENSHIPS.MAP"
-#define MAP_VERSION 2
+#define MAP_VERSION 3
 
 // The cell whose hexagon is under map-space character (cx, cy), cx below
 // MAP_WIDTH_CHARS. Tiles overlap, so a character can lie inside two tiles'

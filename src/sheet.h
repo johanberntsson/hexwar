@@ -20,9 +20,10 @@
 // its four rows of eight characters one after the other, 512 bytes a row, so
 // a tile's address is its base plus row * 512 wherever it is. The first
 // SHEET_LOW_TILES are in bank 5, just above the view's tile store,
-// $57000-$5EFFF, which is all the room there is below the minimap; the rest
-// are in bank 1 at $1B000-$1EFFF, where code regions 5 and 6 would have gone
-// (src/region.h). CLAUDE.md, "When bank 5 fills up", has why there.
+// $57000-$5FFFF, the rest of the bank since the minimap moved into the
+// store's padding; the rest are in bank 1 at $1B000-$1EFFF, where code
+// regions 5 and 6 would have gone (src/region.h). CLAUDE.md, "When bank 5
+// fills up", has why there.
 //
 // **Not attic RAM, where it used to be.** Search And Rescue measured DMA *out
 // of* attic RAM on a real MEGA65 at 16.1 cycles a byte against 2.2 chip to
@@ -34,7 +35,7 @@
 #define SHEET_EXPANDED 0x57000UL
 #define SHEET_EXPANDED_BANK 0x05
 #define SHEET_EXPANDED_ADDR 0x7000u
-#define SHEET_LOW_TILES 16
+#define SHEET_LOW_TILES 18
 #define SHEET_HIGH 0x1B000UL
 #define SHEET_HIGH_BANK 0x01
 #define SHEET_HIGH_ADDR 0xB000u
@@ -52,6 +53,9 @@
 #define TILE_ROW_BYTES (64U * TILE_EXPANDED_COLUMNS)       // 512
 #define TILE_BYTES (TILE_ROW_BYTES * TILE_ROWS)             // 2048
 
+#if SHEET_EXPANDED + 2048UL * SHEET_LOW_TILES > 0x60000UL
+#error "the low part of the sheet runs past bank 5"
+#endif
 #if TILE_COUNT > SHEET_LOW_TILES + SHEET_HIGH_TILES
 #error "more tiles than the sheet has room for"
 #endif
@@ -83,7 +87,7 @@
 // intersection of all the outlines tiles the plane, so any mixture of
 // explored and unexplored hexagons still covers the window.
 #define TILE_UNDISCOVERED 15
-// In bank 1 from here. The builders' improvements, drawn over the terrain
+// The builders' improvements, drawn over the terrain
 // straight after it (MAP_OVERLAY_TILE in src/map.h, in MAP_IMPROVEMENT's
 // order).
 #define TILE_OVERLAY_FIRST 16

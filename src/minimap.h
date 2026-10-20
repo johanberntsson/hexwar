@@ -2,9 +2,9 @@
 // outline of the part the map window shows, as in
 // civ1-reference/civ1-pic01.png.
 //
-// **It is full-colour characters, like the map window**, 16x8 of them, each
+// **It is full-colour characters, like the map window**, 16x5 of them, each
 // with a 64-byte definition of its own in bank 5, so that together they are
-// a 128x64-pixel framebuffer. A hexagon is two pixels across and one line
+// a 128x40-pixel framebuffer. A hexagon is two pixels across and one line
 // down -- square on the glass at H640/V200 -- and its hexagon row is its
 // line, so the odd rows sit a pixel across from the even ones exactly as the
 // tiles do: hexagon (hx, hy) is pixels hx and hx + 1 of line hy, wrapping at
@@ -24,21 +24,18 @@
 #define MINIMAP_LEFT 1
 #define MINIMAP_TOP 2
 #define MINIMAP_COLUMNS 16
-#define MINIMAP_ROWS 8
+#define MINIMAP_ROWS 5
 
-// Its character definitions, 128 of 64 bytes, in two places. Chip RAM,
-// because the VIC-IV cannot fetch characters from attic RAM.
+// Its character definitions, 80 of 64 bytes. Chip RAM, because the VIC-IV
+// cannot fetch characters from attic RAM.
 //
-// **The first 92 are in the tile store's row padding**: each of the 23 rows
+// **All of them are in the tile store's row padding**: each of the 23 rows
 // has 256 bytes after the window's 3840 that the redraw never writes, four
-// characters' worth (src/view.h). Character i of the minimap (row-major,
-// 16 a row) is slot i % 4 of store row i / 4 while i < 92, and the rest are
-// at MINIMAP_STORE, $5F000-$5F8FF, so the expanded sheet can go up to $5F000.
+// characters' worth (src/view.h), 92 in all. Character i of the minimap
+// (row-major, 16 a row) is slot i % 4 of store row i / 4. (With the 128x32
+// map it was 128 characters, and the last 36 were at $5F000.)
 #define MINIMAP_PAD_SLOTS ((VIEW_ROW_STRIDE - 64 * VIEW_COLUMNS) / 64)     // 4
 #define MINIMAP_PAD_CHARS (MINIMAP_PAD_SLOTS * VIEW_ROWS)                  // 92
-#define MINIMAP_STORE 0x5f000UL
-#define MINIMAP_STORE_SIZE \
-    (64UL * (MINIMAP_COLUMNS * MINIMAP_ROWS - MINIMAP_PAD_CHARS))         // 2304
 
 // Write the minimap's character numbers and frame into the screen and draw
 // all of it. Once, when the game screen goes up.

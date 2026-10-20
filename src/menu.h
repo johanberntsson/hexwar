@@ -18,6 +18,7 @@
 #define MENU_SAVE 8
 #define MENU_IRRIGATE 9
 #define MENU_MINE 10
+#define MENU_DIPLOMACY 11
 
 // What the Orders menu offers, for the unit that has the orders: up to two
 // of MENU_FOUND_CITY, MENU_FORTIFY, MENU_IRRIGATE and MENU_MINE, MENU_NONE

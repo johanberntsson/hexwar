@@ -21,17 +21,17 @@
 #define DROP_TOP 1              // the dropdown's frame; items start a row below
 
 #ifdef DEBUG_MENU
+#define MENUS 6
+static const char *const menu_title[MENUS] = {
+    "Game", "Orders", "Advisors", "World", "Debug", "Help",
+};
+static const byte menu_x[MENUS] = { 0, 5, 12, 21, 27, 33 };
+#else
 #define MENUS 5
 static const char *const menu_title[MENUS] = {
-    "Game", "Orders", "Debug", "World", "Help",
+    "Game", "Orders", "Advisors", "World", "Help",
 };
-static const byte menu_x[MENUS] = { 0, 5, 12, 18, 24 };
-#else
-#define MENUS 4
-static const char *const menu_title[MENUS] = {
-    "Game", "Orders", "World", "Help",
-};
-static const byte menu_x[MENUS] = { 0, 5, 12, 18 };
+static const byte menu_x[MENUS] = { 0, 5, 12, 21, 27 };
 #endif
 
 // Each menu's items and what they ask for. An empty menu does not open.
@@ -49,6 +49,9 @@ static const char *const debug_items[] = { "Show Map", "Play 50 Turns" };
 static const byte debug_commands[] = { MENU_SHOW_MAP, MENU_PLAY_50 };
 #endif
 
+static const char *const advisors_items[] = { "Diplomacy" };
+static const byte advisors_commands[] = { MENU_DIPLOMACY };
+
 static const char *const world_items[] = { "Top Five Cities" };
 static const byte world_commands[] = { MENU_TOP_CITIES };
 
@@ -57,21 +60,23 @@ static const byte help_commands[] = { MENU_KEYS };
 
 #ifdef DEBUG_MENU
 static const char *const *const menu_items[MENUS] = {
-    game_items, orders_items, debug_items, world_items, help_items
+    game_items, orders_items, advisors_items, world_items, debug_items,
+    help_items
 };
 static const byte *const menu_commands[MENUS] = {
-    game_commands, orders_commands, debug_commands, world_commands,
-    help_commands
+    game_commands, orders_commands, advisors_commands, world_commands,
+    debug_commands, help_commands
 };
-static byte menu_count[MENUS] = { 2, 0, 2, 1, 1 };
+static byte menu_count[MENUS] = { 2, 0, 1, 1, 2, 1 };
 #else
 static const char *const *const menu_items[MENUS] = {
-    game_items, orders_items, world_items, help_items
+    game_items, orders_items, advisors_items, world_items, help_items
 };
 static const byte *const menu_commands[MENUS] = {
-    game_commands, orders_commands, world_commands, help_commands
+    game_commands, orders_commands, advisors_commands, world_commands,
+    help_commands
 };
-static byte menu_count[MENUS] = { 2, 0, 1, 1 };
+static byte menu_count[MENUS] = { 2, 0, 1, 1, 1 };
 #endif
 
 #define ORDERS 1                // Orders' index in the tables above

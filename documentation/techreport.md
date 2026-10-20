@@ -18,7 +18,7 @@ copied into by DMA. Moving the view redraws the whole window, synchronised to
 the raster beam.
 
 - The map
-A 128x32 hexagon map, wrapping east to west, made at build time by a Python
+A 128x20 hexagon map, wrapping east to west, made at build time by a Python
 generator and read from disk at start-up. One byte per hexagon holds the
 terrain, whether the player has explored it, and whether anything is on it.
 A minimap in the panel shows all of it that has been explored.
@@ -144,7 +144,7 @@ to `release/`), holding five files:
 | SEVENSHIPS.MAP | the map: a 16-byte header and one 4096-byte layer of terrain |
 | TEXT.PAK | the texts -- the title, help and new-game screens, the opening popup, and the lists of names -- with their markup |
 | SEVENSHIPS.R1 | code region 1, the computer players, the builders' improvements and the cities' growth: a header and the code, run at \$6000 from bank 1 |
-| SEVENSHIPS.R2 | code region 2, the city screen and Top Five Cities, the same way |
+| SEVENSHIPS.R2 | code region 2, the city screen, Top Five Cities and diplomacy, the same way |
 
 The C65 ROM boots AUTOBOOT.C65 automatically. `main()` then:
 
@@ -253,7 +253,7 @@ BASIC 65's variable area, unused while the game runs. Region 0 holds the
 screens that are not the map -- title, setup, help -- with the menus,
 save and load and the tile sheet's loader; region 1 holds the computer
 players, the builders' improvements and the cities' yields and growth;
-region 2 the city screen and Top Five Cities. Four regions fit,
+region 2 the city screen, Top Five Cities and diplomacy. Four regions fit,
 up to \$1afff; above them, \$1b000-\$1efff holds the last eight tiles of
 the tile sheet.
 
@@ -275,12 +275,10 @@ and the main loop stay resident, where a call costs nothing.
 | \$12000-\$12f9f | 4 | Screen RAM, 80x25 cells of two bytes |
 | \$13000-\$14fff | 8 | Code region 1 |
 | \$15000-\$16fff | 8 | Code region 2 |
-| \$1b000-\$1efff | 16 | The expanded tile sheet's tiles 16-23: the overlays, two of them so far |
+| \$1b000-\$1efff | 16 | The expanded tile sheet's tiles 18-25, none used yet |
 | \$20000-\$3ffff | 128 | The C65 ROM, left in place |
 | \$40000-\$56fff | 92 | The tile store: the map window's character definitions, and 92 of the minimap's in the row padding |
-| \$57000-\$5efff | 32 | The expanded tile sheet's tiles 0-15 |
-| \$5f000-\$5f8ff | 2.25 | The other 36 of the minimap's character definitions |
-| \$5f900-\$5ffff | 1.75 | free |
+| \$57000-\$5ffff | 36 | The expanded tile sheet's tiles 0-17 |
 | \$08000000- | 8192 | Attic RAM: the texts from TEXT.PAK at the bottom, the rest free |
 | \$0ff81000-\$0ff81f9f | 4 | Colour RAM |
 
@@ -310,8 +308,8 @@ characters, 2 KB each, stored a tile at a time. It is in chip RAM rather
 than in Attic RAM because the redraw copies about 160 KB out of it, and DMA
 reading Attic RAM is about seven times slower than reading chip RAM on the
 real machine. The VIC never reads it -- it is only a DMA source -- so it
-need not be in bank 5: the first 16 tiles fill bank 5 up to the minimap,
-and the rest go in bank 1, where two code regions would have been. Each
+need not be in bank 5: the first 18 tiles fill bank 5 to its end, and the
+rest go in bank 1, where two code regions would have been. Each
 part lies in one bank, so a source address is 16 bits, and the redraw
 changes the DMA's source bank only when it moves from one part to the
 other. While loading it, the program notes which characters of each tile
@@ -319,9 +317,9 @@ row have any pixels, and the redraw copies only those: a unit or an
 improvement, a small picture in the middle of its tile, then costs much
 less than a whole tile.
 
-**The minimap** is the same trick at a smaller scale: 16x8 full-colour
-characters, each with a definition of its own -- 92 of them in the tile
-store's row padding, which nothing else uses, and 36 at \$5f000 -- making a 128x64
+**The minimap** is the same trick at a smaller scale: 16x5 full-colour
+characters, each with a definition of its own, all of them in the tile
+store's row padding, which nothing else uses -- making a 128x40
 framebuffer with a two-pixel hexagon per position. It is drawn in full once
 and then a hexagon at a time as the map is explored or units move; the
 outline of the view on it is two sprites, so scrolling never touches it.
@@ -341,7 +339,7 @@ six bits of the list's address too.
 The map is 128 columns by 32 rows of array cells, one byte each. In the
 "doubled" coordinates that the game uses, array cell (ax, ay) is the hexagon
 (ax, 2·ay + (ax and 1)): odd columns are half a hexagon lower than even ones.
-That packs 4096 hexagons, 64 across by 64 down, into a 4 KB rectangle.
+That packs 2560 hexagons, 64 across by 40 down, into a 2.5 KB rectangle.
 
 Bits 0-5 of each byte are the terrain, which is also its tile number. **Bit 6
 says that the player has seen the hexagon**; until then the redraw draws a

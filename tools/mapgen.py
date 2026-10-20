@@ -34,7 +34,7 @@ the sheet has today:
     0   3   "HXM"
     3   1   format version, MAP_VERSION
     4   1   columns (128)
-    5   1   rows (32)
+    5   1   rows (20)
     6   1   number of layers that follow
     7   1   0
     8   4   the seed that made it
@@ -59,8 +59,8 @@ from collections import deque
 
 # MAP_COLUMNS and MAP_ROWS in src/map.h. Keep the two in step.
 COLUMNS = 128
-ROWS = 32
-MAP_VERSION = 2
+ROWS = 20
+MAP_VERSION = 3
 
 # TILE_* in src/sheet.h. Keep the two in step.
 (HILLS, GRASS, MOUNTAIN, OCEAN, SHALLOW_OCEAN, TUNDRA,
@@ -90,7 +90,7 @@ DRY_PLAINS_RAIN = 1.9
 PLAINS_RAIN = 1.0
 FOREST_RAIN = 2.0
 # Rivers to try for; see rivers().
-RIVERS = 24
+RIVERS = 15
 
 # The six neighbours of a hexagon in doubled coordinates.
 HEX_STEPS = ((2, 0), (-2, 0), (1, 1), (1, -1), (-1, 1), (-1, -1))

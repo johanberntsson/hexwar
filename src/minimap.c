@@ -9,14 +9,8 @@
 #if MINIMAP_COLUMNS * 8 != MAP_COLUMNS || MINIMAP_ROWS * 8 != 2 * MAP_ROWS
 #error "the minimap is a pixel a hexagon column and a line a hexagon row"
 #endif
-#if SHEET_EXPANDED + 2048UL * SHEET_LOW_TILES > MINIMAP_STORE
-#error "the expanded sheet runs into the minimap"
-#endif
-#if MINIMAP_STORE + MINIMAP_STORE_SIZE > 0x60000UL
-#error "the minimap runs past $60000"
-#endif
-#if MINIMAP_PAD_CHARS >= MINIMAP_COLUMNS * MINIMAP_ROWS
-#error "the minimap fits in the padding, so MINIMAP_STORE is not needed"
+#if MINIMAP_COLUMNS * MINIMAP_ROWS > MINIMAP_PAD_CHARS
+#error "the minimap no longer fits in the tile store's row padding"
 #endif
 
 // Pixel values are palette indices, and 0-15 are the system colours that
@@ -71,11 +65,9 @@ static byte colour(byte ax, byte ay)
 // MINIMAP_STORE -- see src/minimap.h.
 static word char_number(byte i)
 {
-    if (i < MINIMAP_PAD_CHARS)
-        return (word)(TILE_STORE / 64)
-               + (word)(i / MINIMAP_PAD_SLOTS) * (VIEW_ROW_STRIDE / 64)
-               + VIEW_COLUMNS + i % MINIMAP_PAD_SLOTS;
-    return (word)(MINIMAP_STORE / 64) + (i - MINIMAP_PAD_CHARS);
+    return (word)(TILE_STORE / 64)
+           + (word)(i / MINIMAP_PAD_SLOTS) * (VIEW_ROW_STRIDE / 64)
+           + VIEW_COLUMNS + i % MINIMAP_PAD_SLOTS;
 }
 
 // Where character i's 64 bytes are. The call is kept out of the 32-bit

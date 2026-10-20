@@ -123,6 +123,8 @@ stub:       .macro  name, target, region
             stub    city_toggle, city_toggle_r1, 1
             stub    hex_yield, hex_yield_r1, 1
 
-; Region 2: the city screen and Top Five Cities.
+; Region 2: the city screen, Top Five Cities and diplomacy.
             stub    city_screen, city_screen_r2, 2
             stub    top_cities_screen, top_cities_screen_r2, 2
+            stub    diplomacy_contact, diplomacy_contact_r2, 2
+            stub    diplomacy_screen, diplomacy_screen_r2, 2

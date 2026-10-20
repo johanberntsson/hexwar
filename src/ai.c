@@ -26,11 +26,11 @@
 // Expansion. A player builds a settler -- one at a time, and not counted
 // against AI_UNIT_CAP, since it is gone again once it has founded -- when
 // it has two military units, one of them fortified, and a builder, and a
-// city of its has a site within SETTLE_RANGE hexagons: grassland or hills,
-// SITE_LAND land neighbours or more, and at least CITY_SPACING hexagons
-// from every city. No more than AI_CITY_CAP cities, which with the unit
-// cap leaves a guard for each, a builder and an explorer; and MAX_CITIES
-// is shared with the human.
+// city of its has a site within SETTLE_RANGE hexagons: grassland, plains,
+// floodplain or hills, SITE_LAND land neighbours or more, and at least
+// CITY_SPACING hexagons from every city. No more than AI_CITY_CAP cities,
+// which with the unit cap leaves a guard for each, a builder and an
+// explorer; and MAX_CITIES is shared with the human.
 #define SETTLE_RANGE 6
 #define CITY_SPACING 4
 #define SITE_LAND 3
@@ -137,7 +137,8 @@ static byte find_site(byte fx, byte fy)
             d = distance(fx, fy, x, (byte)y);
             if (d > SETTLE_RANGE || d >= best) continue;
             t = MAP_TERRAIN(x, y);
-            if (t != TILE_GRASS && t != TILE_DESERT_HILL) continue;
+            if (t != TILE_GRASS && t != TILE_PLAINS && t != TILE_FLOODPLAIN
+                && t != TILE_HILLS) continue;
             if ((map_tile[y][x] & MAP_OCCUPIED) && d) continue;
             if (land_neighbours(x, (byte)y) < SITE_LAND) continue;
             ok = 1;

@@ -7,12 +7,16 @@
 
 // Shields a hexagon yields, by terrain value (a TILE_* number).
 static const byte terrain_shields[] = {
-    2,      // TILE_DESERT_HILL
+    2,      // TILE_HILLS
     1,      // TILE_GRASS
     1,      // TILE_MOUNTAIN
     0,      // TILE_OCEAN
     0,      // TILE_SHALLOW_OCEAN
     0,      // TILE_TUNDRA
+    1,      // TILE_PLAINS
+    2,      // TILE_FOREST
+    0,      // TILE_DESERT
+    1,      // TILE_FLOODPLAIN
 };
 
 byte city_count;

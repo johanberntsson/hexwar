@@ -4,22 +4,29 @@
     mapgen.py [--seed N] [--land PERCENT] [--png preview.png] out.map
 
 The steps follow the Civilization 1 generator described in design.md (and the
-civfanatics thread it links), adapted to a hex grid and cut down to the six
-tiles the sheet has today:
+civfanatics thread it links), adapted to a hex grid and to the ten terrains
+the sheet has today:
 
 1. Land masses: random walks that stamp a hexagon and its six neighbours,
    repeated until the land target is reached. **The map wraps east-west**,
    as the game's view does, so land may run across the seam; it is kept two
    cells away from the top and bottom only.
 2. Relief: shorter random walks that raise mountain ranges, only on land at
-   least two steps from the coast, so ranges never sit on a beach.
+   least two steps from the coast, so ranges never sit on a beach; then hills,
+   as foothills round the ranges and as a few short walks of their own.
 3. Rainfall: wind blows along each row, picking moisture up over water and
    dropping it over land, more of it against mountains; done west to east and
    east to west and summed. Each pass goes round the row twice and keeps the
-   second lap, so that the seam gets the moisture the wrap would bring it. Dry land in the warm band becomes desert.
+   second lap, so that the seam gets the moisture the wrap would bring it.
+   In the warm band dry land becomes desert, then plains, then grassland as
+   the rain rises; elsewhere plains, grassland and, wettest, forest.
 4. Temperature: land near the top and bottom of the map becomes tundra, with
    a ragged edge rather than a straight line.
-5. Clean-up: one-hexagon lakes are filled in, and ocean next to land becomes
+5. Rivers: from mountains and hills down the coast distance to the sea.
+   They are not drawn -- the sheet has no river tile yet -- but where one
+   crosses desert or plains it leaves a line of floodplain, the Nile's
+   arrangement and the grain the game's peoples lived on.
+6. Clean-up: one-hexagon lakes are filled in, and ocean next to land becomes
    shallow ocean.
 
 **The file layout**, which src/map.c reads; all of it little-endian:
@@ -53,20 +60,37 @@ from collections import deque
 # MAP_COLUMNS and MAP_ROWS in src/map.h. Keep the two in step.
 COLUMNS = 128
 ROWS = 32
-MAP_VERSION = 1
+MAP_VERSION = 2
 
 # TILE_* in src/sheet.h. Keep the two in step.
-DESERT_HILL, GRASS, MOUNTAIN, OCEAN, SHALLOW_OCEAN, TUNDRA = range(6)
+(HILLS, GRASS, MOUNTAIN, OCEAN, SHALLOW_OCEAN, TUNDRA,
+ PLAINS, FOREST, DESERT, FLOODPLAIN) = range(10)
+# Lowland: what the climate decides, and what erosion may turn into another.
+LOWLAND = (GRASS, PLAINS, FOREST, DESERT, TUNDRA)
 
 # Preview colours, one per terrain value.
 COLOURS = {
-    DESERT_HILL: (214, 190, 96),
+    HILLS: (120, 96, 48),
     GRASS: (64, 150, 48),
     MOUNTAIN: (130, 130, 140),
     OCEAN: (40, 60, 160),
     SHALLOW_OCEAN: (70, 120, 210),
     TUNDRA: (200, 215, 220),
+    PLAINS: (150, 140, 56),
+    FOREST: (16, 80, 24),
+    DESERT: (240, 228, 140),
+    FLOODPLAIN: (150, 210, 80),
 }
+
+# Rainfall thresholds; see generate(). In the warm band, below DESERT_RAIN
+# is desert and below DRY_PLAINS_RAIN plains; elsewhere below PLAINS_RAIN is
+# plains and above FOREST_RAIN forest. The rest is grassland.
+DESERT_RAIN = 1.3
+DRY_PLAINS_RAIN = 1.9
+PLAINS_RAIN = 1.0
+FOREST_RAIN = 2.0
+# Rivers to try for; see rivers().
+RIVERS = 24
 
 # The six neighbours of a hexagon in doubled coordinates.
 HEX_STEPS = ((2, 0), (-2, 0), (1, 1), (1, -1), (-1, 1), (-1, -1))
@@ -155,6 +179,32 @@ def raise_mountains(rng, terrain, dist):
             x, y = cell
 
 
+def raise_hills(rng, terrain, dist):
+    """Step 2, second half: foothills beside the ranges, then short walks.
+    About one land cell in twelve again, all told."""
+    for y in range(ROWS):
+        for x in range(COLUMNS):
+            if (terrain[y][x] == GRASS and dist[y][x] >= 1
+                    and any(terrain[ny][nx] == MOUNTAIN
+                            for nx, ny in neighbours(x, y))
+                    and rng.random() < 0.35):
+                terrain[y][x] = HILLS
+    lowland = [(x, y) for y in range(ROWS) for x in range(COLUMNS)
+               if dist[y][x] >= 1]
+    if not lowland:
+        return
+    target = len(lowland) // 24
+    placed = 0
+    while placed < target:
+        x, y = rng.choice(lowland)
+        for _ in range(rng.randrange(2, 6)):
+            if dist[y][x] >= 1 and terrain[y][x] == GRASS:
+                terrain[y][x] = HILLS
+                placed += 1
+            cell = rng.choice(list(neighbours(x, y)))
+            x, y = cell
+
+
 def rainfall(terrain, land):
     """Step 3: moisture per cell from two passes of wind along each row."""
     rain = [[0.0] * COLUMNS for _ in range(ROWS)]
@@ -173,6 +223,31 @@ def rainfall(terrain, land):
     return rain
 
 
+def rivers(rng, terrain, dist):
+    """Step 5: each river runs from a mountain or hill to the sea, always
+    to a neighbour nearer the coast, and turns the desert and plains on its
+    way into floodplain. Only rivers that cross some of either are kept."""
+    sources = [(x, y) for y in range(ROWS) for x in range(COLUMNS)
+               if terrain[y][x] in (MOUNTAIN, HILLS) and dist[y][x] >= 2]
+    rng.shuffle(sources)
+    made = 0
+    for x, y in sources:
+        if made >= RIVERS:
+            break
+        path = []
+        while dist[y][x] > 0:
+            lower = [(nx, ny) for nx, ny in neighbours(x, y)
+                     if dist[ny][nx] < dist[y][x]]
+            x, y = rng.choice(lower)
+            path.append((x, y))
+        dry = [(px, py) for px, py in path if terrain[py][px] in (DESERT, PLAINS)]
+        if len(dry) < 2:
+            continue
+        for px, py in dry:
+            terrain[py][px] = FLOODPLAIN
+        made += 1
+
+
 def latitude(ay):
     """0 at the equator, 1 at either pole."""
     centre = (ROWS - 1) / 2
@@ -187,18 +262,28 @@ def generate(seed, land_percent):
     dist = coast_distance(land)
     raise_mountains(rng, terrain, dist)
 
+    raise_hills(rng, terrain, dist)
+
     # Steps 3 and 4. The desert band sits between the tropics and the cold,
     # and the noise on both thresholds is what makes the edges ragged.
     rain = rainfall(terrain, land)
     for y in range(ROWS):
         for x in range(COLUMNS):
-            if not land[y][x] or terrain[y][x] == MOUNTAIN:
+            if terrain[y][x] != GRASS:
                 continue
             lat = latitude(y) + rng.uniform(-0.08, 0.08)
+            wet = rain[y][x] + rng.uniform(0, 1.5)
             if lat > 0.68:
                 terrain[y][x] = TUNDRA
-            elif 0.25 < lat < 0.55 and rain[y][x] + rng.uniform(0, 1.5) < 2.0:
-                terrain[y][x] = DESERT_HILL
+            elif 0.25 < lat < 0.55:
+                if wet < DESERT_RAIN:
+                    terrain[y][x] = DESERT
+                elif wet < DRY_PLAINS_RAIN:
+                    terrain[y][x] = PLAINS
+            elif wet < PLAINS_RAIN:
+                terrain[y][x] = PLAINS
+            elif wet > FOREST_RAIN:
+                terrain[y][x] = FOREST
 
     # Erosion, roughly Civ 1's "age" step: a cell most of whose neighbours
     # are one other lowland terrain becomes that terrain. Without it the
@@ -207,19 +292,21 @@ def generate(seed, land_percent):
         changes = []
         for y in range(ROWS):
             for x in range(COLUMNS):
-                if terrain[y][x] not in (GRASS, DESERT_HILL, TUNDRA):
+                if terrain[y][x] not in LOWLAND:
                     continue
                 counts = {}
                 for nx, ny in neighbours(x, y):
                     t = terrain[ny][nx]
                     counts[t] = counts.get(t, 0) + 1
                 for t, n in counts.items():
-                    if n >= 4 and t != terrain[y][x] and t in (GRASS, DESERT_HILL, TUNDRA):
+                    if n >= 4 and t != terrain[y][x] and t in LOWLAND:
                         changes.append((x, y, t))
         for x, y, t in changes:
             terrain[y][x] = t
 
-    # Step 5. Lakes first, so a filled lake does not leave a shallow ring.
+    rivers(rng, terrain, dist)
+
+    # Step 6. Lakes first, so a filled lake does not leave a shallow ring.
     for y in range(ROWS):
         for x in range(COLUMNS):
             if terrain[y][x] == OCEAN and all(

@@ -67,6 +67,7 @@ static byte blink;
 
 static const char *const terrain_name[] = {
     "Hills", "Grassland", "Mountains", "Ocean", "Shallows", "Tundra",
+    "Plains", "Forest", "Desert", "Floodplain",
 };
 
 // ------------------------------------------------------------------- text
@@ -762,7 +763,7 @@ void game_init(void)
     off_y = START_OFF_Y;
     map_cell_at(off_x + VIEW_COLUMNS / 2, off_y + VIEW_ROWS / 2, &cx, &cy);
     if (!find_terrain(cx, cy, TILE_GRASS, &ax, &ay)
-        && !find_terrain(cx, cy, TILE_DESERT_HILL, &ax, &ay)) {
+        && !find_terrain(cx, cy, TILE_HILLS, &ax, &ay)) {
         ax = cx;
         ay = cy;
     }

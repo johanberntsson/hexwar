@@ -4,7 +4,7 @@
 // **FCI** (Full Colour Image) is the format tools/png2fci.py writes. A header
 // of nine bytes, a palette of RGB triples, the marker "IMG", and then the
 // pixels as a row-major grid of 8x8 characters, 64 bytes each, one byte of
-// palette index per pixel. res/tiles.fci is 48x4 characters: twelve
+// palette index per pixel. res/tiles.fci is 64x4 characters: sixteen
 // 4x4-character tiles side by side, in the order tiles/Makefile lists them.
 // tools/mktiles.py writes it.
 //
@@ -17,7 +17,8 @@
 #include "mega65.h"
 
 // Where the x-expanded sheet is built: bank 5, just above the view's tile
-// store. 96 * 4 * 64 = 24576 bytes, $57000-$5CFFF.
+// store. 128 * 4 * 64 = 32768 bytes, $57000-$5EFFF, which is all the room
+// there is below the minimap (CLAUDE.md, "When bank 5 fills up").
 //
 // **Not attic RAM, where it used to be.** Search And Rescue measured DMA *out
 // of* attic RAM on a real MEGA65 at 16.1 cycles a byte against 2.2 chip to
@@ -30,7 +31,7 @@
 #define SHEET_EXPANDED_ADDR 0x7000u
 
 // The sheet as it is in the file, and as it is once expanded.
-#define SHEET_COLUMNS 48
+#define SHEET_COLUMNS 64
 #define SHEET_ROWS 4
 #define SHEET_EXPANDED_COLUMNS (SHEET_COLUMNS * 2)
 
@@ -41,25 +42,32 @@
 #define TILE_COUNT (SHEET_COLUMNS / TILE_COLUMNS)
 
 // Tile numbers, in the order tiles/Makefile appends the PNGs into the sheet.
-#define TILE_DESERT_HILL 0
+// **The terrains come first**, because a terrain value is its tile number
+// (map_tile in src/map.h); TERRAIN_COUNT of them.
+#define TILE_HILLS 0
 #define TILE_GRASS 1
 #define TILE_MOUNTAIN 2
 #define TILE_OCEAN 3
 #define TILE_SHALLOW_OCEAN 4
 #define TILE_TUNDRA 5
+#define TILE_PLAINS 6
+#define TILE_FOREST 7           // trees baked over the plains (tiles/Makefile)
+#define TILE_DESERT 8
+#define TILE_FLOODPLAIN 9       // a river valley in the dry land: the grain
+#define TERRAIN_COUNT 10
 // Not terrain: these are drawn over a terrain tile, never instead of one.
-#define TILE_CITY 6
-#define TILE_SELECT 7           // a ring: the tile-select cursor (Tab)
-#define TILE_SETTLER 8
-#define TILE_WARRIOR 9
-#define TILE_BUILDER 10
+#define TILE_CITY 10
+#define TILE_SELECT 11          // a ring: the tile-select cursor (Tab)
+#define TILE_SETTLER 12
+#define TILE_WARRIOR 13
+#define TILE_BUILDER 14
 // Drawn *instead of* the terrain of a hexagon the player has not seen yet
 // (MAP_EXPLORED in src/map.h): a solid black hexagon, never skipped, because
 // the redraw does not clear and relies on every byte of the window being
 // written. Its outline is a little inside the terrain tiles', but even the
 // intersection of all the outlines tiles the plane, so any mixture of
 // explored and unexplored hexagons still covers the window.
-#define TILE_UNDISCOVERED 11
+#define TILE_UNDISCOVERED 15
 
 // The FCI on the disk. Capitals, because that is how diskutil.rb writes the
 // host name tiles.fci -- see MAP_FILE_NAME.

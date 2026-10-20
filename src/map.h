@@ -122,7 +122,7 @@ void map_explore(byte ax, byte ay);
 // which is the bytes of ASCII "SEVENSHIPS.MAP", and Calypsi passes literals
 // through unchanged.
 #define MAP_FILE_NAME "SEVENSHIPS.MAP"
-#define MAP_VERSION 1
+#define MAP_VERSION 2
 
 // The cell whose hexagon is under map-space character (cx, cy), cx below
 // MAP_WIDTH_CHARS. Tiles overlap, so a character can lie inside two tiles'

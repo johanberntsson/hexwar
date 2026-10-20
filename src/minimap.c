@@ -24,12 +24,6 @@
 #define PAL_BLACK 0
 #define PAL_WHITE 1
 #define PAL_RED 2
-#define PAL_BLUE 6
-#define PAL_YELLOW 7
-#define PAL_GREEN 5
-#define PAL_GREY 12
-#define PAL_LIGHTBLUE 14
-#define PAL_LIGHTGREY 15
 
 #define PAL_PURPLE 4
 #define PAL_ORANGE 8
@@ -43,15 +37,10 @@ static const byte player_colour[PLAYERS + 1] = {
     PAL_WHITE, PAL_RED, PAL_PURPLE, PAL_ORANGE, PAL_BROWN,
 };
 
-// By terrain value, which is a TILE_* number.
-static const byte terrain_colour[] = {
-    PAL_YELLOW,         // TILE_DESERT_HILL
-    PAL_GREEN,          // TILE_GRASS
-    PAL_GREY,           // TILE_MOUNTAIN
-    PAL_BLUE,           // TILE_OCEAN
-    PAL_LIGHTBLUE,      // TILE_SHALLOW_OCEAN
-    PAL_LIGHTGREY,      // TILE_TUNDRA
-};
+// Terrain t is palette entry PAL_TERRAIN + t: tools/mktiles.py puts a flat
+// colour for each terrain there, ahead of the tiles' own colours, since the
+// system palette has too few left over from the players' for ten terrains.
+#define PAL_TERRAIN 16
 
 // The outline, in sprite pixels. A sprite pixel at H640 is two screen pixels
 // across, which is one hexagon here; the window is 60 characters = 7.5
@@ -74,7 +63,7 @@ static byte colour(byte ax, byte ay)
         return player_colour[c != CITY_NONE ? city_owner[c]
                                             : unit_owner[unit_at(ax, ay)]];
     }
-    return terrain_colour[t & MAP_TERRAIN_MASK];
+    return PAL_TERRAIN + (t & MAP_TERRAIN_MASK);
 }
 
 // The character number of minimap character i (row-major, 16 a row): in the

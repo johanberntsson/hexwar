@@ -55,7 +55,7 @@ static byte defence(byte u)
     byte t = MAP_TERRAIN(ax, ay);
     byte d = (byte)(4 * unit_kind_defence[unit_kind[u]]);
 
-    if (t == TILE_DESERT_HILL) d += d >> 1;
+    if (t == TILE_HILLS || t == TILE_FOREST) d += d >> 1;
     else if (t == TILE_MOUNTAIN) d <<= 1;
     if (unit_orders[u] == ORDERS_FORTIFY || city_at(ax, ay) != CITY_NONE)
         d += d >> 1;

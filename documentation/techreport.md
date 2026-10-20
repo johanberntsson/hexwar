@@ -140,7 +140,7 @@ to `release/`), holding five files:
 | **File** |  **Contents** |
 | -- |  ---- |
 | AUTOBOOT.C65 | the program, a C65-mode PRG loaded at \$2001 |
-| TILES.FCI | the tile sheet: a palette and 12 tiles of 4x4 full colour characters |
+| TILES.FCI | the tile sheet: a palette and 16 tiles of 4x4 full colour characters |
 | SEVENSHIPS.MAP | the map: a 16-byte header and one 4096-byte layer of terrain |
 | TEXT.PAK | the texts -- the title, help and new-game screens, the opening popup, and the lists of names -- with their markup |
 | SEVENSHIPS.R1 | code region 1, the computer players: a header and the code, run at \$6000 from bank 1 |
@@ -271,8 +271,7 @@ and the main loop stay resident, where a call costs nothing.
 | \$12000-\$12f9f | 4 | Screen RAM, 80x25 cells of two bytes |
 | \$20000-\$3ffff | 128 | The C65 ROM, left in place |
 | \$40000-\$56fff | 92 | The tile store: the map window's character definitions, and 92 of the minimap's in the row padding |
-| \$57000-\$5cfff | 24 | The expanded tile sheet |
-| \$5d000-\$5efff | 8 | free, for four more tiles |
+| \$57000-\$5efff | 32 | The expanded tile sheet, 16 tiles |
 | \$5f000-\$5f8ff | 2.25 | The other 36 of the minimap's character definitions |
 | \$5f900-\$5ffff | 1.75 | free |
 | \$08000000- | 8192 | Attic RAM: the texts from TEXT.PAK at the bottom, the rest free |
@@ -299,12 +298,12 @@ the store is 94208 bytes, which leaves banks 2 and 3, the ROM, alone. A larger
 window would need the ROM banked out, with everything that brings with it;
 `src/view.h` stops the build if the store outgrows \$60000.
 
-**The expanded sheet** is the tile art as it is drawn: 12 tiles of 8x4
+**The expanded sheet** is the tile art as it is drawn: 16 tiles of 8x4
 characters, 2 KB each. It is in bank 5 rather than in Attic RAM because the
 redraw copies about 160 KB out of it, and DMA reading Attic RAM is about seven
 times slower than reading chip RAM on the real machine. All of it lies in one
-bank, so a source address is 16 bits. There is room for 16 tiles before it
-reaches the minimap.
+bank, so a source address is 16 bits. Its 16 tiles fill it up to the
+minimap, so the next tile needs room made first.
 
 **The minimap** is the same trick at a smaller scale: 16x8 full-colour
 characters, each with a definition of its own -- 92 of them in the tile

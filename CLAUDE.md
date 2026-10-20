@@ -212,8 +212,7 @@ buffers at the default `$FF80000` and corrupts the display.
 | `$1600-$1EFF` | 2304 | `zpsave` (56 bytes, BASIC's zero page during the run), then `lowfree`: the popup's 400-byte text and the scratch buffers of the view and the minimap, 1.6 KB free — `LOW_FREE` in `src/mega65.h` moves a variable there |
 | `$12000` | 4000 | screen RAM, 80x25 cells of 2 bytes |
 | `$40000-$56FFF` | 94208 | the view's tile store, 23 rows of 4096: 3840 for the window, then 256 holding four of the minimap's characters |
-| `$57000-$5CFFF` | 24576 | the x-expanded tile sheet, 96x4 characters |
-| `$5D000-$5EFFF` | 8192 | free: room for four more tiles of sheet |
+| `$57000-$5EFFF` | 32768 | the x-expanded tile sheet, 128x4 characters: 16 tiles, all the room there is |
 | `$5F000-$5F8FF` | 2304 | the last 36 of the minimap's 128 full-colour characters |
 | `$5F900-$5FFFF` | 1792 | free |
 | `$8000000` | ~1 KB | attic RAM: the texts, `TEXT.PAK`'s body (`src/text.h`); the rest of the 8 MB free |
@@ -238,8 +237,10 @@ minimap's characters, so **nothing may write a row past byte 3840** —
 Bank 5 is chip RAM the *VIC* has to see — tiles, the minimap, anything
 else drawn as full-colour characters. Data the CPU alone reads goes to
 attic RAM instead and does not count. It has room for 16 tiles of sheet,
-12 used, plus 1792 bytes above the minimap. Take these in order when a
-17th tile or another full-colour surface needs room:
+**all 16 used since milestone 5** (20 Oct 2026), plus 1792 bytes above the
+minimap. Take these in order when a 17th tile or another full-colour
+surface needs room — the river, the resources of milestone 7, a plains
+hill:
 
 1. **The tile store's row padding** — *done* (19 Oct 2026). Each of the
    23 rows has 256 bytes after its 3840, 92 character slots in all, and a
@@ -479,13 +480,19 @@ characters to the right. The generator wraps the same way, so land crosses
 the seam.
 
 **The map comes from `tools/mapgen.py`**, a build-time Python generator after
-Civ 1's (design.md): land-mass random walks, inland mountain ranges, rainfall
-swept along each row, latitude for tundra, an erosion pass, then shallow ocean
-next to land. Its docstring is the file format: a 16-byte header (`"HXM"`,
+Civ 1's (design.md): land-mass random walks, inland mountain ranges and
+hills, rainfall swept along each row (desert, plains, grassland and forest by
+how wet a hexagon is, desert only in the warm band), latitude for tundra, an
+erosion pass, rivers, then shallow ocean next to land. **Rivers are not drawn
+yet** — `tile_river.png` is a 17x3 texture, not a tile — but where one
+crosses desert or plains it leaves a line of floodplain, the Nile's
+arrangement. Its docstring is the file format: a 16-byte header (`"HXM"`,
 version, columns, rows, layer count, seed) followed by 4096-byte layers. Layer
-0 is terrain, and **its values are currently `TILE_*` numbers** because every
-terrain has exactly one tile; more terrain types mean more tiles in the sheet
-and, once the two diverge, a terrain-to-tile table. `make` leaves a preview at
+0 is terrain, and **its values are `TILE_*` numbers** because every
+terrain has exactly one tile, which is why the ten terrain tiles come first
+in the sheet (`TERRAIN_COUNT`) and the city, units and the rest after them.
+A terrain that needed two tiles, or an eleventh terrain once the sheet is
+full, would mean a terrain-to-tile table in the redraw instead. `make` leaves a preview at
 `build/sevenships-map.png`, which is the fastest way to judge a generator change.
 `map_load()` reads the file with the Calypsi `_Stub_open`/`_Stub_read` calls
 directly; stdio would only add a buffer. That cost about 560 bytes. **It reads
@@ -653,7 +660,8 @@ this. And note `$D012` is 8 bits of a 0-311 raster, so it repeats for lines
 
 TODO.txt's milestones are the plan. Milestones 1 (pointer, turn loop, a
 settler, founding a city), 2 (the city screen and building units), 3
-(computer players) and 4 (combat and barbarians) are in, as of 18 Oct 2026.
+(computer players) and 4 (combat and barbarians) are in, as of 18 Oct 2026,
+and 5 (plains, forest, desert and floodplain) as of 20 Oct 2026.
 
 **The title screen comes first** (`src/title.c`): `title_show()` puts the
 title up once the texts are read and before the sheet and the map are,
@@ -785,7 +793,7 @@ none, then a builder if it has none, then warriors, until the player has
 everyone shares. **They expand**: once a player has two military units,
 one of them fortified, and a builder, and no settler, the first of its
 cities with a site within `SETTLE_RANGE` (6) builds a settler, which is
-not held back by the cap. A site (`find_site()`) is grassland or hills,
+not held back by the cap. A site (`find_site()`) is grassland, plains, floodplain or hills,
 off the two edge rows, with at least `SITE_LAND` (3) land neighbours and
 at least `CITY_SPACING` (4) hexagons from every city; the settler makes
 for the nearest one from where it stands and founds there, and explores
@@ -819,7 +827,8 @@ own `.c` file for the eventual banking (see **Growing past 32 KB**).
 **Combat is `src/combat.c`** (milestone 4), after Civilization: attack
 against defence (`unit_kind_attack[]`, `unit_kind_defence[]`: warriors
 1/1, settlers and builders 0/1), the attacker winning with probability
-A/(A+D), in quarter points so it stays in bytes. Defence is ×1.5 on hills,
+A/(A+D), in quarter points so it stays in bytes. Defence is ×1.5 on hills
+and in forest,
 ×2 on mountains, and ×1.5 again for a unit that is fortified or in a city
 (not both). The best defender on the hexagon fights; outside a city the
 whole stack dies with it, in a city only the defender. An attack uses all
@@ -872,8 +881,8 @@ usual reason. The production box also shows the rate and the turns left.
 **Production** (`src/city.c`) stands in for population and food until they
 exist: a city makes the shields of its own hexagon, at least 1, plus those
 of its best neighbour — what a size-1 city working one tile would make.
-`terrain_shields[]` there is the table (hills 2, grassland and mountains 1,
-water and tundra 0), so a grassland city by hills makes 3 a turn: a warrior
+`terrain_shields[]` there is the table (hills and forest 2; grassland,
+plains, floodplain and mountains 1; water, tundra and desert 0), so a grassland city by hills makes 3 a turn: a warrior
 (10) in four turns, a builder (20) in seven. Each city has `city_build` (a
 `KIND_*`, warriors when founded) and `city_shields`. At the end of a turn,
 after `ai_turn()`, `end_turn()` calls `city_produce()` on every city; at
@@ -936,8 +945,11 @@ of the panel: 16x8 full-colour characters with definitions of their own — the 
 92 in the tile store's row padding, the other 36 at `$5F000` — a 128x64-pixel framebuffer in which hexagon `(hx, hy)` is pixels
 `hx` and `hx + 1` of line `hy` — two pixels by one line, square on the
 glass, and the odd rows offset by a pixel as the tiles are. Pixels are
-system palette entries 0-15 (black for unexplored, white a city, red a
-unit). It is drawn in full once, by `minimap_init()`, and after that one
+palette entries: black for unexplored, cities and units in their player's
+system colour, and terrain `t` in entry `16 + t`, a flat colour per
+terrain that `tools/mktiles.py` writes there (`TERRAIN_COLOURS`) ahead of
+the tiles' own, since the system palette has too few colours left over
+from the players' for ten terrains. It is drawn in full once, by `minimap_init()`, and after that one
 hexagon at a time by `minimap_plot()`, which `map_explore()` calls for each
 newly explored hexagon and `unit_mark()` for every hexagon it looks at.
 **The outline of the view is sprites 2 and 3, not pixels**, so scrolling
@@ -1276,16 +1288,21 @@ in xemu by building once with `input_real_hw = 1` forced in
 
 ## Assets
 
-`res/tiles.fci` is 48x4 characters — twelve 4x4 tiles side by side, in the
-order `tiles/Makefile` lists the PNGs: six terrains (desert hill, grass,
-mountain, ocean, shallow ocean, tundra), then the city, a selection ring
+`res/tiles.fci` is 64x4 characters — sixteen 4x4 tiles side by side, in the
+order `tiles/Makefile` lists the PNGs: ten terrains (hills, grass, mountain, ocean, shallow ocean, tundra, plains, forest,
+desert, floodplain), then the city, a selection ring
 (the tile-select cursor),
 three units (settler, warrior, builder) and the black hexagon of unexplored
 land; `TILE_*` in `src/sheet.h`. The
 terrain, city and unit art is OpenCiv's, under CC BY 4.0
 (`tiles/README.txt`, and **Credits** in `README.md`, which must stay in
 step); `tile_select.png` is a placeholder drawn from the grass tile's
-outline.
+outline. **The forest is the plains with `tile_forest.png`'s trees drawn
+over them at sheet-build time** — `a.png+b.png` in `tiles/Makefile` is one
+tile, b composited over a by `mktiles.py` — rather than an overlay, which
+would cost the redraw a fifth DMA job for every forest in view. Any other
+overlay art (resources, improvements) can be baked the same way, at a tile
+of sheet each.
 **Only what the game uses goes into `tiles/`** — `alltiles/` is the whole
 collection to pick from.
 
@@ -1297,10 +1314,11 @@ KB of the 32 a tile.
 **`tiles/Makefile` is a separate, manual step** — run `make` in `tiles/`
 after editing tile art, and check `res/tiles.fci` in. It runs
 `tools/mktiles.py`, which reads the RGBA PNGs, makes every pixel with alpha
-below 128 palette index 0 (transparent), and quantises the rest across all
-tiles together to 240 colours at entries 16-255, leaving 0-15 to the system
-palette the panel text uses. The art has about 1450 colours between it, so
-it is quantised; with 240 or fewer it would be exact. `tiles/tiles.png` is
+below 128 palette index 0 (transparent), writes the minimap's ten terrain
+colours at entries 16-25, and quantises the rest across all tiles together
+to 230 colours at entries 26-255, leaving 0-15 to the system palette the
+panel text uses. The art has about 2000 colours between it, so it is
+quantised; with 230 or fewer it would be exact. `tiles/tiles.png` is
 left as a preview of the result. (The old route — ImageMagick `+append` then
 `tools/png2fci.py` — needed a single paletted PNG with transparency at index
 0, which ImageMagick gives no say over; `png2fci.py` is kept but unused.)
@@ -1310,20 +1328,23 @@ left as a preview of the result. (The old route — ImageMagick `+append` then
 A new tile needs all of these, and nothing checks that they agree:
 
 1. the PNG in `tiles/`, 32x32 pixels (4x4 characters), transparent where
-   the neighbours should show through, **appended** to `TILES` in
-   `tiles/Makefile`. The order there *is* the tile numbering, so do not
-   reorder.
+   the neighbours should show through, added to `TILES` in
+   `tiles/Makefile` — a terrain at the end of `TERRAIN`, anything else at
+   the end. The order there *is* the tile numbering, so a new terrain
+   renumbers every tile after it, in `src/sheet.h` too.
 2. `make` in `tiles/`, and `res/tiles.fci` checked in.
 3. `SHEET_COLUMNS` and the `TILE_*` list in `src/sheet.h` (4 columns a
    tile). `sheet_load()` refuses a sheet whose size disagrees, so a stale
    constant stops at boot with "cannot read TILES.FCI or it is not the sheet
    this build expects".
 4. for terrain: the matching constants in `tools/mapgen.py`, the generator
-   taught to place it, and `terrain_name[]` in `src/game.c`. Terrain values
-   are still tile numbers, so a new terrain has to come before the
+   taught to place it, its minimap colour in `TERRAIN_COLOURS` in
+   `tools/mktiles.py`, and a row each in `terrain_name[]` in `src/game.c`
+   and `terrain_shields[]` in `src/city.c`, both indexed by terrain. Terrain
+   values are tile numbers, so a new terrain has to come before the
    non-terrain tiles or the map layer grows a lookup table (see `map_tile`).
 5. room: each tile is 2 KB expanded, and the sheet must stop below the
    rest of the minimap at `$5F000` (an `#error` in `src/minimap.c`): from
-   `$57000`, **16 tiles, of which 12 are used**. The tile store's own `#error` in
-   `src/view.c` keeps the store and the sheet apart. Past 14 something has
-   to move: see **When bank 5 fills up**.
+   `$57000`, **16 tiles, and all 16 are used**. The tile store's own `#error` in
+   `src/view.c` keeps the store and the sheet apart. **The next tile needs
+   something moved first**: see **When bank 5 fills up**.

@@ -5,6 +5,8 @@
 
 **The order of the PNGs on the command line is the tile numbering** -- TILE_*
 in src/sheet.h -- and tiles/Makefile is where that order is written down.
+A tile given as `a.png+b.png` is a drawn first and b over it, which is how an
+overlay such as the forest's trees becomes a terrain tile of its own.
 
 This replaced an ImageMagick `convert +append` followed by tools/png2fci.py,
 which needed a single paletted PNG whose palette index 0 happened to be the
@@ -14,10 +16,14 @@ ImageMagick gives no say over which index transparency lands on. Here:
 
 * a pixel with alpha below 128 is transparent and becomes **palette index 0**,
   which is what the DMAgic's transparent copy skips (src/mega65.h);
-* every other pixel is quantised, across all the tiles together, to at most
-  240 colours, which are written at palette entries 16-255. Entries 0-15 are
+* entries 16 up hold TERRAIN_COLOURS, one flat colour per terrain, which is
+  what the minimap draws a hexagon in (PAL_TERRAIN in src/minimap.c). The
+  system palette has too few colours left for ten terrains beside the five
+  players';
+* every other pixel is quantised, across all the tiles together, to what is
+  left -- 230 colours -- which are written after them. Entries 0-15 are
   the system colours the panel text uses, so the FCI carries the "reserved"
-  flag and src/sheet.c leaves them alone. If the art has 240 colours or fewer
+  flag and src/sheet.c leaves them alone. If the art has few enough colours
   it is used exactly.
 
 The FCI layout is png2fci's: "fciP", version 1, rows, columns (in 8x8
@@ -32,14 +38,36 @@ from PIL import Image
 
 TILE = 32               # pixels; a tile is 4x4 characters in the file
 RESERVED = 16
-MAX_COLOURS = 256 - RESERVED
+
+# The minimap's colour for each terrain, in terrain (TILE_*) order: entry
+# 16 + terrain. Keep in step with TILE_* in src/sheet.h.
+TERRAIN_COLOURS = [
+    (120, 96, 48),      # hills
+    (48, 140, 40),      # grassland
+    (136, 136, 144),    # mountains
+    (32, 56, 160),      # ocean
+    (72, 120, 216),     # shallows
+    (208, 216, 224),    # tundra
+    (150, 140, 56),     # plains
+    (16, 80, 24),       # forest
+    (240, 228, 140),    # desert
+    (150, 210, 80),     # floodplain
+]
+FIRST = RESERVED + len(TERRAIN_COLOURS)
+MAX_COLOURS = 256 - FIRST
 
 
-def load(path):
-    im = Image.open(path).convert("RGBA")
-    if im.size != (TILE, TILE):
-        sys.exit("%s: tiles are %dx%d, this is %dx%d"
-                 % (path, TILE, TILE, im.size[0], im.size[1]))
+def load(spec):
+    im = None
+    for path in spec.split("+"):
+        layer = Image.open(path).convert("RGBA")
+        if layer.size != (TILE, TILE):
+            sys.exit("%s: tiles are %dx%d, this is %dx%d"
+                     % (path, TILE, TILE, layer.size[0], layer.size[1]))
+        if im is None:
+            im = layer
+        else:
+            im.alpha_composite(layer)
     return im
 
 
@@ -83,7 +111,7 @@ def main():
     index = []
     it = iter(mapped)
     for p in pixels:
-        index.append(RESERVED + next(it) if p[3] >= 128 else 0)
+        index.append(FIRST + next(it) if p[3] >= 128 else 0)
 
     cols = width // 8
     rows = TILE // 8
@@ -95,8 +123,10 @@ def main():
                 image.extend(index[start:start + 8])
 
     out = bytearray(b"fciP")
-    out += bytes([1, rows, cols, 0x02, RESERVED + len(palette) - 1])
+    out += bytes([1, rows, cols, 0x02, FIRST + len(palette) - 1])
     out += bytes(3 * RESERVED)
+    for c in TERRAIN_COLOURS:
+        out += bytes(c)
     for c in palette:
         out += bytes(c)
     out += b"IMG"
@@ -106,7 +136,7 @@ def main():
 
     if args.png:
         preview = Image.new("RGBA", (width, TILE))
-        full = [(0, 0, 0)] * RESERVED + palette
+        full = [(0, 0, 0)] * RESERVED + TERRAIN_COLOURS + palette
         preview.putdata([(0, 0, 0, 0) if i == 0 else full[i] + (255,)
                          for i in index])
         preview.save(args.png)

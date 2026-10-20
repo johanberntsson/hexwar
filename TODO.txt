@@ -18,12 +18,6 @@ Before milestone 5: make room in bank 5
   region 1 in bank 1 (ai.c). Works on a real MEGA65. New subsystems go into a region from the
   start: resident space is 2.7 KB, with room for five more 8 KB regions in bank 1.
 
-Milestone 5: more terrain
-- New terrain tiles: plains, forest, desert, floodplain/river valley (for grain)
-- Teach mapgen.py to place them; terrain_name[] in game.c
-- Terrain values are still tile numbers, so new terrain goes before the non-terrain tiles
-  (or add the terrain-to-tile table)
-
 Milestone 6: yields and city growth
 - Food, shields and trade per terrain, replacing the production stand-in in city.c
 - City size, food box, growth; cities work tiles (size 1 = centre + one tile, as now)
@@ -49,6 +43,14 @@ Milestone 9: trade
 - Later: merchant ships (need cedar), physical trade fleets, emporia
 
 --- DONE ---
+
+Milestone 5: more terrain
+- New terrain tiles: plains, forest (baked over plains), desert, floodplain (for grain)
+- mapgen.py places them: hills round the ranges, desert/plains/grass/forest by rainfall,
+  undrawn rivers that leave floodplain through desert and plains
+- Terrain still = tile number: the ten terrains first in the sheet, the rest renumbered
+- The sheet is full: 16 tiles of 16. A river tile or resources need room first
+  (CLAUDE.md, "When bank 5 fills up", step 2)
 
 AI now builds settlers and found multiple cities
 

@@ -89,8 +89,8 @@ pratamacam. They are licensed under
 They have been modified for this game: scaled to 32×32 pixels, reduced to a
 shared 240-colour palette, and widened at run time for the MEGA65's 640×200
 display. The cattle, copper and tin (OpenCiv's iron) resources are cut down
-to fit the middle of a hexagon, and the olives and wine are OpenCiv's orange
-trees recoloured.
+to fit the middle of a hexagon, and the olives and wine, and their improved
+groves, are OpenCiv's orange trees and orchard recoloured.
 
 Additional graphics and tiles were created by myself for this game.
 

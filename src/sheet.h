@@ -4,7 +4,7 @@
 // **FCI** (Full Colour Image) is the format tools/png2fci.py writes. A header
 // of nine bytes, a palette of RGB triples, the marker "IMG", and then the
 // pixels as a row-major grid of 8x8 characters, 64 bytes each, one byte of
-// palette index per pixel. res/tiles.fci is 120x4 characters: 30
+// palette index per pixel. res/tiles.fci is 132x4 characters: 33
 // 4x4-character tiles side by side, in the order tiles/Makefile lists them.
 // tools/mktiles.py writes it.
 //
@@ -21,8 +21,8 @@
 // a tile's address is its base plus row * 512 wherever it is. The first
 // SHEET_LOW_TILES are in bank 5, just above the view's tile store,
 // $57000-$5FFFF, the rest of the bank since the minimap moved into the
-// store's padding; the rest are in bank 1 at $19000-$1EFFF, where code
-// regions 4 to 6 would have gone (src/region.h). CLAUDE.md, "When bank 5
+// store's padding; the rest are in bank 1 at $17000-$1EFFF, where code
+// regions 3 to 6 would have gone (src/region.h). CLAUDE.md, "When bank 5
 // fills up", has why there.
 //
 // **Not attic RAM, where it used to be.** Search And Rescue measured DMA *out
@@ -36,13 +36,13 @@
 #define SHEET_EXPANDED_BANK 0x05
 #define SHEET_EXPANDED_ADDR 0x7000u
 #define SHEET_LOW_TILES 18
-#define SHEET_HIGH 0x19000UL
+#define SHEET_HIGH 0x17000UL
 #define SHEET_HIGH_BANK 0x01
-#define SHEET_HIGH_ADDR 0x9000u
-#define SHEET_HIGH_TILES 12
+#define SHEET_HIGH_ADDR 0x7000u
+#define SHEET_HIGH_TILES 16
 
 // The sheet as it is in the file.
-#define SHEET_COLUMNS 120
+#define SHEET_COLUMNS 132
 #define SHEET_ROWS 4
 
 // A tile is 4x4 characters in the file and 8x4 once expanded.
@@ -97,10 +97,14 @@
 // tile TILE_RESOURCE_FIRST - 1 + r. All in bank 1.
 #define TILE_RESOURCE_FIRST 18
 // Copper and tin once mined, drawn instead of the resource (RES_TILE in
-// src/map.h); and the bronze unit. These fill bank 1.
+// src/map.h); the bronze unit; and cattle, olives and wine once irrigated,
+// the same way. One tile left in bank 1 after them.
 #define TILE_COPPER_MINE 27
 #define TILE_TIN_MINE 28
 #define TILE_SPEARMAN 29
+#define TILE_CATTLE_PASTURE 30
+#define TILE_OLIVES_GROVE 31
+#define TILE_WINE_VINEYARD 32
 
 // The FCI on the disk. Capitals, because that is how diskutil.rb writes the
 // host name tiles.fci -- see MAP_FILE_NAME.

@@ -1,6 +1,9 @@
 These tiles are from OpenCiv (the res_*.png resources partly: res_cattle,
 res_copper and res_tin are its cattle, copper and iron cut to pixel lines
-8-23, res_olives and res_wine its orange trees recoloured; res_grain,
+8-23, res_olives and res_wine its orange trees recoloured,
+res_olives_grove and res_wine_vineyard its orange orchard recoloured;
+res_copper_mine, res_tin_mine and res_cattle_pasture are its copper, iron
+and cattle improved as they are; res_grain,
 res_fish, res_cedar and res_dye are placeholders drawn for this game): https://github.com/RyanGrieb/OpenCiv
 by Ryan Grieb, with art commissioned for it from lucasyoung988, brysia and
 pratamacam (see the Credits in OpenCiv's README).

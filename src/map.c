@@ -1,4 +1,5 @@
 #include "map.h"
+#include "sheet.h"
 #include "minimap.h"
 
 HIGH_BSS byte map_tile[MAP_ROWS][MAP_COLUMNS];
@@ -9,6 +10,16 @@ HIGH_BSS byte map_res_kind[MAP_RES_MAX];
 #ifdef DEBUG_MENU
 byte map_show;
 #endif
+
+// RES_* order. Grain, fish, cedar and dye have no improved picture yet.
+const byte map_res_improved_by[RES_COUNT] = {
+    0, 0, 0, MAP_IRRIGATED, MAP_IRRIGATED, MAP_IRRIGATED, 0, MAP_MINED,
+    MAP_MINED, 0
+};
+const byte map_res_improved[RES_COUNT] = {
+    0, 0, 0, TILE_CATTLE_PASTURE, TILE_OLIVES_GROVE, TILE_WINE_VINEYARD, 0,
+    TILE_COPPER_MINE, TILE_TIN_MINE, 0
+};
 
 // One step in each direction, in doubled coordinates; DIR_* order. File scope
 // and 16 bit, because small static const arrays of int8_t inside a function

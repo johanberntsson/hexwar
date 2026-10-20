@@ -27,11 +27,15 @@ RESOURCES = res_grain.png res_fish.png res_cattle.png res_olives.png \
             res_wine.png res_cedar.png res_copper.png res_tin.png res_dye.png
 # Copper and tin mined: alltiles' tile_copper_improved and tile_iron_improved,
 # drawn instead of the resource when its hexagon has a mine (RES_TILE in
-# src/map.h). Then the bronze unit, alltiles' spearman.
+# src/map.h). Then the bronze unit, alltiles' spearman. Then cattle, olives
+# and wine irrigated, in bank 1's code region 3: alltiles'
+# tile_cattle_improved, and its tile_oranges_improved recoloured as
+# res_olives and res_wine are.
 MINES = res_copper_mine.png res_tin_mine.png
+IRRIGATED = res_cattle_pasture.png res_olives_grove.png res_wine_vineyard.png
 TILES = $(TERRAIN) tile_city.png tile_select.png \
         unit_settler.png unit_warrior.png unit_builder.png tile_undiscovered.png \
-        $(OVERLAYS) $(RESOURCES) $(MINES) unit_spearman.png
+        $(OVERLAYS) $(RESOURCES) $(MINES) unit_spearman.png $(IRRIGATED)
 
 all: ../res/tiles.fci
 

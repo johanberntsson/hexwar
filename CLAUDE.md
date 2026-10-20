@@ -208,8 +208,8 @@ buffers at the default `$FF80000` and corrupts the display.
 | `$2001-$5FFF`, `$8000-$9FFF` | 24 KB | the resident program: code, data, BSS, C stack. 500 bytes free, nearly all at `$5E0D-$5FFF` |
 | `$6000-$7FFF` | 8 KB | the code window (`src/region.h`); as loaded, region 0 — the title, setup and help screens, the menus, save and load, the sheet's and the map's loaders, the owners' flags. 2.3 KB free |
 | `$13000-$14FFF` | 8 KB | region 1, from `SEVENSHIPS.R1`: the computer players, the builders' improvements, the cities' yields and growth, bronze. 360 bytes free |
-| `$15000-$16FFF` | 8 KB | region 2, from `SEVENSHIPS.R2`: the city screen, Top Five Cities and diplomacy. 2.2 KB free; room for region 3 up to `$18FFF` |
-| `$19000-$1EFFF` | 24 KB | the tile sheet's tiles 18-29, where regions 4 to 6 would have been: the resources, mined copper and tin, the spearman; full |
+| `$15000-$16FFF` | 8 KB | region 2, from `SEVENSHIPS.R2`: the city screen, Top Five Cities and diplomacy. 2.2 KB free; the last code region |
+| `$17000-$1EFFF` | 32 KB | the tile sheet's tiles 18-33, where regions 3 to 6 would have been: the resources, the improved resources, the spearman; one tile free |
 | `$A000-$BFFF` | 8 KB | `highram`, under the BASIC ROM, banked out by `src/bank.s`: `map_tile`, the unit and city arrays, the sprite blocks, the AI's headings, the staging buffers of the texts and the regions, the texts' line buffers, the sheet loader's buffers, the saved VIC registers, the AI's exploration memory, the resource list; about 2.8 KB free — `HIGH_BSS` in `src/mega65.h` moves a variable there, and **the startup does not clear it** |
 | `$1600-$1EFF` | 2304 | `zpsave` (56 bytes, BASIC's zero page during the run), then `lowfree`: the popup's 400-byte text and the scratch buffers of the view and the minimap, 1.6 KB free — `LOW_FREE` in `src/mega65.h` moves a variable there |
 | `$12000` | 4000 | screen RAM, 80x25 cells of 2 bytes |
@@ -252,12 +252,13 @@ tile or another full-colour surface needs room:
    characters fitted the padding altogether, which made it 18. Checked headlessly: pixel-identical to the old layout,
    including after a retire and with Show Map on.
 
-   1b. **Bank 1, code regions 4 to 6** — *done* (20 Oct 2026, for
-   milestone 6's overlays, and region 4 for milestone 7's resources).
-   `$19000-$1EFFF` holds the tiles after bank 5's, twelve of them
-   (`SHEET_HIGH` in `src/sheet.h`; 16-23 at first in `$1B000-$1EFFF`,
-   18-25 since the map shrank, 18-29 since the resources), so three code
-   regions are left (`REGION_LIMIT` in `src/region.h` has an `#error`). The sheet is stored a tile at a time
+   1b. **Bank 1, code regions 3 to 6** — *done* (20 Oct 2026, for
+   milestone 6's overlays, region 4 for milestone 7's resources and
+   region 3 for the improved resources). `$17000-$1EFFF` holds the tiles
+   after bank 5's, sixteen of them (`SHEET_HIGH` in `src/sheet.h`; 16-23
+   at first in `$1B000-$1EFFF`, 18-25 since the map shrank, 18-29 since
+   the resources, 18-33 since the improved resources), so two code
+   regions are left, both in use (`REGION_LIMIT` in `src/region.h` has an `#error`). The sheet is stored a tile at a time
    (2 KB each, 512 bytes a row), so a tile's address is its base plus
    `row * 512` in either bank, and `view_draw_tile()` changes the DMA's
    source bank (`blit_source_bank()`) only when a tile is in the other one.
@@ -412,7 +413,7 @@ return to BASIC. Screen RAM is below it at `$12000-$12F9F`; above it,
 `$1F600-$1F6FF` holds something at READY and `$1F800-$1FFFF` is the C65's
 colour RAM window, so neither is to be used. MAP offsets are in 256-byte
 steps, so two 24 KB regions fit (`$13000-$18FFF`, `$19000-$1EFFF`) with
-1.5 KB over. (**Since milestone 7 the top 24 KB of it, `$19000-$1EFFF`, is
+1.5 KB over. (**Since milestone 7 the top 32 KB of it, `$17000-$1EFFF`, is
 the tile sheet's**; see **When bank 5 fills up**, step 1b.) On a real MEGA65 (19 Oct 2026) the first try of BASIC after
 quitting hung in `DIM` — but so did the plain game in xemu, with nothing
 in bank 1: it was the zero page not being put back (see **Quitting**
@@ -471,8 +472,10 @@ the city screen, the menus by mouse and MEGA+letter, HELP, Play 50 Turns,
 save, retire and load, and `DIM` after quitting. **Resident space is what to watch now**: 500 bytes of it (20 Oct 2026,
 after city growth, the AI pass, diplomacy and exploring, the fixes after
 them, the resources, the owners' flags and bronze), against 2.3 KB
-in region 0, 360 bytes in region 1 (nearly full: the next AI work wants region 3) and 2.2 KB in region 2, plus one empty region (4 to 6 are the tile sheet's
-now). **Region 2** came with city growth, when the city screen's new box
+in region 0, 360 bytes in region 1 (nearly full) and 2.2 KB in region 2, and **no empty region left** (3 to 6 are the tile sheet's
+now): more code means moving code between regions, more room (CLAUDE.md
+**When bank 5 fills up**, steps 2 and 3, apply to code as much as tiles),
+or a region that is loaded from the disk when it is wanted. **Region 2** came with city growth, when the city screen's new box
 left region 0 with 217 bytes: it took a `win2` memory in
 `sevenships.scm`, a third entry in `dispatch.s`'s map tables (offset
 `$0F000`), `REGIONS` 2 and the second file in the Makefile's
@@ -723,15 +726,24 @@ TODO.txt's milestones are the plan. Milestones 1 (pointer, turn loop, a
 settler, founding a city), 2 (the city screen and building units), 3
 (computer players) and 4 (combat and barbarians) are in, as of 18 Oct 2026,
 and 5 (plains, forest, desert and floodplain) as of 20 Oct 2026. **6 is
-done but for roads** (20 Oct 2026), which wait for milestone 7 since both
-need tiles and roads a map bit: improvements, yields, city size and
-growth, worked tiles by hand, Civilization's production rules for the
-computer players and its grassland shields. Ahead of milestone 8 there is
+done but for roads** (20 Oct 2026), which need tiles and a map bit:
+improvements, yields, city size and growth, worked tiles by hand,
+Civilization's production rules for the computer players and its
+grassland shields. **7, resources, and 7b, bronze, are done** (20 Oct
+2026; see **Resources** and **Bronze**). Ahead of milestone 8 there is
 contact between the peoples and an Advisors → Diplomacy screen (see
-**Contact**), and the exploring that makes contact happen (see
-**Exploring**). **Not yet tried on a real MEGA65**: the 128x20 map with its
-16x5 minimap and the panel moved up, the menu bar with Advisors, the
-Diplomacy screen and the greeting popup.
+**Contact**), the exploring that makes contact happen (see
+**Exploring**), and the owners' flags that say whose a unit is.
+**Not yet tried on a real MEGA65** (all of 20 Oct 2026's later work,
+which ran in xemu): the resources and the improved resources drawn from
+bank 1 at `$17000` up, the map loader in region 0, the owners' flags,
+contact by adjacency with the view moved to the newcomer, bronze and the
+spearman, and the info line following the active unit.
+
+**Where to start next time**: there is no free code region (regions 3-6
+are tile sheet), region 1 has 360 bytes and the resident program about
+500, and the tile sheet one tile. Milestone 8 (diplomacy) and roads both
+need room first; see TODO.txt.
 
 **The title screen comes first** (`src/title.c`): `title_show()` puts the
 title up once the texts are read and before the sheet and the map are,
@@ -1131,13 +1143,20 @@ its cities, or mined and next to one** (`player_has()` in
 copper and tin together are bronze (`player_bronze()`), which the
 **spearman** needs: `KIND_SPEARMAN`, Civilization's phalanx, attack 1,
 defence 2, cost 20, `unit_spearman.png` from `alltiles/`. A builder may
-mine copper and tin on any terrain (tin is often on tundra), and a
-**mined copper or tin hexagon is drawn with its own tile**,
-`alltiles/`' `tile_copper_improved` and `tile_iron_improved`, instead of
-the resource (`RES_TILE()` in `src/map.h`; the mine overlay is still
-drawn under it). Those are lines 2-29, all four character rows, which
-costs the redraw two more jobs than lines 8-23, on the few hexagons that
-have one. The city screen's CHANGE lists Spearman only with bronze, and
+mine copper and tin on any terrain (tin is often on tundra). **An improved
+resource is drawn with its own tile**, instead of the resource:
+`RES_TILE()` in `src/map.h` looks up `map_res_improved_by[]` (the
+improvement bit that does it) and `map_res_improved[]` (the tile) in
+`src/map.c`. Mined copper and tin are `alltiles/`' `tile_copper_improved`
+and `tile_iron_improved`; irrigated cattle its `tile_cattle_improved`, a
+pasture; irrigated olives and wine its `tile_oranges_improved` recoloured
+as `res_olives` and `res_wine` are. The improvement's own overlay is
+still drawn under it, and shows through a little (the blue of the
+irrigation in the middle of a pasture). They are lines 2-30, all four
+character rows, which costs the redraw two more jobs than lines 8-23, on
+the few hexagons that have one. Fish's improved tile is fishing boats,
+which wants a work boat, so it is not in; grain, cedar and dye have no
+improved art. The city screen's CHANGE lists Spearman only with bronze, and
 otherwise says which is missing ("Spearman needs bronze: tin"). **The
 computer players**: any builder goes first for unmined copper or tin next
 to any of its people's cities, the nearest (`strategic_site()`; before
@@ -1581,20 +1600,22 @@ in xemu by building once with `input_real_hw = 1` forced in
 
 ## Assets
 
-`res/tiles.fci` is 120x4 characters — 30 4x4 tiles side by side, in the
+`res/tiles.fci` is 132x4 characters — 33 4x4 tiles side by side, in the
 order `tiles/Makefile` lists the PNGs: ten terrains (hills, grass, mountain, ocean, shallow ocean, tundra, plains, forest,
 desert, floodplain), then the city, a selection ring
 (the tile-select cursor),
 three units (settler, warrior, builder), the black hexagon of unexplored
 land, the overlays, irrigation and mine, the nine resources (see
-**Resources**), mined copper and tin, and the spearman (see **Bronze**);
+**Resources**), mined copper and tin, the spearman, and irrigated
+cattle, olives and wine (see **Bronze**);
 `TILE_*` in `src/sheet.h`.
 **Tiles 18 and up go in bank 1** (see **When bank 5 fills up**, step 1b):
 the resources. `res_cattle`, `res_copper` and `res_tin` are `alltiles/`'
 cattle, copper and iron cut to lines 8-23, `res_olives` and `res_wine` its
 orange trees recoloured, and `res_grain`, `res_fish`, `res_cedar` and
-`res_dye` placeholders drawn for them; `res_copper_mine`, `res_tin_mine`
-and `unit_spearman` are `alltiles/`' as they are.
+`res_dye` placeholders drawn for them; `res_copper_mine`, `res_tin_mine`,
+`res_cattle_pasture` and `unit_spearman` are `alltiles/`' as they are, and
+`res_olives_grove` and `res_wine_vineyard` its orange orchard recoloured.
 `overlay_mine.png` is the mine cut out of `alltiles/`' plains and tundra
 hill mines — the pixels the two share and neither bare hill has — and
 cropped to lines 8-23; `overlay_irrigation.png` is a placeholder drawn for
@@ -1652,10 +1673,9 @@ A new tile needs all of these, and nothing checks that they agree:
    non-terrain tiles or the map layer grows a lookup table (see `map_tile`).
 5. room: each tile is 2 KB expanded, and the sheet must stop at the end
    of bank 5 (an `#error` in `src/sheet.h`): from `$57000`, **18 tiles in
-   bank 5 and 12 more in bank 1** (`SHEET_LOW_TILES`, `SHEET_HIGH`), all
-   30 used, so **the next tile needs room first**: code region 3
-   (`$17000-$18FFF`, four tiles, unused) is the obvious place. The tile store's own `#error` in `src/view.c` keeps the store
-   and the sheet apart, and `src/sheet.h` has one for the total. Past 30:
-   see **When bank 5 fills up**.
+   bank 5 and 16 more in bank 1** (`SHEET_LOW_TILES`, `SHEET_HIGH`), 33
+   used, so one is left. The tile store's own `#error` in `src/view.c` keeps the store
+   and the sheet apart, and `src/sheet.h` has one for the total. Past 34:
+   see **When bank 5 fills up**, where the code regions are gone now.
 6. for an overlay: art inside pixel lines 8-23, or it costs the redraw
    twice as much (see **Drawing**).

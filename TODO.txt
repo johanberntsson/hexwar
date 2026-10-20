@@ -1,5 +1,11 @@
 --- OPEN ---
 
+NEXT: make room before milestone 8. No free code region (1 and 2 in use, 3-6 are tiles),
+region 1 has 360 bytes, resident ~500, the tile sheet 1 tile. Options: move code between
+regions 0-2 (region 0 has 2.3 KB, region 2 2.2 KB); load a region from disk when wanted;
+or CLAUDE.md's "When bank 5 fills up" steps 2-3 (C64 ROM area, banking the ROM out).
+Roads also need tiles (and a map bit or a 320-byte bitmap)
+
 Peoples on separate landmasses never meet before there are boats (map seeds 3 and 7).
 Place them two to a continent, more land (MAP_LAND), or leave it for milestone 9's ships
 
@@ -33,8 +39,8 @@ Milestone 6: yields and city growth -- DONE but for roads (20 Oct 2026)
   a builder per city, unit cap 3 + 2 a city (max 12), 6 cities. Barbarians from turn 30
 - DONE: Civ 1's grassland shield pattern (half the grassland and floodplain, not drawn);
   the hover readout shows food/shields/trade. All four peoples now survive seed 1
-- Roads: left for milestone 7, to be planned with the resources, since both need tiles
-  (8 left in bank 1 after bank 5's 18) and roads need a map bit (a 512-byte bitmap would do)
+- Roads: still to do. They need tiles (the sheet is full but for one) and a map bit
+  (a 320-byte bitmap would do at 128x20)
 - Per-continent policy (attack/defend/transport) when there are boats and wars
 
 Milestone 7: resources -- DONE (20 Oct 2026)
@@ -51,8 +57,11 @@ Milestone 7: resources -- DONE (20 Oct 2026)
   cities; AI guards are spearmen with bronze, and warriors they replace are disbanded.
   Tin: 4 edge nodes plus inland hills/mountains at 2/3 of copper's rate. In 200-turn
   autoplays one people of four had bronze on seed 1, none on seeds 3 and 7
-- The tile sheet is full (30 tiles): the next tile needs code region 3 or other room.
-  Other *_improved tiles (cattle, fish, oranges) would need it too
+- DONE: improved resources have their own tiles in code region 3's room (now the
+  sheet's): irrigated cattle (pasture), olives and wine (orchard recoloured). One tile
+  left. Fish's improved tile (boats) waits for a work boat
+- No code region is left: regions 1 and 2 are in use, 3-6 are tiles. Region 1 has 360
+  bytes. The next code needs room (move code between regions, or load one from disk)
 
 Milestone 8: basic diplomacy
 - Contact between peoples; peace, war, ceasefire; an attitude value per pair

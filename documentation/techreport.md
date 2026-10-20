@@ -255,8 +255,8 @@ screens that are not the map -- title, setup, help -- with the menus,
 save and load and the loaders of the tile sheet and the map; region 1
 holds the computer players, the builders' improvements and the cities'
 yields and growth; region 2 the city screen, Top Five Cities and
-diplomacy. Three regions fit, up to \$18fff; above them, \$19000-\$1efff
-holds the last twelve tiles of the tile sheet.
+diplomacy. Those two are all there is room for now: above them,
+\$17000-\$1efff holds the last sixteen tiles of the tile sheet.
 
 Resident code calls a function in a region through a stub of the same
 name (`src/dispatch.s`), which maps the region in, makes the call, and
@@ -276,7 +276,7 @@ and the main loop stay resident, where a call costs nothing.
 | \$12000-\$12f9f | 4 | Screen RAM, 80x25 cells of two bytes |
 | \$13000-\$14fff | 8 | Code region 1 |
 | \$15000-\$16fff | 8 | Code region 2 |
-| \$19000-\$1efff | 24 | The expanded tile sheet's tiles 18-29: the resources, mined copper and tin, the spearman |
+| \$17000-\$1efff | 32 | The expanded tile sheet's tiles 18-33: the resources, the improved resources, the spearman |
 | \$20000-\$3ffff | 128 | The C65 ROM, left in place |
 | \$40000-\$56fff | 92 | The tile store: the map window's character definitions, and in the row padding the minimap's 80 and the owners' flags |
 | \$57000-\$5ffff | 36 | The expanded tile sheet's tiles 0-17 |
@@ -304,13 +304,13 @@ the store is 94208 bytes, which leaves banks 2 and 3, the ROM, alone. A larger
 window would need the ROM banked out, with everything that brings with it;
 `src/view.h` stops the build if the store outgrows \$60000.
 
-**The expanded sheet** is the tile art as it is drawn: 30 tiles of 8x4
+**The expanded sheet** is the tile art as it is drawn: 33 tiles of 8x4
 characters, 2 KB each, stored a tile at a time. It is in chip RAM rather
 than in Attic RAM because the redraw copies about 160 KB out of it, and DMA
 reading Attic RAM is about seven times slower than reading chip RAM on the
 real machine. The VIC never reads it -- it is only a DMA source -- so it
 need not be in bank 5: the first 18 tiles fill bank 5 to its end, and the
-rest go in bank 1, where three code regions would have been. Each
+rest go in bank 1, where four code regions would have been. Each
 part lies in one bank, so a source address is 16 bits, and the redraw
 changes the DMA's source bank only when it moves from one part to the
 other. While loading it, the program notes which characters of each tile

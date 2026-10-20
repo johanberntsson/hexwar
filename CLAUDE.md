@@ -205,14 +205,15 @@ buffers at the default `$FF80000` and corrupts the display.
 
 | Address | Size | Contents |
 |---|---|---|
-| `$2001-$5FFF`, `$8000-$9FFF` | 24 KB | the resident program: code, data, BSS, C stack. 2.7 KB free, all at `$5536-$5FFF` |
-| `$6000-$7FFF` | 8 KB | the code window (`src/region.h`); as loaded, region 0 — the title, setup, city, Top Five and help screens, the menus, save and load, the sheet loader. 1.5 KB free |
-| `$13000-$14FFF` | 8 KB | region 1, from `SEVENSHIPS.R1`: the computer players. 4.9 KB free; room for regions 2-6 up to `$1EFFF` |
+| `$2001-$5FFF`, `$8000-$9FFF` | 24 KB | the resident program: code, data, BSS, C stack. 1.8 KB free, all at `$58CE-$5FFF` |
+| `$6000-$7FFF` | 8 KB | the code window (`src/region.h`); as loaded, region 0 — the title, setup, city, Top Five and help screens, the menus, save and load, the sheet loader. 1.0 KB free |
+| `$13000-$14FFF` | 8 KB | region 1, from `SEVENSHIPS.R1`: the computer players and the builders' improvements. 4.0 KB free; room for regions 2-4 up to `$1AFFF` |
+| `$1B000-$1EFFF` | 16 KB | the tile sheet's tiles 16-23, where regions 5 and 6 would have been: the overlays. 2 of 8 used |
 | `$A000-$BFFF` | 8 KB | `highram`, under the BASIC ROM, banked out by `src/bank.s`: `map_tile`, the unit and city arrays, the sprite blocks, the AI's headings, the staging buffers of the texts and the regions, the texts' line buffers, the sheet loader's buffers, the saved VIC registers; about 2.3 KB free — `HIGH_BSS` in `src/mega65.h` moves a variable there, and **the startup does not clear it** |
 | `$1600-$1EFF` | 2304 | `zpsave` (56 bytes, BASIC's zero page during the run), then `lowfree`: the popup's 400-byte text and the scratch buffers of the view and the minimap, 1.6 KB free — `LOW_FREE` in `src/mega65.h` moves a variable there |
 | `$12000` | 4000 | screen RAM, 80x25 cells of 2 bytes |
 | `$40000-$56FFF` | 94208 | the view's tile store, 23 rows of 4096: 3840 for the window, then 256 holding four of the minimap's characters |
-| `$57000-$5EFFF` | 32768 | the x-expanded tile sheet, 128x4 characters: 16 tiles, all the room there is |
+| `$57000-$5EFFF` | 32768 | the x-expanded tile sheet's tiles 0-15, 2 KB each: all the room there is |
 | `$5F000-$5F8FF` | 2304 | the last 36 of the minimap's 128 full-colour characters |
 | `$5F900-$5FFFF` | 1792 | free |
 | `$8000000` | ~1 KB | attic RAM: the texts, `TEXT.PAK`'s body (`src/text.h`); the rest of the 8 MB free |
@@ -238,9 +239,10 @@ Bank 5 is chip RAM the *VIC* has to see — tiles, the minimap, anything
 else drawn as full-colour characters. Data the CPU alone reads goes to
 attic RAM instead and does not count. It has room for 16 tiles of sheet,
 **all 16 used since milestone 5** (20 Oct 2026), plus 1792 bytes above the
-minimap. Take these in order when a 17th tile or another full-colour
-surface needs room — the river, the resources of milestone 7, a plains
-hill:
+minimap. **The sheet is not something the VIC sees, though**: it is only
+ever a DMA source, copied into the tile store, so it needs chip RAM but
+not bank 5 — which is what step 1b uses. Take these in order when another
+tile or another full-colour surface needs room:
 
 1. **The tile store's row padding** — *done* (19 Oct 2026). Each of the
    23 rows has 256 bytes after its 3840, 92 character slots in all, and a
@@ -249,6 +251,17 @@ hill:
    (`char_number()` in `src/minimap.c`). That took the sheet's room from
    14 tiles to 16. Checked headlessly: pixel-identical to the old layout,
    including after a retire and with Show Map on.
+
+   1b. **Bank 1, code regions 5 and 6** — *done* (20 Oct 2026, for
+   milestone 6's overlays). `$1B000-$1EFFF` holds tiles 16-23 (`SHEET_HIGH`
+   in `src/sheet.h`), so four code regions are left (`REGION_LIMIT` in
+   `src/region.h` has an `#error`). The sheet is stored a tile at a time
+   (2 KB each, 512 bytes a row), so a tile's address is its base plus
+   `row * 512` in either bank, and `view_draw_tile()` changes the DMA's
+   source bank (`blit_source_bank()`) only when a tile is in the other one.
+   More of bank 1 can go the same way, a region (four tiles) at a time,
+   against room for code. **Confirmed on a real MEGA65** (20 Oct 2026): the
+   overlays draw from bank 1 and scrolling is still fast.
 2. **The C64 ROM, which C65 mode never runs.** A dump of the running game
    shows C64 BASIC at `$2A000` (`CBMBASIC` at `$2A004`) and the GO64
    KERNAL at `$2E000`, 16 KB together. Using them keeps the C65 KERNAL,
@@ -396,7 +409,8 @@ return to BASIC. Screen RAM is below it at `$12000-$12F9F`; above it,
 `$1F600-$1F6FF` holds something at READY and `$1F800-$1FFFF` is the C65's
 colour RAM window, so neither is to be used. MAP offsets are in 256-byte
 steps, so two 24 KB regions fit (`$13000-$18FFF`, `$19000-$1EFFF`) with
-1.5 KB over. On a real MEGA65 (19 Oct 2026) the first try of BASIC after
+1.5 KB over. (**Since milestone 6 the top 16 KB of it, `$1B000-$1EFFF`, is
+the tile sheet's**; see **When bank 5 fills up**, step 1b.) On a real MEGA65 (19 Oct 2026) the first try of BASIC after
 quitting hung in `DIM` — but so did the plain game in xemu, with nothing
 in bank 1: it was the zero page not being put back (see **Quitting**
 below), fixed the same day. BASIC itself treats the area as its own and
@@ -451,8 +465,9 @@ help, the menus, save, 100 turns, retire and load left every unit and
 city array and the map identical, and `DIM` still works at READY after
 quitting. **Confirmed on a real MEGA65** the same day: title and setup,
 the city screen, the menus by mouse and MEGA+letter, HELP, Play 50 Turns,
-save, retire and load, and `DIM` after quitting. **Resident space is what to watch now**: 2.7 KB of it, against
-1.5 KB in region 0 and 4.9 KB in region 1 plus five empty regions, so new
+save, retire and load, and `DIM` after quitting. **Resident space is what to watch now**: 1.8 KB of it (20 Oct 2026,
+after the improvements), against 1.0 KB in region 0 and 4.0 KB in region
+1 plus three empty regions (5 and 6 are the tile sheet's now), so new
 subsystems go into a region from the start, per-turn ones especially.
 `--no-cross-call --no-interprocedural-cross-jump` are on for the banked
 files only (the Makefile's `BANKED`).
@@ -570,6 +585,21 @@ that stays put for a run (both megabytes, the source bank, the transparent
 byte) and `blit()` then stores four fields, all 8 or 16 bit. That plus the
 padded row stride took a redraw from **32.2 ms to 12.8 ms**.
 
+**A tile row copies only the characters that have pixels.** `sheet_load()`
+notes, for every row of every tile, the first expanded character with a
+non-zero pixel and how many from there to the last (`sheet_row_lead`,
+`sheet_row_width` in `HIGH_BSS`), and `view_draw_tile()` copies just those,
+skipping a row with none. The result is the same — the characters left out
+are all transparent — but a unit or an overlay, a small picture in the middle
+of its tile, costs one or two short jobs instead of four of 512 bytes. **Keep
+overlay art inside pixel lines 8-23** of its 32, the middle two character
+rows: the mine and the irrigation are, which halved their cost.
+
+**Overlays go straight over their own terrain, in the same pass**, not a row
+behind like units: an improvement is drawn inside its hexagon, and nothing
+drawn later covers the inside of a hexagon. In `view_redraw()` it is one
+test of the map byte per hexagon, `t & MAP_IMPROVEMENT`.
+
 Two things that were tried and are not worth revisiting: **chaining DMA jobs**
 (bit 2 of the command byte) measured 25.8 µs a job against 27.2 for separate
 triggers — 5%, for a much more complicated inner loop. And the `$D02F` I/O
@@ -616,14 +646,26 @@ all three have to stay:
 - **The redraw is fast enough to fit in a frame** — 12.8 ms, from the
   `blit_begin`/`blit` path and the padded row stride above; 13.6 ms (to
   raster line 143) once units and cities went in, measured with a settler
-  and with a city in view. There is no
+  and with a city in view. **Measured again with CIA2 around the whole
+  `view_redraw()` call** (20 Oct 2026, a `NO_TITLE` build at
+  `START_OFF_X=90 START_OFF_Y=60` with Show Map on, not `-sleepless`),
+  which takes in the raster interrupt too: 15.9 ms at HEAD before the
+  overlays, 16.0 ms after them with none in view, and **20.5 ms with an
+  overlay on two hexagons in three** — about 70 µs an overlay. That needed
+  the row extents (see **Drawing**) and overlay art kept to the middle two
+  character rows; it was 25.7 ms without either. There is no
   double buffer: a second 94 KB store does not fit in the free banks, and
   making room would mean banking out the ROM.
 - **It starts when the beam leaves the window.** `view_wait_for_redraw()` waits
   for raster line 243, the bottom of the map window. Measured, the redraw runs
   from `$D012` 243 to 136 of the next frame — about 205 lines — while the beam
   needs window row *r* only at line 128 + 8*r*. It stays ahead by roughly 100
-  lines throughout, and finishes with ~6 ms of slack.
+  lines throughout, and finishes with ~6 ms of slack. **So the real limit
+  is about 24 ms, not 20**: a redraw spread evenly down the window stays
+  ahead of the beam until the beam reaches the last row, 197 + 8 × 23 lines
+  after it started; one longer than 20 ms only misses the next frame's line
+  243, so the view runs at 25 frames a second there rather than tearing.
+  Leave the 20% by which xemu flatters compiled C out of that.
 - **It draws strictly top to bottom and never clears.** The `hy` loop makes the
   destination row monotonically increasing, which is what "ahead of the beam"
   means. A `view_clear()` first would blank rows the beam has not reached yet —
@@ -661,7 +703,9 @@ this. And note `$D012` is 8 bits of a 0-311 raster, so it repeats for lines
 TODO.txt's milestones are the plan. Milestones 1 (pointer, turn loop, a
 settler, founding a city), 2 (the city screen and building units), 3
 (computer players) and 4 (combat and barbarians) are in, as of 18 Oct 2026,
-and 5 (plains, forest, desert and floodplain) as of 20 Oct 2026.
+and 5 (plains, forest, desert and floodplain) as of 20 Oct 2026. Of 6,
+the builders' irrigation and mines are in (see **Improvements**); food,
+city size and growth are not.
 
 **The title screen comes first** (`src/title.c`): `title_show()` puts the
 title up once the texts are read and before the sheet and the map are,
@@ -784,9 +828,11 @@ neighbours, at least 16 hexagons from every other settler (12, 8 and 4 if
 200 random tries each find nothing). `ai_turn(p)` then plays TODO.txt's
 five rules: a settler founds a city where it stands; the first warrior in
 an unguarded city fortifies there and the rest explore (on along a heading
-kept in `heading[]`, turning now and then); a builder goes to a hexagon
-next to its nearest city and stays — **there are no improvements yet**, so
-that is where rule 5 stops. Each city builds a warrior if the player has
+kept in `heading[]`, turning now and then); a builder improves the
+hexagons round its nearest city — `improve_best()` on the one it stands
+on, if that is next to the city, or else it makes for the first neighbour
+of the city that wants something and has nobody on it, and waits next to
+the city when none does. Each city builds a warrior if the player has
 none, then a builder if it has none, then warriors, until the player has
 `AI_UNIT_CAP` (6) units, when it builds nothing (`city_build` =
 `KIND_NONE`), so that three computer players cannot fill the 64 unit slots
@@ -882,7 +928,9 @@ usual reason. The production box also shows the rate and the turns left.
 exist: a city makes the shields of its own hexagon, at least 1, plus those
 of its best neighbour — what a size-1 city working one tile would make.
 `terrain_shields[]` there is the table (hills and forest 2; grassland,
-plains, floodplain and mountains 1; water, tundra and desert 0), so a grassland city by hills makes 3 a turn: a warrior
+plains, floodplain and mountains 1; water, tundra and desert 0), plus 2
+for a mine on hills and 1 on mountains or desert (`shields()`), so a
+grassland city by hills makes 3 a turn: a warrior
 (10) in four turns, a builder (20) in seven. Each city has `city_build` (a
 `KIND_*`, warriors when founded) and `city_shields`. At the end of a turn,
 after `ai_turn()`, `end_turn()` calls `city_produce()` on every city; at
@@ -891,6 +939,29 @@ coming turn asks for its orders first like any other, and the surplus
 carries over. The panel says "Mycenae / built Warrior" (the last city, if
 several finish at once). With the unit list full the shields wait at the
 cost.
+
+**Improvements** (`src/improve.c`, milestone 6, in region 1) are bits 4
+and 5 of the map byte: `MAP_IRRIGATED` or `MAP_MINED`, never both, drawn
+as an overlay tile over the terrain (`MAP_OVERLAY_TILE`). A builder makes
+one with `i` or `m`, or Orders → Irrigate or Mine: `improve_start()` gives
+it `ORDERS_IRRIGATE` or `ORDERS_MINE`, so it asks for no orders, and
+`improve_turn()`, from `end_turn()` after the computer players, counts its
+turns in `unit_work[]` — 5 to irrigate, 10 to mine, Civilization's — and
+sets the bits; the panel says "Irrigation / finished". Waking it (a click)
+starts the count again. Irrigation goes on grassland, plains, desert,
+floodplain or hills with the sea, a floodplain or irrigation next to it,
+or on a floodplain; a mine on hills, mountains or desert. Mines add
+shields now; **irrigation does nothing yet**, until there is food. Works
+on a real MEGA65 (20 Oct 2026). **Builders on one hexagon with the same orders
+work together**, as Civilization's settlers do: `improve_turn()` adds one
+to every working builder's count first, then compares the sum on each
+hexagon with the turns needed, and frees them all when it is done, so two
+irrigate in three turns. One known gap, in TODO.txt: a builder may
+improve any hexagon, however far from a city (Civilization allows it too). The
+hover readout adds "+irr" or "+mine", short so that a unit's name and the
+coordinates still fit its 40 columns. `map_reset()` clears them with the
+rest. **Roads need a bit**, and the map byte has none left: terrain is
+down to four bits (`MAP_TERRAIN_MASK` 0x0f, ten of sixteen values used).
 
 **Popups** (`src/popup.c`) are a box of word-wrapped text over the middle
 of the map window, closed by a click anywhere, fire, Return, space or Esc.
@@ -930,7 +1001,8 @@ of the unit list for every tile. `unit_mark()` keeps it right, and everything
 that puts a unit or city on a hexagon or takes one off calls it.
 
 **Bit 6 means "the player has seen this hexagon"** (`MAP_EXPLORED`;
-terrain is the low six bits, `MAP_TERRAIN_MASK`). `map_explore()` sets it on
+terrain is the low four bits, `MAP_TERRAIN_MASK`; bits 4 and 5 are the
+improvement, see **Improvements**). `map_explore()` sets it on
 a hexagon and its six neighbours whenever a human unit is created or moves,
 and nothing clears it. An unexplored hexagon is **drawn** as
 `TILE_UNDISCOVERED`, a solid black hexagon, never skipped — the redraw does
@@ -1016,7 +1088,7 @@ pattern on the right of the keyboard, by the cursor keys, so that those
 letters are free for other orders (`:` is also taken as `[`, its shifted
 form); the tiles are pointy-topped, so there is no N or S; a move onto
 another player's unit or city is an attack; `b` founds a
-city with a settler; MEGA or CTRL with a menu title's first letter (`g o d w h`) opens it; space skips the unit this turn, `w` asks again
+city with a settler; `i` and `m` irrigate and mine with a builder; MEGA or CTRL with a menu title's first letter (`g o d w h`) opens it; space skips the unit this turn, `w` asks again
 after the others, `f` fortifies; Return ends the turn; the cursor keys
 scroll; ESC or RUN/STOP quits to BASIC, after asking with `popup_ask()`
 (Esc again is No). `w a s d` do not scroll.
@@ -1288,12 +1360,19 @@ in xemu by building once with `input_real_hw = 1` forced in
 
 ## Assets
 
-`res/tiles.fci` is 64x4 characters — sixteen 4x4 tiles side by side, in the
+`res/tiles.fci` is 72x4 characters — eighteen 4x4 tiles side by side, in the
 order `tiles/Makefile` lists the PNGs: ten terrains (hills, grass, mountain, ocean, shallow ocean, tundra, plains, forest,
 desert, floodplain), then the city, a selection ring
 (the tile-select cursor),
-three units (settler, warrior, builder) and the black hexagon of unexplored
-land; `TILE_*` in `src/sheet.h`. The
+three units (settler, warrior, builder), the black hexagon of unexplored
+land, and the overlays, irrigation and mine; `TILE_*` in `src/sheet.h`.
+**Tiles 16 and up are in bank 1** (see **When bank 5 fills up**, step 1b).
+`overlay_mine.png` is the mine cut out of `alltiles/`' plains and tundra
+hill mines — the pixels the two share and neither bare hill has — and
+cropped to lines 8-23; `overlay_irrigation.png` is a placeholder drawn for
+it, as `alltiles/` has no irrigation. Resources and the other improvements
+of `alltiles/` can be overlays the same way: its resource tiles already
+are, on transparent backgrounds. The
 terrain, city and unit art is OpenCiv's, under CC BY 4.0
 (`tiles/README.txt`, and **Credits** in `README.md`, which must stay in
 step); `tile_select.png` is a placeholder drawn from the grass tile's
@@ -1345,6 +1424,9 @@ A new tile needs all of these, and nothing checks that they agree:
    non-terrain tiles or the map layer grows a lookup table (see `map_tile`).
 5. room: each tile is 2 KB expanded, and the sheet must stop below the
    rest of the minimap at `$5F000` (an `#error` in `src/minimap.c`): from
-   `$57000`, **16 tiles, and all 16 are used**. The tile store's own `#error` in
-   `src/view.c` keeps the store and the sheet apart. **The next tile needs
-   something moved first**: see **When bank 5 fills up**.
+   `$57000`, **16 tiles in bank 5 and 8 more in bank 1** (`SHEET_HIGH`),
+   18 used. The tile store's own `#error` in `src/view.c` keeps the store
+   and the sheet apart, and `src/sheet.h` has one for the total. Past 24:
+   see **When bank 5 fills up**.
+6. for an overlay: art inside pixel lines 8-23, or it costs the redraw
+   twice as much (see **Drawing**).

@@ -22,6 +22,8 @@
 // Standing orders: what a unit does instead of asking for any.
 #define ORDERS_NONE 0
 #define ORDERS_FORTIFY 1
+#define ORDERS_IRRIGATE 2       // a builder at work (src/improve.h)
+#define ORDERS_MINE 3
 
 // The players: the human, and a computer player for each of the other
 // peoples (src/ai.c). Player p leads people player_civ[p] (civ.h).
@@ -39,6 +41,9 @@ extern byte unit_ax[MAX_UNITS];
 extern byte unit_ay[MAX_UNITS];
 extern byte unit_moves[MAX_UNITS];      // left this turn
 extern byte unit_orders[MAX_UNITS];
+// Turns a builder has worked on its improvement; set by improve_start(),
+// meaningful only with ORDERS_IRRIGATE or ORDERS_MINE.
+extern byte unit_work[MAX_UNITS];
 
 // The unit waiting for orders, which view_redraw() draws on top of anything
 // else on its hexagon. UNIT_NONE between units and between turns.

@@ -7,6 +7,7 @@
 #include "ai.h"
 #include "city.h"
 #include "combat.h"
+#include "improve.h"
 #include "map.h"
 #include "sheet.h"
 #include "unit.h"
@@ -281,9 +282,24 @@ static void hunt(byte u, word range)
         explore(u);
 }
 
+// Builder u towards the first hexagon round city c that wants improving
+// and has nobody on it. Whether there was one.
+static byte to_work(byte u, byte c)
+{
+    byte dir, nx, ny;
+    for (dir = 0; dir < 6; ++dir) {
+        if (!map_neighbour(city_ax[c], city_ay[c], dir, &nx, &ny)) continue;
+        if (map_tile[ny][nx] & MAP_OCCUPIED) continue;
+        if (improve_best(nx, ny) == ORDERS_NONE) continue;
+        approach(u, nx, ny);
+        return 1;
+    }
+    return 0;
+}
+
 static void move_unit(byte u)
 {
-    byte c, ax = unit_ax[u], ay = unit_ay[u];
+    byte c, w, ax = unit_ax[u], ay = unit_ay[u];
 
     if (unit_owner[u] == PLAYER_BARBARIAN) {
         if (!attack_near(u, BARB_ODDS)) hunt(u, BARB_RANGE);
@@ -328,19 +344,29 @@ static void move_unit(byte u)
         hunt(u, AI_RANGE);
         break;
     case KIND_BUILDER:
-        // 5. To a hexagon next to its city, and there it stays: there are no
-        // improvements to make yet, so every hexagon is unimproved and the
-        // nearest will do.
+        // 5. Improve the hexagons round its city (improve_best()): where it
+        // stands if it is one of them and wants something, or else the
+        // first of them that wants something and has nobody on it. With
+        // all of them done it waits next to the city.
         c = home(u);
         if (c == CITY_NONE) {
             explore(u);
-        } else if (ax == city_ax[c] && ay == city_ay[c]) {
-            explore(u);
-        } else if (distance(ax, ay, city_ax[c], city_ay[c]) > 1) {
-            approach(u, city_ax[c], city_ay[c]);
-        } else {
-            unit_moves[u] = 0;
+            return;
         }
+        if (distance(ax, ay, city_ax[c], city_ay[c]) == 1) {
+            w = improve_best(ax, ay);
+            if (w != ORDERS_NONE) {
+                improve_start(u, w);
+                return;
+            }
+        }
+        if (to_work(u, c)) return;
+        if (ax == city_ax[c] && ay == city_ay[c])
+            explore(u);
+        else if (distance(ax, ay, city_ax[c], city_ay[c]) > 1)
+            approach(u, city_ax[c], city_ay[c]);
+        else
+            unit_moves[u] = 0;
         break;
     }
 }

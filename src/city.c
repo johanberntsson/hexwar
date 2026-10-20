@@ -95,16 +95,28 @@ const char *city_name_of(byte c)
     return civ_city_name(player_civ[city_founder[c]], city_name[c]);
 }
 
+// What a mine adds, by terrain: Civilization's, less one on the hills,
+// which already make 2 here where they make none there.
+static byte shields(byte ax, byte ay)
+{
+    byte m = map_tile[ay][ax];
+    byte t = m & MAP_TERRAIN_MASK;
+    byte s = terrain_shields[t];
+
+    if (m & MAP_MINED) s += t == TILE_HILLS ? 2 : 1;
+    return s;
+}
+
 byte city_production(byte c)
 {
     byte ax = city_ax[c], ay = city_ay[c];
     byte dir, nx, ny, s, best = 0;
-    byte own = terrain_shields[MAP_TERRAIN(ax, ay)];
+    byte own = shields(ax, ay);
 
     if (own == 0) own = 1;
     for (dir = 0; dir < 6; ++dir) {
         if (!map_neighbour(ax, ay, dir, &nx, &ny)) continue;
-        s = terrain_shields[MAP_TERRAIN(nx, ny)];
+        s = shields(nx, ny);
         if (s > best) best = s;
     }
     return own + best;

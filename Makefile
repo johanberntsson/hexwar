@@ -93,6 +93,7 @@ SRCS     = src/sevenships.c \
            src/text.c \
            src/game.c \
            src/ai.c \
+           src/improve.c \
            src/combat.c \
            src/civ.c \
            src/popup.c \
@@ -103,7 +104,7 @@ SRCS     = src/sevenships.c \
 # The files whose code is in a MAP window region (src/region.h), compiled
 # without the shared instruction fragments that could be called across one.
 BANKED   = src/title.c src/cityscreen.c src/topcities.c src/save.c \
-           src/sheet.c src/help.c src/menu.c src/ai.c
+           src/sheet.c src/help.c src/menu.c src/ai.c src/improve.c
 
 # Assembly: src/bank.s, which banks BASIC out before main(), and
 # src/dispatch.s, the MAP window and the calls into it.

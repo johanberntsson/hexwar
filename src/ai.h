@@ -1,8 +1,8 @@
 // The computer players: TODO.txt's milestone 3, the simplest thing that
 // plays. Each one founds a city with its settler, builds a warrior, then a
 // builder, then warriors that explore; the first warrior home stays to
-// guard the city, and a builder goes to a hexagon next to its city and
-// stays there until there are improvements to make. With two military
+// guard the city, and a builder improves the hexagons round its city
+// (milestone 6, src/improve.h). With two military
 // units, one fortified, and a builder, a city builds a settler, which
 // founds a new city on the nearest good site.
 //

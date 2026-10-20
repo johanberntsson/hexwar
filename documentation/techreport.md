@@ -143,7 +143,7 @@ to `release/`), holding five files:
 | TILES.FCI | the tile sheet: a palette and 16 tiles of 4x4 full colour characters |
 | SEVENSHIPS.MAP | the map: a 16-byte header and one 4096-byte layer of terrain |
 | TEXT.PAK | the texts -- the title, help and new-game screens, the opening popup, and the lists of names -- with their markup |
-| SEVENSHIPS.R1 | code region 1, the computer players: a header and the code, run at \$6000 from bank 1 |
+| SEVENSHIPS.R1 | code region 1, the computer players and the builders' improvements: a header and the code, run at \$6000 from bank 1 |
 
 The C65 ROM boots AUTOBOOT.C65 automatically. `main()` then:
 
@@ -201,21 +201,21 @@ window shows one region of code at a time. The figures below are from the linker
 | \$1600-\$1637 | 0.05 | `zpsave`: BASIC's zero page \$02-\$39, saved at start-up and put back on exit |
 | \$1638-\$18e0 | 0.7 | the `lowfree` section (`LOW_FREE`): the popup's text and the scratch buffers of the view and the minimap |
 | \$18e1-\$1eff | 1.5 | free |
-| \$2001-\$5285 | 12.6 | BASIC stub, startup and resident code |
-| \$5286-\$52f2 | 0.1 | initialised data: the DMA lists |
-| \$52f3-\$53f2 | 0.25 | C stack |
-| \$53f3-\$5535 | 0.3 | BSS: small state |
-| \$5536-\$5fff | 2.7 | free |
-| \$6000-\$7fff | 8 | the code window; region 0 as loaded (6.5 KB used) |
-| \$8000-\$9ff9 | 8 | resident constant data and code |
-| \$a000-\$b6c0 | 5.7 | `highbss` (`HIGH_BSS`): the map's terrain layer `map_tile`, the unit and city arrays, the sprite blocks, the AI's headings, the staging buffers of the texts and the regions, the texts' line buffers, the sheet loader's buffers and the saved VIC registers |
-| \$b6c1-\$bfff | 2.3 | free |
+| \$2001-\$5627 | 13.5 | BASIC stub, startup and resident code |
+| \$5628-\$5686 | 0.1 | initialised data: the DMA lists |
+| \$5687-\$5786 | 0.25 | C stack |
+| \$5787-\$58cd | 0.3 | BSS: small state |
+| \$58ce-\$5fff | 1.8 | free |
+| \$6000-\$7fff | 8 | the code window; region 0 as loaded (7.0 KB used) |
+| \$8000-\$9ffe | 8 | resident constant data and code |
+| \$a000-\$b790 | 5.9 | `highbss` (`HIGH_BSS`): the map `map_tile` (terrain, improvements, explored and occupied bits), the unit and city arrays, the sprite blocks, the AI's headings, the staging buffers of the texts and the regions, the texts' line buffers, the sheet loader's buffers and row extents, and the saved VIC registers |
+| \$b791-\$bfff | 2.1 | free |
 
 The long texts and the names are not in this table at all: they are in
 TEXT.PAK, read into Attic RAM at start-up, which is most of why the
 constant data went from 3.7 KB on 18 October to 1.8 KB.
 
-The PRG is everything from \$2001 to \$9ff9, gaps and all. Nothing initialised may go above \$9fff,
+The PRG is everything from \$2001 to \$9ffe, gaps and all. Nothing initialised may go above \$9fff,
 because the PRG is loaded while BASIC is still mapped there, so only BSS
 marked `HIGH_BSS` is put in the window. BASIC is banked back in as the last
 thing `main()` does before it returns.
@@ -251,7 +251,9 @@ files (SEVENSHIPS.R1, ...) into bank 1 from \$13000 at start-up. That is
 BASIC 65's variable area, unused while the game runs. Region 0 holds the
 screens that are not the map -- title, setup, city, Top Five, help --
 with the menus, save and load and the tile sheet's loader; region 1 holds
-the computer players.
+the computer players and the builders' improvements. Four regions fit,
+up to \$1afff; above them, \$1b000-\$1efff holds the last eight tiles of
+the tile sheet.
 
 Resident code calls a function in a region through a stub of the same
 name (`src/dispatch.s`), which maps the region in, makes the call, and
@@ -269,9 +271,11 @@ and the main loop stay resident, where a call costs nothing.
 | **Address range** | **KB** |  **Usage** |
 | -- |  - | ---- |
 | \$12000-\$12f9f | 4 | Screen RAM, 80x25 cells of two bytes |
+| \$13000-\$14fff | 8 | Code region 1 |
+| \$1b000-\$1efff | 16 | The expanded tile sheet's tiles 16-23: the overlays, two of them so far |
 | \$20000-\$3ffff | 128 | The C65 ROM, left in place |
 | \$40000-\$56fff | 92 | The tile store: the map window's character definitions, and 92 of the minimap's in the row padding |
-| \$57000-\$5efff | 32 | The expanded tile sheet, 16 tiles |
+| \$57000-\$5efff | 32 | The expanded tile sheet's tiles 0-15 |
 | \$5f000-\$5f8ff | 2.25 | The other 36 of the minimap's character definitions |
 | \$5f900-\$5ffff | 1.75 | free |
 | \$08000000- | 8192 | Attic RAM: the texts from TEXT.PAK at the bottom, the rest free |
@@ -298,12 +302,19 @@ the store is 94208 bytes, which leaves banks 2 and 3, the ROM, alone. A larger
 window would need the ROM banked out, with everything that brings with it;
 `src/view.h` stops the build if the store outgrows \$60000.
 
-**The expanded sheet** is the tile art as it is drawn: 16 tiles of 8x4
-characters, 2 KB each. It is in bank 5 rather than in Attic RAM because the
-redraw copies about 160 KB out of it, and DMA reading Attic RAM is about seven
-times slower than reading chip RAM on the real machine. All of it lies in one
-bank, so a source address is 16 bits. Its 16 tiles fill it up to the
-minimap, so the next tile needs room made first.
+**The expanded sheet** is the tile art as it is drawn: 18 tiles of 8x4
+characters, 2 KB each, stored a tile at a time. It is in chip RAM rather
+than in Attic RAM because the redraw copies about 160 KB out of it, and DMA
+reading Attic RAM is about seven times slower than reading chip RAM on the
+real machine. The VIC never reads it -- it is only a DMA source -- so it
+need not be in bank 5: the first 16 tiles fill bank 5 up to the minimap,
+and the rest go in bank 1, where two code regions would have been. Each
+part lies in one bank, so a source address is 16 bits, and the redraw
+changes the DMA's source bank only when it moves from one part to the
+other. While loading it, the program notes which characters of each tile
+row have any pixels, and the redraw copies only those: a unit or an
+improvement, a small picture in the middle of its tile, then costs much
+less than a whole tile.
 
 **The minimap** is the same trick at a smaller scale: 16x8 full-colour
 characters, each with a definition of its own -- 92 of them in the tile
@@ -367,7 +378,9 @@ in which case the panel asks the player to end the turn.
 ## Redrawing in step with the beam
 
 A PAL frame is 19.97 ms. The redraw takes about 13.6 ms (measured in xemu,
-with a settler and with a city in view) and there is no second buffer to draw
+with a settler and with a city in view; 16 ms measured round the whole call,
+interrupts included, and 20.5 ms with an improvement on two hexagons in
+three) and there is no second buffer to draw
 into, so it has to be timed so that the beam never displays a row that is
 being redrawn. This works in three ways:
 

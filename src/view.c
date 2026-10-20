@@ -57,27 +57,59 @@ void view_wait_for_redraw(void)
     screen_wait_raster(SCREEN_ROW_LINE(VIEW_TOP + VIEW_ROWS));
 }
 
+// The DMA's source bank as blit_begin() or view_draw_tile() last set it.
+static byte source_bank;
+
+static void begin(void)
+{
+    blit_begin(0x00, SHEET_EXPANDED_BANK, 0x00, 0x00);
+    source_bank = SHEET_EXPANDED_BANK;
+}
+
 void view_draw_tile(int x, int y, byte tile)
 {
-    byte r;
-    // The source is the expanded sheet in bank 5, which fits inside the bank
-    // -- so a source address is 16 bits and the megabyte and bank never
-    // change. blit_begin() in view_redraw() has set them.
-    word src = SHEET_EXPANDED_ADDR
-               + (word)(64U * ((word)tile * TILE_EXPANDED_COLUMNS));
+    byte r, bank, hi, k;
+    word src;
 
-    for (r = 0; r < TILE_ROWS; ++r, src += 64U * SHEET_EXPANDED_COLUMNS) {
+    // The source is the expanded sheet, each part of which fits inside its
+    // bank -- so a source address is 16 bits and the megabyte never
+    // changes. The bank does, for a tile in bank 1: the overlays, which
+    // alternate with terrain, so it is one store when it changes and a
+    // compare when it does not.
+    // TILE_BYTES is 2048, so a tile's offset is tile * 8 in the high byte;
+    // the byte goes through a variable for the narrowing-cast bug.
+    if (tile < SHEET_LOW_TILES) {
+        bank = SHEET_EXPANDED_BANK;
+        hi = tile << 3;
+        src = SHEET_EXPANDED_ADDR + ((word)hi << 8);
+    } else {
+        bank = SHEET_HIGH_BANK;
+        hi = (tile - SHEET_LOW_TILES) << 3;
+        src = SHEET_HIGH_ADDR + ((word)hi << 8);
+    }
+    if (bank != source_bank) {
+        blit_source_bank(bank);
+        source_bank = bank;
+    }
+
+    k = tile << 2;                  // TILE_ROWS a tile in sheet_row_*
+    for (r = 0; r < TILE_ROWS; ++r, ++k, src += TILE_ROW_BYTES) {
         int row = y + r;
-        int first = x;              // leftmost column this row would touch
-        byte skip = 0;              // source characters clipped off the left
-        byte width = TILE_EXPANDED_COLUMNS;
+        // Only the characters of the row that have pixels: all eight in
+        // the middle of a terrain tile, two or three of a unit's, and none
+        // of an overlay's empty rows.
+        byte skip = sheet_row_lead[k];  // source characters not copied
+        byte width = sheet_row_width[k];
+        int first = x + skip;       // leftmost column this row would touch
 
-        if (row < 0 || row >= VIEW_ROWS) continue;
+        if (!width || row < 0 || row >= VIEW_ROWS) continue;
 
         if (first < 0) {
-            if (first <= -TILE_EXPANDED_COLUMNS) continue;
-            skip = (byte)(-first);
-            width -= skip;
+            byte cut;
+            if (first <= -(int)width) continue;
+            cut = (byte)(-first);
+            skip += cut;
+            width -= cut;
             first = 0;
         }
         if (first >= VIEW_COLUMNS) continue;
@@ -170,7 +202,7 @@ void view_draw_patch(byte col, byte row, byte ax, byte ay)
         lfill(TILE_STORE + VIEW_ROW_STRIDE * (row + i) + 64UL * col, 0,
               64 * VIEW_PATCH_COLUMNS);
 
-    blit_begin(0x00, SHEET_EXPANDED_BANK, 0x00, 0x00);
+    begin();
     for (i = 0; i < 7; ++i) {
         nx = ax;
         ny = ay;
@@ -183,9 +215,12 @@ void view_draw_patch(byte col, byte row, byte ax, byte ay)
         cell_x[i] = nx;
         cell_y[i] = ny;
         t = map_tile[ny][nx] | map_show;
+        if (!(t & MAP_EXPLORED)) t = TILE_UNDISCOVERED;
         view_draw_tile(col + patch_x[i], row + patch_y[i],
-                       (t & MAP_EXPLORED) ? (t & MAP_TERRAIN_MASK)
-                                          : TILE_UNDISCOVERED);
+                       t & MAP_TERRAIN_MASK);
+        if (t & MAP_IMPROVEMENT)
+            view_draw_tile(col + patch_x[i], row + patch_y[i],
+                           MAP_OVERLAY_TILE(t));
     }
     // The overlays after all the terrain, as view_redraw() does a row
     // behind it. The active unit does not blink here, so it is always shown.
@@ -211,7 +246,7 @@ void view_redraw(word off_x, word off_y)
 
     // Source: chip RAM, bank 5 (the expanded sheet); destination megabyte 0
     // (chip RAM); palette index 0 transparent.
-    blit_begin(0x00, SHEET_EXPANDED_BANK, 0x00, 0x00);
+    begin();
 
     // Which map cells can touch the window. A tile is 8 characters wide and
     // starts at 4*ax, and 4 rows tall starting at 3*hy, so anything beyond
@@ -267,6 +302,12 @@ void view_redraw(word off_x, word off_y)
                 }
             }
             view_draw_tile(tx, ty, t & MAP_TERRAIN_MASK);
+            // An improvement goes straight over its own terrain: it is
+            // inside its hexagon, which nothing drawn later covers. An
+            // unexplored hexagon's t is TILE_UNDISCOVERED, with these bits
+            // clear.
+            if (t & MAP_IMPROVEMENT)
+                view_draw_tile(tx, ty, MAP_OVERLAY_TILE(t));
             ax += 2;
             if (ax >= MAP_COLUMNS) ax -= MAP_COLUMNS;
         }

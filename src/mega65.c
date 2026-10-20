@@ -113,6 +113,11 @@ void blit_begin(byte source_mb, byte source_bank, byte dest_mb,
     POKE(0xd704U, 0x00);
 }
 
+void blit_source_bank(byte source_bank)
+{
+    blit_list.source_bank = source_bank;
+}
+
 void blit(word source_addr, byte dest_bank, word dest_addr, word count)
 {
     blit_list.source_addr = source_addr;

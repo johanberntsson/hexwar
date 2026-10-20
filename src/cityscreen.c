@@ -105,6 +105,8 @@ static void draw_units(byte c)
         screen_putsxy(x, y, unit_kind_name[unit_kind[u]], TEXT_COLOUR);
         if (unit_orders[u] == ORDERS_FORTIFY)
             screen_putsxy(x + 8, y, "fortified", COLOR_LIGHTGREY);
+        else if (unit_orders[u] != ORDERS_NONE)
+            screen_putsxy(x + 8, y, "working", COLOR_LIGHTGREY);
         ++y;
     }
     if (y == LIST_ROW) screen_putsxy(x, y, "None", COLOR_LIGHTGREY);

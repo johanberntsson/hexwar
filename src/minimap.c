@@ -9,7 +9,7 @@
 #if MINIMAP_COLUMNS * 8 != MAP_COLUMNS || MINIMAP_ROWS * 8 != 2 * MAP_ROWS
 #error "the minimap is a pixel a hexagon column and a line a hexagon row"
 #endif
-#if SHEET_EXPANDED + 64UL * SHEET_EXPANDED_COLUMNS * SHEET_ROWS > MINIMAP_STORE
+#if SHEET_EXPANDED + 2048UL * SHEET_LOW_TILES > MINIMAP_STORE
 #error "the expanded sheet runs into the minimap"
 #endif
 #if MINIMAP_STORE + MINIMAP_STORE_SIZE > 0x60000UL

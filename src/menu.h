@@ -16,11 +16,14 @@
 #define MENU_KEYS 6
 #define MENU_PLAY_50 7
 #define MENU_SAVE 8
+#define MENU_IRRIGATE 9
+#define MENU_MINE 10
 
-// What the Orders menu offers, for the unit that has the orders: one of
-// MENU_FOUND_CITY or MENU_FORTIFY, or MENU_NONE for nothing, when Orders
-// does not open. Set it before menu_click() or menu_key().
-void menu_orders(byte command);
+// What the Orders menu offers, for the unit that has the orders: up to two
+// of MENU_FOUND_CITY, MENU_FORTIFY, MENU_IRRIGATE and MENU_MINE, MENU_NONE
+// for none -- with none at all, Orders does not open. Set it before
+// menu_click() or menu_key().
+void menu_orders(byte command, byte second);
 
 // Write the bar into row 0.
 void menu_draw(void);

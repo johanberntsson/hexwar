@@ -78,5 +78,7 @@ void lcopy_transparent(dword source, dword destination, word count,
 void blit_begin(byte source_mb, byte source_bank, byte dest_mb,
                 byte transparent);
 void blit(word source_addr, byte dest_bank, word dest_addr, word count);
+// Change only the source bank blit_begin() set, for the next blits.
+void blit_source_bank(byte source_bank);
 
 #endif // SEVENSHIPS_MEGA65_H

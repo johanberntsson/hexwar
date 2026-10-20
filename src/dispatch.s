@@ -110,7 +110,11 @@ stub:       .macro  name, target, region
             stub    save_write, save_write_r0, 0
             stub    save_read, save_read_r0, 0
 
-; Region 1: the computer players.
+; Region 1: the computer players and the builders' improvements.
             stub    ai_place, ai_place_r1, 1
             stub    ai_turn, ai_turn_r1, 1
             stub    ai_barbarians, ai_barbarians_r1, 1
+            stub    improve_can, improve_can_r1, 1
+            stub    improve_best, improve_best_r1, 1
+            stub    improve_start, improve_start_r1, 1
+            stub    improve_turn, improve_turn_r1, 1

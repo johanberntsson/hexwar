@@ -33,6 +33,7 @@ static const struct block blocks[] = {
     { unit_ay, sizeof unit_ay },
     { unit_moves, sizeof unit_moves },
     { unit_orders, sizeof unit_orders },
+    { unit_work, sizeof unit_work },
     { ai_heading, sizeof ai_heading },
     { &city_count, sizeof city_count },
     { &city_founded, sizeof city_founded },

@@ -1,5 +1,7 @@
 --- OPEN ---
 
+You can irrigate and mine etc outside the city area
+
 Add a list of (known) AIs on the game screen with some basic info
 
 --- MILESTONES ---
@@ -21,7 +23,11 @@ Before milestone 5: make room in bank 5
 Milestone 6: yields and city growth
 - Food, shields and trade per terrain, replacing the production stand-in in city.c
 - City size, food box, growth; cities work tiles (size 1 = centre + one tile, as now)
-- Builder improvements: irrigation, mine, road. The AI's rule 5 continues from here
+- Builder improvements: DONE irrigation and mine (src/improve.c, overlays from bank 1,
+  AI rule 5 improves the hexagons round its city). Irrigation does nothing until food.
+  Road still to do: needs a map bit (none left in map_tile) and road art for six
+  directions (alltiles' road_*.png are corner pieces, check whether they fit)
+  DONE: builders on one hexagon with the same orders add up their turns
 - City screen shows food/shields/trade and the worked tiles
 - Dedicated AI pass afterwards: Civ 1's city production priorities and per-continent policy
 

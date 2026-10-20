@@ -12,6 +12,7 @@ HIGH_BSS byte unit_ax[MAX_UNITS];
 HIGH_BSS byte unit_ay[MAX_UNITS];
 HIGH_BSS byte unit_moves[MAX_UNITS];
 HIGH_BSS byte unit_orders[MAX_UNITS];
+HIGH_BSS byte unit_work[MAX_UNITS];
 byte unit_active = UNIT_NONE;
 byte unit_hidden;
 

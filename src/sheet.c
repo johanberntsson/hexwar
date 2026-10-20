@@ -28,6 +28,40 @@
 HIGH_BSS static byte source_char[64];
 HIGH_BSS static byte expanded_pair[128];
 
+HIGH_BSS byte sheet_row_lead[TILE_COUNT * TILE_ROWS];
+HIGH_BSS byte sheet_row_width[TILE_COUNT * TILE_ROWS];
+
+// Note which expanded characters of a tile row have a pixel in them, as the
+// row's characters go past left to right: the left half of a source
+// character is expanded character 2c, the right half 2c + 1. The width
+// holds the end until the row's last character turns it into a width.
+static void note_extent(byte row, byte col)
+{
+    byte c = col % TILE_COLUMNS;
+    byte k = (byte)((col / TILE_COLUMNS) * TILE_ROWS + row);
+    byte y, left = 0, right = 0;
+
+    for (y = 0; y < 64; y += 8) {
+        left |= source_char[y] | source_char[y + 1] | source_char[y + 2]
+                | source_char[y + 3];
+        right |= source_char[y + 4] | source_char[y + 5] | source_char[y + 6]
+                 | source_char[y + 7];
+    }
+    if (c == 0) {
+        sheet_row_lead[k] = 0xff;
+        sheet_row_width[k] = 0;
+    }
+    if (left || right) {
+        byte from = left ? 2 * c : 2 * c + 1;
+        if (from < sheet_row_lead[k]) sheet_row_lead[k] = from;
+        sheet_row_width[k] = right ? 2 * c + 2 : 2 * c + 1;
+    }
+    if (c == TILE_COLUMNS - 1) {
+        if (sheet_row_lead[k] == 0xff) sheet_row_lead[k] = 0;
+        else sheet_row_width[k] -= sheet_row_lead[k];
+    }
+}
+
 // **Expand the sheet once, as it is read, not once per character drawn.**
 //
 // At H640/V200 a screen pixel is half as wide as it is tall, so a 32x32-pixel
@@ -53,9 +87,10 @@ static void expand_char(byte row, byte col)
             right[2 * x] = right[2 * x + 1] = src[4 + x];
         }
     }
+    byte tile = col / TILE_COLUMNS;
+    dword at = SHEET_TILE(tile);
     lcopy((dword)(word)expanded_pair,
-          SHEET_EXPANDED + 64UL * ((word)row * SHEET_EXPANDED_COLUMNS
-                                   + 2 * (word)col),
+          at + (word)row * TILE_ROW_BYTES + 128U * (col % TILE_COLUMNS),
           sizeof(expanded_pair));
 }
 
@@ -98,6 +133,7 @@ static byte read_sheet(int fd)
     for (row = 0; row < SHEET_ROWS; ++row) {
         for (col = 0; col < SHEET_COLUMNS; ++col) {
             if (_Stub_read(fd, source_char, 64) != 64) return 0;
+            note_extent(row, col);
             expand_char(row, col);
         }
     }

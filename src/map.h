@@ -69,11 +69,22 @@
 // drawn as TILE_UNDISCOVERED and anything on it stays hidden. map_explore()
 // sets it; nothing clears it. The map file has it clear everywhere.
 //
+// **Bits 4 and 5 are the builders' improvement** (src/improve.h): 0, or
+// MAP_IRRIGATED or MAP_MINED, never both, and 3 is free for one more. They
+// are drawn as an overlay over the terrain, the tile MAP_OVERLAY_TILE says.
+// Which leaves the low four bits for terrain, ten values of sixteen used;
+// roads will need a bit from somewhere else.
+//
 // **It lives in HIGH_BSS**, under the BASIC ROM, out of the 32 KB.
 extern byte map_tile[MAP_ROWS][MAP_COLUMNS];
 #define MAP_OCCUPIED 0x80
 #define MAP_EXPLORED 0x40
-#define MAP_TERRAIN_MASK 0x3f
+#define MAP_IMPROVEMENT 0x30
+#define MAP_IRRIGATED 0x10
+#define MAP_MINED 0x20
+#define MAP_TERRAIN_MASK 0x0f
+// The overlay for a map byte whose MAP_IMPROVEMENT bits are not 0.
+#define MAP_OVERLAY_TILE(T) (TILE_OVERLAY_FIRST - 1 + (((T) >> 4) & 3))
 #define MAP_TERRAIN(AX, AY) (map_tile[AY][AX] & MAP_TERRAIN_MASK)
 #define MAP_IS_EXPLORED(AX, AY) ((map_tile[AY][AX] | map_show) & MAP_EXPLORED)
 

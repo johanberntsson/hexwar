@@ -10,6 +10,7 @@
 
 #include "game.h"
 #include "help.h"
+#include "improve.h"
 #include "ai.h"
 #include "city.h"
 #include "cityscreen.h"
@@ -230,6 +231,10 @@ static void draw_hover(void)
                 line_add("  ");
             }
             line_add(terrain_name[MAP_TERRAIN(ax, ay)]);
+            c = map_tile[ay][ax] & MAP_IMPROVEMENT;
+            // Short, so that "Canaanite Builder  Mountains+mine 127,31"
+            // still fits in the 40 columns.
+            if (c) line_add(c == MAP_IRRIGATED ? "+irr" : "+mine");
         }
         line_add(" ");
         line_add_num(ax);
@@ -297,6 +302,9 @@ static void end_turn(void)
     news = NEWS_NONE;
     for (c = PLAYER_FIRST_AI; c < PLAYERS; ++c) ai_turn(c);
     ai_barbarians(game_turn);
+    kind = improve_turn();
+    if (kind != ORDERS_NONE)
+        message(kind == ORDERS_IRRIGATE ? "Irrigation" : "Mine", "finished");
     for (c = 0; c < city_count; ++c) {
         kind = city_produce(c);
         if (kind != KIND_NONE && city_owner[c] == PLAYER_HUMAN) {
@@ -456,6 +464,27 @@ static byte key_dir(byte key)
     return DIR_NONE;
 }
 
+// The active unit, a builder, starts irrigating or mining where it stands.
+static void improve(byte orders)
+{
+    byte u = unit_active;
+    const char *what = orders == ORDERS_IRRIGATE ? "irrigate" : "mine";
+
+    if (unit_kind[u] != KIND_BUILDER) {
+        message("Only builders", what);
+        return;
+    }
+    if (!improve_can(orders, unit_ax[u], unit_ay[u])) {
+        line_clear();
+        line_add("Cannot ");
+        line_add(what);
+        message(line, "here");
+        return;
+    }
+    improve_start(u, orders);
+    select_unit(u);
+}
+
 static void unit_key(byte key)
 {
     byte u = unit_active;
@@ -479,6 +508,8 @@ static void unit_key(byte key)
         unit_orders[u] = ORDERS_FORTIFY;
         select_unit(u);
         break;
+    case 'i': improve(ORDERS_IRRIGATE); break;
+    case 'm': improve(ORDERS_MINE); break;
     }
 }
 
@@ -519,13 +550,17 @@ static void open_top_cities(void)
 // Fill in the Orders menu for the unit that has the orders.
 static void set_orders_menu(void)
 {
-    byte command = MENU_NONE;
+    byte command = MENU_NONE, second = MENU_NONE;
     if (unit_active != UNIT_NONE) {
         byte kind = unit_kind[unit_active];
         if (kind == KIND_SETTLER) command = MENU_FOUND_CITY;
         else if (kind == KIND_WARRIOR) command = MENU_FORTIFY;
+        else if (kind == KIND_BUILDER) {
+            command = MENU_IRRIGATE;
+            second = MENU_MINE;
+        }
     }
-    menu_orders(command);
+    menu_orders(command, second);
 }
 
 // Do what a menu item asks for, picked by click or by key. Whatever it
@@ -562,6 +597,12 @@ static void menu_command(byte command)
         break;
     case MENU_FORTIFY:
         unit_key('f');
+        break;
+    case MENU_IRRIGATE:
+        unit_key('i');
+        break;
+    case MENU_MINE:
+        unit_key('m');
         break;
     case MENU_TOP_CITIES:
         open_top_cities();

@@ -39,8 +39,8 @@ static const char *const game_items[] = { "Save Game", "Retire" };
 static const byte game_commands[] = { MENU_SAVE, MENU_RETIRE };
 
 // Orders depends on the unit that has them, and menu_orders() fills it in.
-static const char *orders_items[1];
-static byte orders_commands[1];
+static const char *orders_items[2];
+static byte orders_commands[2];
 
 #ifdef DEBUG_MENU
 // Show Map lifts the fog of war, and again puts it back. Play 50 Turns
@@ -76,11 +76,28 @@ static byte menu_count[MENUS] = { 2, 0, 1, 1 };
 
 #define ORDERS 1                // Orders' index in the tables above
 
-void menu_orders(byte command)
+static const char *order_name(byte command)
 {
-    orders_commands[0] = command;
-    orders_items[0] = command == MENU_FOUND_CITY ? "Found City" : "Fortify";
-    menu_count[ORDERS] = command != MENU_NONE;
+    switch (command) {
+    case MENU_FOUND_CITY: return "Found City";
+    case MENU_IRRIGATE: return "Irrigate";
+    case MENU_MINE: return "Mine";
+    }
+    return "Fortify";
+}
+
+void menu_orders(byte command, byte second)
+{
+    byte n = 0;
+    if (command != MENU_NONE) {
+        orders_commands[n] = command;
+        orders_items[n++] = order_name(command);
+    }
+    if (second != MENU_NONE) {
+        orders_commands[n] = second;
+        orders_items[n++] = order_name(second);
+    }
+    menu_count[ORDERS] = n;
 }
 
 static byte length(const char *s)

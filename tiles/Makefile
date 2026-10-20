@@ -14,8 +14,14 @@
 TERRAIN = tile_plains_hill.png tile_grass.png tile_mountain.png tile_ocean.png \
           tile_shallow_ocean.png tile_tundra.png tile_plains.png \
           tile_plains.png+tile_forest.png tile_desert.png tile_floodplains.png
+# The overlays come after: drawn over a terrain, never instead of one, and
+# in bank 1 from tile 16 on (src/sheet.h). overlay_mine.png is the mine cut
+# out of alltiles' plains and tundra hill mines (what the two have in common
+# and neither bare hill has); overlay_irrigation.png is a placeholder.
+OVERLAYS = overlay_irrigation.png overlay_mine.png
 TILES = $(TERRAIN) tile_city.png tile_select.png \
-        unit_settler.png unit_warrior.png unit_builder.png tile_undiscovered.png
+        unit_settler.png unit_warrior.png unit_builder.png tile_undiscovered.png \
+        $(OVERLAYS)
 
 all: ../res/tiles.fci
 

@@ -45,7 +45,10 @@ static word off_y;
 
 static byte dirty;              // the view wants redrawing
 static byte contact;            // see whether a people has come in sight
+static byte greet;              // peoples just met, greeted after a redraw
 static byte hover_dirty;        // the readout of what is under the arrow
+static byte hover_unit;         // ... or on hover_ax/ay; see draw_hover()
+static byte hover_ax, hover_ay;
 static byte game_over;
 static byte quit;
 static byte retired;            // quit by Game/Retire, for the title screen
@@ -213,12 +216,17 @@ static void draw_hover(void)
     byte ax, ay, c, u, x;
 
     line_clear();
-    // While tile select is up the readout follows the ring, not the arrow.
+    // While tile select is up the readout follows the ring, not the arrow;
+    // and when the orders pass to a unit, or it moves, it shows the unit's
+    // hexagon (hover_on()) until the arrow moves.
     if (selecting) {
         ax = sel_ax;
         ay = sel_ay;
+    } else if (hover_unit) {
+        ax = hover_ax;
+        ay = hover_ay;
     }
-    if (selecting || pointer_hex(&ax, &ay)
+    if (selecting || hover_unit || pointer_hex(&ax, &ay)
         || minimap_hex(input_x, input_y, &ax, &ay)) {
         if (!MAP_IS_EXPLORED(ax, ay)) {
             line_add("Unexplored");
@@ -284,7 +292,33 @@ static void centre_on(byte ax, byte ay)
     dirty = 1;
 }
 
+// Where a people just met was seen, brought into view above the middle of
+// the window, which the greeting's popup is about to cover -- or below it,
+// near the bottom of the map, where the view cannot go far enough down.
+#define MET_ROW 2               // the window row of the tile's top
+#define MET_ROW_BELOW 17
+static void show_met(void)
+{
+    byte ax = diplomacy_ax, ay = diplomacy_ay;
+    int y = (int)MAP_CELL_Y(ax, ay) - MET_ROW;
+
+    centre_on(ax, ay);
+    if (y > VIEW_MAX_OFF_Y) y -= MET_ROW_BELOW - MET_ROW;
+    if (y < VIEW_MIN_OFF_Y) y = VIEW_MIN_OFF_Y;
+    if (y > VIEW_MAX_OFF_Y) y = VIEW_MAX_OFF_Y;
+    off_y = (word)y;
+}
+
 // ------------------------------------------------------------------- turns
+
+// The readout on (ax, ay) until the arrow moves.
+static void hover_on(byte ax, byte ay)
+{
+    hover_ax = ax;
+    hover_ay = ay;
+    hover_unit = 1;
+    hover_dirty = 1;
+}
 
 // Hand the orders to the next unit after `after` that wants some, bringing
 // it into view. With none left, the panel asks for the end of the turn.
@@ -299,6 +333,7 @@ static void select_unit(byte after)
     }
     unit_active = u;
     if (was != u) dirty = 1;   // another unit blinks
+    if (u != UNIT_NONE) hover_on(unit_ax[u], unit_ay[u]);
     if (u != UNIT_NONE && !in_view(unit_ax[u], unit_ay[u]))
         centre_on(unit_ax[u], unit_ay[u]);
     draw_orders();
@@ -440,6 +475,7 @@ static void move_active(byte dir)
     --unit_moves[u];
     dirty = 1;
     contact = 1;
+    hover_on(nx, ny);
     if (unit_moves[u]) {
         if (!in_view(nx, ny)) centre_on(nx, ny);
         draw_orders();
@@ -561,6 +597,10 @@ static void draw_screen(void)
 static void open_city(byte c)
 {
     city_screen(c);
+    // Its unit list may have woken a unit, with the turn otherwise over,
+    // or fortified the one that had the orders.
+    if (unit_active == UNIT_NONE || unit_orders[unit_active] != ORDERS_NONE)
+        select_unit(unit_active);
     draw_screen();
 }
 
@@ -637,7 +677,9 @@ static void menu_command(byte command)
         open_top_cities();
         break;
     case MENU_DIPLOMACY:
-        diplomacy_contact();
+        // Anybody in sight is met before the list, and greeted after it.
+        greet |= diplomacy_contact();
+        if (greet) show_met();
         diplomacy_screen();
         draw_screen();
         break;
@@ -678,6 +720,7 @@ static void click_hex(byte ax, byte ay)
             unit_orders[u] = ORDERS_NONE;
             unit_active = u;
             dirty = 1;
+            hover_on(ax, ay);
             draw_orders();
             return;
         }
@@ -829,6 +872,8 @@ void game_init(void)
     game_over = quit = retired = loaded = 0;
     diplomacy_met = 0;
     contact = 1;
+    greet = 0;
+    hover_unit = 0;
     selecting = 0;
 
     // START_OFF_X / START_OFF_Y are what let a headless run check
@@ -926,15 +971,24 @@ byte game_run(void)
             dirty = 0;
             hover_dirty = 1;
         }
-        // After the redraw, so that whoever has come in sight is on the
-        // map behind the greeting.
-        if (contact) {
+        // Whoever has come in sight is brought into view first, and
+        // greeted after the redraw, so that they are on the map behind the
+        // greeting -- the popup that said so used to leave the player to
+        // find them.
+        if (greet) {
+            diplomacy_greet(greet);
+            greet = 0;
+        } else if (contact) {
             contact = 0;
-            diplomacy_contact();
+            greet = diplomacy_contact();
+            if (greet) show_met();
         }
 
         key = input_poll();
-        if (input_moved()) hover_dirty = 1;
+        if (input_moved()) {
+            hover_dirty = 1;
+            hover_unit = 0;
+        }
         if (hover_dirty) {
             draw_hover();
             hover_dirty = 0;

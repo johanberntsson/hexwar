@@ -205,10 +205,10 @@ buffers at the default `$FF80000` and corrupts the display.
 
 | Address | Size | Contents |
 |---|---|---|
-| `$2001-$5FFF`, `$8000-$9FFF` | 24 KB | the resident program: code, data, BSS, C stack. 1.4 KB free, all at `$5A94-$5FFF` |
+| `$2001-$5FFF`, `$8000-$9FFF` | 24 KB | the resident program: code, data, BSS, C stack. 1.1 KB free, all at `$5BE5-$5FFF` |
 | `$6000-$7FFF` | 8 KB | the code window (`src/region.h`); as loaded, region 0 — the title, setup and help screens, the menus, save and load, the sheet loader. 3.2 KB free |
 | `$13000-$14FFF` | 8 KB | region 1, from `SEVENSHIPS.R1`: the computer players, the builders' improvements, the cities' yields and growth. 1.4 KB free |
-| `$15000-$16FFF` | 8 KB | region 2, from `SEVENSHIPS.R2`: the city screen, Top Five Cities and diplomacy. 2.8 KB free; room for regions 3 and 4 up to `$1AFFF` |
+| `$15000-$16FFF` | 8 KB | region 2, from `SEVENSHIPS.R2`: the city screen, Top Five Cities and diplomacy. 2.4 KB free; room for regions 3 and 4 up to `$1AFFF` |
 | `$1B000-$1EFFF` | 16 KB | the tile sheet's tiles 18-25, where regions 5 and 6 would have been; none used yet |
 | `$A000-$BFFF` | 8 KB | `highram`, under the BASIC ROM, banked out by `src/bank.s`: `map_tile`, the unit and city arrays, the sprite blocks, the AI's headings, the staging buffers of the texts and the regions, the texts' line buffers, the sheet loader's buffers, the saved VIC registers, the AI's exploration memory; about 3.4 KB free (the map shrank to 2.5 KB) — `HIGH_BSS` in `src/mega65.h` moves a variable there, and **the startup does not clear it** |
 | `$1600-$1EFF` | 2304 | `zpsave` (56 bytes, BASIC's zero page during the run), then `lowfree`: the popup's 400-byte text and the scratch buffers of the view and the minimap, 1.6 KB free — `LOW_FREE` in `src/mega65.h` moves a variable there |
@@ -467,9 +467,10 @@ help, the menus, save, 100 turns, retire and load left every unit and
 city array and the map identical, and `DIM` still works at READY after
 quitting. **Confirmed on a real MEGA65** the same day: title and setup,
 the city screen, the menus by mouse and MEGA+letter, HELP, Play 50 Turns,
-save, retire and load, and `DIM` after quitting. **Resident space is what to watch now**: 1.4 KB of it (20 Oct 2026,
-after city growth, the AI pass, diplomacy and exploring), against 3.2 KB
-in region 0, 1.4 KB in region 1 and 2.8 KB in region 2, plus two empty regions (5 and 6 are the tile sheet's
+save, retire and load, and `DIM` after quitting. **Resident space is what to watch now**: 1.1 KB of it (20 Oct 2026,
+after city growth, the AI pass, diplomacy and exploring, and the fixes
+after them), against 3.2 KB
+in region 0, 1.4 KB in region 1 and 2.4 KB in region 2, plus two empty regions (5 and 6 are the tile sheet's
 now). **Region 2** came with city growth, when the city screen's new box
 left region 0 with 217 bytes: it took a `win2` memory in
 `sevenships.scm`, a third entry in `dispatch.s`'s map tables (offset
@@ -544,7 +545,9 @@ are free, but the minimap is a line a hexagon row (an `#error`), and its
 characters must fit the tile store's padding (another). The
 readout at the top right of the screen (`draw_hover()` in `src/game.c`, via
 `map_cell_at()`) names the terrain, its yield and the `ax,ay` of the hexagon under the
-arrow.
+arrow — or, from when the orders pass to a unit or a unit moves until the
+arrow next moves, of that unit's hexagon (`hover_on()`), and of tile
+select's ring while it is up.
 
 Two constants in `src/map.h` carry the whole view geometry:
 
@@ -717,9 +720,16 @@ this. And note `$D012` is 8 bits of a 0-311 raster, so it repeats for lines
 TODO.txt's milestones are the plan. Milestones 1 (pointer, turn loop, a
 settler, founding a city), 2 (the city screen and building units), 3
 (computer players) and 4 (combat and barbarians) are in, as of 18 Oct 2026,
-and 5 (plains, forest, desert and floodplain) as of 20 Oct 2026. Of 6,
-the builders' irrigation and mines are in (see **Improvements**); food,
-city size and growth are not.
+and 5 (plains, forest, desert and floodplain) as of 20 Oct 2026. **6 is
+done but for roads** (20 Oct 2026), which wait for milestone 7 since both
+need tiles and roads a map bit: improvements, yields, city size and
+growth, worked tiles by hand, Civilization's production rules for the
+computer players and its grassland shields. Ahead of milestone 8 there is
+contact between the peoples and an Advisors → Diplomacy screen (see
+**Contact**), and the exploring that makes contact happen (see
+**Exploring**). **Not yet tried on a real MEGA65**: the 128x20 map with its
+16x5 minimap and the panel moved up, the menu bar with Advisors, the
+Diplomacy screen and the greeting popup.
 
 **The title screen comes first** (`src/title.c`): `title_show()` puts the
 title up once the texts are read and before the sheet and the map are,
@@ -967,8 +977,14 @@ other turns goes into `news` and is shown in the panel at the end of
 name on top, three boxes — the units in the city, the city's hexagon and
 its six neighbours, and what it is producing with a CHANGE button — and
 EXIT at the bottom right (`c` and Esc/Return do the same). CHANGE turns the
-production box into a list of what can be built (`buildable[]`: warriors
-and builders), picked like a menu. **It is the map screen's own cells
+production box into a list of what can be built (`buildable[]`: warriors,
+settlers and builders), picked like a menu; a settler chosen in a city of
+size 1 waits at its cost, and the box says "waits for size 2". **The unit
+list is where a unit fortified in the city is woken**, since the map does
+not draw it (see **Bit 7** below): a click on a unit, or its number key
+1-7, wakes it if it has orders and fortifies it if it is a warrior
+without, and on the way out `open_city()` hands the orders on if the
+turn was over or the active unit was fortified. **It is the map screen's own cells
 rewritten**: text over the panel, the minimap and most of the window, and
 in the middle the window's own full-colour cells, showing 24x10 characters
 of the tile store that `view_draw_patch()` has cleared and drawn the seven
@@ -1061,9 +1077,14 @@ down to four bits (`MAP_TERRAIN_MASK` 0x0f, ten of sixteen values used).
 its units or cities stands on a hexagon the player has explored — the
 real `MAP_EXPLORED` bit, not Show Map's. `diplomacy_contact()` checks
 after each of the player's moves and at the end of every turn (a
-`contact` flag in `game.c`, acted on after the frame's redraw, so the
-newcomer is on the map behind the greeting) and greets each new people
-with a popup: "You have met the Hittites. Their ruler is Suppiluliuma,
+`contact` flag in `game.c`). It returns the peoples newly met as a
+bitmask and leaves in `diplomacy_ax/ay` where one was seen, a city if
+any; `show_met()` in `game.c` moves the view to put that hexagon in
+window row 2, above the popup (or row 17, below it, near the bottom of
+the map), and after the next redraw `diplomacy_greet()` greets each new
+people with a popup —
+before 20 Oct 2026 it greeted wherever the view was, and the newcomer
+could be anywhere on the explored map: "You have met the Hittites. Their ruler is Suppiluliuma,
 Great King of Hatti." `diplomacy_met`, a bit per player, is saved
 (`SAVE_VERSION` 5) and never cleared during a game. **Advisors →
 Diplomacy** lists every people — the player's own first, then for each
@@ -1106,7 +1127,10 @@ slot, so zeroed BSS is an empty list.
 terrain through `MAP_TERRAIN`). That is how `view_redraw()` finds the few
 cells that need anything drawn on them without another 4 KB layer or a search
 of the unit list for every tile. `unit_mark()` keeps it right, and everything
-that puts a unit or city on a hexagon or takes one off calls it.
+that puts a unit or city on a hexagon or takes one off calls it. **A unit
+fortified in a city is not drawn** (`unit_overlay()`), so that cities can
+be told apart on the map; another unit there is, and the active one
+always.
 
 **Bit 6 means "the player has seen this hexagon"** (`MAP_EXPLORED`;
 terrain is the low four bits, `MAP_TERRAIN_MASK`; bits 4 and 5 are the
@@ -1178,7 +1202,8 @@ player's cities opens the city screen, on one of the player's units hands
 it the orders, elsewhere on the map centres the view, on the minimap
 centres the view there, and on the panel at the end of a turn ends it
 (`click()` and `click_hex()` in `src/game.c`). A city comes before a unit
-in it, so a fortified unit in a city can no longer be woken by a click.
+in it, so a unit fortified in a city is woken from the city screen's unit
+list.
 **Everything must be possible from the keyboard alone**, since not every
 MEGA65 has a mouse and the joystick is slow: **Tab is tile select**, as in
 Civilization — a yellow ring (`TILE_SELECT`) on the active unit or the

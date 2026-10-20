@@ -1,5 +1,10 @@
 --- OPEN ---
 
+Peoples on separate landmasses never meet before there are boats (map seeds 3 and 7).
+Place them two to a continent, more land (MAP_LAND), or leave it for milestone 9's ships
+
+--- IDEAS, not yet decided implement or not --
+
 You can irrigate and mine etc outside the city area
 
 --- MILESTONES ---
@@ -8,13 +13,14 @@ Each milestone includes the AI's use of what it adds, so the computer players ke
 Ideas for the AI: documentation/civ1-civ2-ai-analysis-sources.txt and OpenCivOne
 (https://codeberg.org/rhorvat/OpenCivOne).
 
-Milestone 6: yields and city growth
+Milestone 6: yields and city growth -- DONE but for roads (20 Oct 2026)
 - DONE: food, shields and trade per terrain (src/growth.c, Civ 1's numbers); city size,
   food box, growth and famine; a city works its centre and its size's best neighbours
   (radius 1, picked automatically); settlers need size 2 and cost a citizen
 - Trade is worked out but nothing uses it yet (science/gold need a later milestone)
 - Builder improvements: DONE irrigation and mine (src/improve.c, overlays from bank 1,
-  AI rule 5 improves the hexagons round its city). Irrigation does nothing until food.
+  AI rule 5 improves the hexagons round its city; overlays are in bank 5 again since the
+  map shrank). Irrigation does nothing until food.
   Road still to do (see below): needs a map bit (none left in map_tile) and road art for
   six directions (alltiles' road_*.png are corner pieces, check whether they fit)
   DONE: builders on one hexagon with the same orders add up their turns
@@ -27,8 +33,8 @@ Milestone 6: yields and city growth
   a builder per city, unit cap 3 + 2 a city (max 12), 6 cities. Barbarians from turn 30
 - DONE: Civ 1's grassland shield pattern (half the grassland and floodplain, not drawn);
   the hover readout shows food/shields/trade. All four peoples now survive seed 1
-- Roads: left for later, to be planned with milestone 7's resources, since both need
-  tiles (6 left in the sheet) and roads need a map bit (a 512-byte bitmap would do)
+- Roads: left for milestone 7, to be planned with the resources, since both need tiles
+  (8 left in bank 1 after bank 5's 18) and roads need a map bit (a 512-byte bitmap would do)
 - Per-continent policy (attack/defend/transport) when there are boats and wars
 
 Milestone 7: resources
@@ -44,6 +50,7 @@ Milestone 8: basic diplomacy
 - Letters in the Amarna formulas (vision.md section 3), as templates in attic texts
 - DONE ahead of it: contact (a people is met when seen; saved, with a greeting popup) and
   Advisors/Diplomacy listing the peoples met with ruler, war/peace, cities, citizens, units
+  (20 Oct 2026: the view now moves to whoever was met, above the popup)
 
 Milestone 9: trade
 - Start with gift exchange of goods through the letters

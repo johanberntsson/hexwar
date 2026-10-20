@@ -1,6 +1,7 @@
 // In region 2 (src/region.h): called through the stubs in src/dispatch.s,
 // under these names here.
 #define diplomacy_contact diplomacy_contact_r2
+#define diplomacy_greet diplomacy_greet_r2
 #define diplomacy_screen diplomacy_screen_r2
 
 #include "diplomacy.h"
@@ -16,6 +17,7 @@
 #pragma clang section text="r2text" rodata="r2rodata"
 
 byte diplomacy_met;
+byte diplomacy_ax, diplomacy_ay;
 
 #define TITLE "Diplomacy"
 #define BUTTON_EXIT (ATTR_REVERSE | COLOR_RED)
@@ -33,23 +35,38 @@ byte diplomacy_met;
 
 byte diplomacy_contact(void)
 {
-    byte i, p, seen = 0, shown = 0;
+    byte i, p, seen = 0;
 
     for (i = 0; i < MAX_UNITS; ++i) {
         p = unit_owner[i];
         if (unit_kind[i] != KIND_NONE && p != PLAYER_HUMAN
-            && p != PLAYER_BARBARIAN && SEEN(unit_ax[i], unit_ay[i]))
+            && p != PLAYER_BARBARIAN && SEEN(unit_ax[i], unit_ay[i])
+            && !((diplomacy_met >> p) & 1) && !((seen >> p) & 1)) {
             seen |= (byte)(1 << p);
+            diplomacy_ax = unit_ax[i];
+            diplomacy_ay = unit_ay[i];
+        }
     }
+    // A city after the units, so that it is what is shown if there is one.
     for (i = 0; i < city_count; ++i) {
         p = city_owner[i];
-        if (p != PLAYER_HUMAN && SEEN(city_ax[i], city_ay[i]))
+        if (p != PLAYER_HUMAN && SEEN(city_ax[i], city_ay[i])
+            && !((diplomacy_met >> p) & 1)) {
             seen |= (byte)(1 << p);
+            diplomacy_ax = city_ax[i];
+            diplomacy_ay = city_ay[i];
+        }
     }
-    seen &= (byte)~diplomacy_met;
+    diplomacy_met |= seen;
+    return seen;
+}
+
+void diplomacy_greet(byte met)
+{
+    byte p;
+
     for (p = PLAYER_FIRST_AI; p < PLAYERS; ++p) {
-        if (!((seen >> p) & 1)) continue;
-        diplomacy_met |= (byte)(1 << p);
+        if (!((met >> p) & 1)) continue;
         // The greeting is the letters' way of putting it (vision.md 3).
         popup_begin();
         popup_add("You have met the ");
@@ -60,9 +77,7 @@ byte diplomacy_contact(void)
         popup_add(civ_title(player_civ[p]));
         popup_add(".");
         popup_show();
-        shown = 1;
     }
-    return shown;
 }
 
 static char digits[4];

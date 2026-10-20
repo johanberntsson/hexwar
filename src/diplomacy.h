@@ -16,10 +16,16 @@
 // Bit p: the human has met player p. game_init() clears it.
 extern byte diplomacy_met;
 
-// Note any people newly seen, and greet each with a popup over the map:
-// "You have met the Hittites ...". The caller redraws the view if a popup
-// was shown, which the return says.
+// Note any people newly seen, as met, and return them as a bitmask (bit
+// p, as diplomacy_met), 0 if none. diplomacy_ax/ay are then where one of
+// them was seen -- a city of theirs if any is in sight -- for the caller to
+// bring into view before diplomacy_greet() says who they are.
 byte diplomacy_contact(void);
+extern byte diplomacy_ax, diplomacy_ay;
+
+// A popup over the map for each people in `met`, a diplomacy_contact()
+// bitmask: "You have met the Hittites ...".
+void diplomacy_greet(byte met);
 
 // The Diplomacy screen until the player leaves. Writes over the whole
 // screen and hides sprites 2 and 3, like the help screen, so **the caller

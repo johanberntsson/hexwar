@@ -98,7 +98,7 @@ void unit_mark(byte ax, byte ay);
 
 // What view_redraw() draws over the terrain of an occupied hexagon, bottom
 // first: the city, then the unit on top -- the active one if it is here,
-// unless unit_hidden. Writes up to two tile numbers into `tiles` and returns
+// unless unit_hidden; in a city, never a fortified one. Writes up to two tile numbers into `tiles` and returns
 // how many.
 byte unit_overlay(byte ax, byte ay, byte *tiles);
 

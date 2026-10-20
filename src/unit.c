@@ -143,9 +143,20 @@ void unit_mark(byte ax, byte ay)
 
 byte unit_overlay(byte ax, byte ay, byte *tiles)
 {
-    byte n = 0;
+    byte n = 0, v;
     byte u = unit_at(ax, ay);
-    if (city_at(ax, ay) != CITY_NONE) tiles[n++] = TILE_CITY;
+    // In a city a fortified unit is not drawn, so that the city can be
+    // seen; the city screen lists it. The active unit always is.
+    if (city_at(ax, ay) != CITY_NONE) {
+        tiles[n++] = TILE_CITY;
+        if (u != unit_active) {
+            u = UNIT_NONE;
+            for (v = 0; v < MAX_UNITS; ++v)
+                if (unit_kind[v] != KIND_NONE && unit_ax[v] == ax
+                    && unit_ay[v] == ay && unit_orders[v] != ORDERS_FORTIFY)
+                    u = v;
+        }
+    }
     if (u != UNIT_NONE && !(u == unit_active && unit_hidden))
         tiles[n++] = unit_kind_tile[unit_kind[u]];
     return n;

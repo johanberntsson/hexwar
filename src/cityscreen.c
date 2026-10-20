@@ -66,8 +66,9 @@ static const byte patch_dir[7] = {
 static const byte patch_cx[7] = { 8, 16, 4, 12, 20, 8, 16 };
 static const byte patch_cy[7] = { 2, 2, 5, 5, 5, 8, 8 };
 
-// What a city can be told to build, in the order CHANGE lists it.
-static const byte buildable[] = { KIND_WARRIOR, KIND_BUILDER };
+// What a city can be told to build, in the order CHANGE lists it. A
+// settler from a city of size 1 waits at its cost until the city grows.
+static const byte buildable[] = { KIND_WARRIOR, KIND_SETTLER, KIND_BUILDER };
 #define BUILDABLE (sizeof buildable)
 
 static char digits[6];
@@ -102,27 +103,41 @@ static void blank_box(byte left, byte right)
         screen_fill(left + 1, y, right - left - 1, TEXT_COLOUR);
 }
 
+// The units in the list, by row: a click on one, or its number key, wakes
+// it if it has orders and fortifies it if it is a warrior without. This is
+// the way to a unit fortified in a city, which the map does not draw.
+#define UNITS_LISTED (LIST_ROWS - 1)
+static byte listed[UNITS_LISTED];
+static byte listed_n;
+
 static void draw_units(byte c)
 {
     byte u, y = LIST_ROW, more = 0;
     byte x = TEXT_LEFT(UNITS_LEFT);
 
+    blank_box(UNITS_LEFT, UNITS_RIGHT);
     screen_putsxy(x, HEADING_ROW, "Units", COLOR_WHITE);
+    listed_n = 0;
     for (u = 0; u < MAX_UNITS; ++u) {
         if (unit_kind[u] == KIND_NONE || unit_ax[u] != city_ax[c]
             || unit_ay[u] != city_ay[c])
             continue;
-        if (y == LIST_ROW + LIST_ROWS - 1) {
+        if (listed_n == UNITS_LISTED) {
             ++more;
             continue;
         }
-        screen_putsxy(x, y, unit_kind_name[unit_kind[u]], TEXT_COLOUR);
+        listed[listed_n++] = u;
+        screen_putcxy(x, y, (char)('0' + listed_n), COLOR_YELLOW);
+        screen_putsxy(x + 2, y, unit_kind_name[unit_kind[u]], TEXT_COLOUR);
         if (unit_orders[u] == ORDERS_FORTIFY)
-            screen_putsxy(x + 8, y, "fortified", COLOR_LIGHTGREY);
+            screen_putsxy(x + 11, y, "fortified", COLOR_LIGHTGREY);
         else if (unit_orders[u] != ORDERS_NONE)
-            screen_putsxy(x + 8, y, "working", COLOR_LIGHTGREY);
+            screen_putsxy(x + 11, y, "working", COLOR_LIGHTGREY);
         ++y;
     }
+    if (listed_n)
+        screen_putsxy(x, LIST_ROW - 1, "number: wake/fortify",
+                      COLOR_LIGHTGREY);
     if (y == LIST_ROW) screen_putsxy(x, y, "None", COLOR_LIGHTGREY);
     if (more) {
         const char *s = number(more);
@@ -130,6 +145,28 @@ static void draw_units(byte c)
         screen_putsxy(x + 4, y, s, COLOR_LIGHTGREY);
         screen_putsxy(x + 4 + length(s), y, " more", COLOR_LIGHTGREY);
     }
+}
+
+// Unit `i` of the list woken, or fortified; see listed[].
+static void wake(byte c, byte i)
+{
+    byte u;
+
+    if (i >= listed_n) return;
+    u = listed[i];
+    if (unit_orders[u] != ORDERS_NONE) unit_orders[u] = ORDERS_NONE;
+    else if (unit_kind[u] == KIND_WARRIOR) unit_orders[u] = ORDERS_FORTIFY;
+    else return;
+    draw_units(c);
+}
+
+static byte unit_under_pointer(void)
+{
+    byte i;
+    for (i = 0; i < listed_n; ++i)
+        if (pointer_on(LIST_ROW + i, TEXT_LEFT(UNITS_LEFT), UNITS_RIGHT - 1))
+            return i;
+    return 0xff;
 }
 
 // Write `s` at (*x, y) and move *x past it.
@@ -224,6 +261,10 @@ static void draw_build(byte c)
     screen_putsxy(x, LIST_ROW + 2, s, TEXT_COLOUR);
     screen_putsxy(x + length(s), LIST_ROW + 2,
                   city_turns_left(c) == 1 ? " turn" : " turns", TEXT_COLOUR);
+    // It takes a citizen with it (city_produce()).
+    if (kind == KIND_SETTLER && city_size[c] < 2)
+        screen_putsxy(TEXT_LEFT(BUILD_LEFT), LIST_ROW + 3,
+                      "waits for size 2", COLOR_YELLOW);
     screen_putsxy(TEXT_LEFT(BUILD_LEFT), CHANGE_ROW, CHANGE_TEXT,
                   BUTTON_CHANGE);
 }
@@ -375,6 +416,8 @@ void city_screen(byte c)
             if (pointer_on(CHANGE_ROW, TEXT_LEFT(BUILD_LEFT),
                            TEXT_LEFT(BUILD_LEFT) + sizeof CHANGE_TEXT - 2))
                 change(c);
+            else if (unit_under_pointer() != 0xff)
+                wake(c, unit_under_pointer());
             else
                 toggle(c, dir_under_pointer());
         } else if (key == KEY_ESC || key == KEY_RUNSTOP
@@ -382,6 +425,8 @@ void city_screen(byte c)
             return;
         } else if (key == 'c') {
             change(c);
+        } else if (key >= '1' && key < '1' + UNITS_LISTED) {
+            wake(c, key - '1');
         } else {
             toggle(c, key_dir(key));
         }

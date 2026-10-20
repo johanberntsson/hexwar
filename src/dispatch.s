@@ -127,4 +127,5 @@ stub:       .macro  name, target, region
             stub    city_screen, city_screen_r2, 2
             stub    top_cities_screen, top_cities_screen_r2, 2
             stub    diplomacy_contact, diplomacy_contact_r2, 2
+            stub    diplomacy_greet, diplomacy_greet_r2, 2
             stub    diplomacy_screen, diplomacy_screen_r2, 2

@@ -10,25 +10,21 @@ Each milestone includes the AI's use of what it adds, so the computer players ke
 Ideas for the AI: documentation/civ1-civ2-ai-analysis-sources.txt and OpenCivOne
 (https://codeberg.org/rhorvat/OpenCivOne).
 
-Before milestone 5: make room in bank 5
-- DONE: moved 92 of the minimap's 128 characters into the tile store's row padding
-  (CLAUDE.md, "When bank 5 fills up", step 1). Room for 16 tiles now, 12 used.
-- DONE: cleared out the program region from 1.4 KB to 2.8 KB free (DMA lists as initialised
-  data, C stack 512 -> 256, scratch buffers to LOW_FREE/HIGH_BSS; CLAUDE.md, "Memory map")
-- DONE: MAP-register code banking (src/region.h; CLAUDE.md, "Growing past 32 KB", step 3).
-  An 8 KB window at $6000-$7FFF; region 0 in the PRG (screens, menus, save, sheet loader),
-  region 1 in bank 1 (ai.c). Works on a real MEGA65. New subsystems go into a region from the
-  start: resident space is 2.7 KB, with room for five more 8 KB regions in bank 1.
-
 Milestone 6: yields and city growth
-- Food, shields and trade per terrain, replacing the production stand-in in city.c
-- City size, food box, growth; cities work tiles (size 1 = centre + one tile, as now)
+- DONE: food, shields and trade per terrain (src/growth.c, Civ 1's numbers); city size,
+  food box, growth and famine; a city works its centre and its size's best neighbours
+  (radius 1, picked automatically); settlers need size 2 and cost a citizen
+- Trade is worked out but nothing uses it yet (science/gold need a later milestone)
+- The computer players build one builder each, which leaves most of their cities stuck
+  at the size where food is exactly 0. Part of the AI pass below
 - Builder improvements: DONE irrigation and mine (src/improve.c, overlays from bank 1,
   AI rule 5 improves the hexagons round its city). Irrigation does nothing until food.
   Road still to do: needs a map bit (none left in map_tile) and road art for six
   directions (alltiles' road_*.png are corner pieces, check whether they fit)
   DONE: builders on one hexagon with the same orders add up their turns
-- City screen shows food/shields/trade and the worked tiles
+- DONE: city screen shows size, food box, food/shields/trade and rings on the worked
+  hexagons; Top Five Cities lists the largest cities seen. Both moved to code region 2
+- Choosing worked tiles by hand on the city screen (Civ 1 lets you click them)
 - Dedicated AI pass afterwards: Civ 1's city production priorities and per-continent policy
 
 Milestone 7: resources
@@ -57,6 +53,16 @@ Milestone 5: more terrain
 - Terrain still = tile number: the ten terrains first in the sheet, the rest renumbered
 - The sheet is full: 16 tiles of 16. A river tile or resources need room first
   (CLAUDE.md, "When bank 5 fills up", step 2)
+
+Before milestone 5: make room in bank 5
+- DONE: moved 92 of the minimap's 128 characters into the tile store's row padding
+  (CLAUDE.md, "When bank 5 fills up", step 1). Room for 16 tiles now, 12 used.
+- DONE: cleared out the program region from 1.4 KB to 2.8 KB free (DMA lists as initialised
+  data, C stack 512 -> 256, scratch buffers to LOW_FREE/HIGH_BSS; CLAUDE.md, "Memory map")
+- DONE: MAP-register code banking (src/region.h; CLAUDE.md, "Growing past 32 KB", step 3).
+  An 8 KB window at $6000-$7FFF; region 0 in the PRG (screens, menus, save, sheet loader),
+  region 1 in bank 1 (ai.c). Works on a real MEGA65. New subsystems go into a region from the
+  start: resident space is 2.7 KB, with room for five more 8 KB regions in bank 1.
 
 AI now builds settlers and found multiple cities
 

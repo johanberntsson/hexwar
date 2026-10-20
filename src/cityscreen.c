@@ -7,19 +7,20 @@
 // into. So nothing new is allocated; the price is that game.c has to put
 // the whole map screen back on the way out, which it does in a frame.
 
-// In region 0 (src/region.h): called through the stubs in src/dispatch.s,
+// In region 2 (src/region.h): called through the stubs in src/dispatch.s,
 // under these names here.
-#define city_screen city_screen_r0
+#define city_screen city_screen_r2
 
 #include "cityscreen.h"
 #include "city.h"
+#include "growth.h"
 #include "input.h"
 #include "map.h"
 #include "screen.h"
 #include "unit.h"
 #include "view.h"
 
-#pragma clang section text="r0text" rodata="r0rodata"
+#pragma clang section text="r2text" rodata="r2rodata"
 
 #define TEXT_COLOUR COLOR_LIGHTGREEN
 #define BORDER_COLOUR COLOR_LIGHTGREY
@@ -35,6 +36,10 @@
 #define PATCH_TOP 3
 #define BUILD_LEFT 54
 #define BUILD_RIGHT 79
+
+// The city's own figures, under the patch.
+#define INFO_TOP (BOX_BOTTOM + 1)
+#define INFO_BOTTOM (INFO_TOP + 6)
 
 #define TEXT_LEFT(BOX) ((BOX) + 2)
 #define HEADING_ROW (BOX_TOP + 1)
@@ -116,6 +121,61 @@ static void draw_units(byte c)
         screen_putsxy(x + 4, y, s, COLOR_LIGHTGREY);
         screen_putsxy(x + 4 + length(s), y, " more", COLOR_LIGHTGREY);
     }
+}
+
+// Write `s` at (*x, y) and move *x past it.
+static void put(byte *x, byte y, const char *s, byte colour)
+{
+    screen_putsxy(*x, y, s, colour);
+    *x += length(s);
+}
+
+// Size, food, shields and trade, from city_work()'s totals.
+static void draw_info(byte c)
+{
+    byte size = city_size[c];
+    byte box = GROWTH_BOX(size);
+    byte eaten = 2 * size;
+    byte x0 = PATCH_LEFT + 1;
+    byte x, y = INFO_TOP + 1, more;
+
+    x = x0;
+    put(&x, y, "Size ", COLOR_WHITE);
+    put(&x, y, number(size), TEXT_COLOUR);
+
+    x = x0;
+    put(&x, ++y, "Food ", COLOR_WHITE);
+    put(&x, y, number(city_food[c]), TEXT_COLOUR);
+    put(&x, y, " of ", TEXT_COLOUR);
+    put(&x, y, number(box), TEXT_COLOUR);
+    if (work_food >= eaten) {
+        more = work_food - eaten;
+        put(&x, y, ", +", TEXT_COLOUR);
+    } else {
+        more = eaten - work_food;
+        put(&x, y, ", -", TEXT_COLOUR);
+    }
+    put(&x, y, number(more), TEXT_COLOUR);
+
+    x = x0 + 5;
+    ++y;
+    if (work_food > eaten) {
+        more = work_food - eaten;
+        put(&x, y, "grows in ", TEXT_COLOUR);
+        put(&x, y, number((box - city_food[c] + more - 1) / more),
+            TEXT_COLOUR);
+        put(&x, y, " turns", TEXT_COLOUR);
+    } else {
+        put(&x, y, work_food == eaten ? "not growing" : "starving",
+            work_food == eaten ? TEXT_COLOUR : COLOR_YELLOW);
+    }
+
+    x = x0;
+    put(&x, ++y, "Shields ", COLOR_WHITE);
+    put(&x, y, number(work_shields), TEXT_COLOUR);
+    x = x0 + 13;
+    put(&x, y, "Trade ", COLOR_WHITE);
+    put(&x, y, number(work_trade), TEXT_COLOUR);
 }
 
 static void draw_build(byte c)
@@ -230,8 +290,9 @@ void city_screen(byte c)
 
     // The picture first, so that the patch's cells show it the moment they
     // are put back.
+    city_work(c);
     view_draw_patch(PATCH_LEFT - VIEW_LEFT, PATCH_TOP - VIEW_TOP,
-                    city_ax[c], city_ay[c]);
+                    city_ax[c], city_ay[c], work_mask);
     screen_clear();
     view_restore(PATCH_LEFT - VIEW_LEFT, PATCH_TOP - VIEW_TOP,
                  VIEW_PATCH_COLUMNS, VIEW_PATCH_ROWS);
@@ -241,6 +302,9 @@ void city_screen(byte c)
     screen_box(PATCH_LEFT - 1, PATCH_TOP - 1, PATCH_LEFT + VIEW_PATCH_COLUMNS,
                PATCH_TOP + VIEW_PATCH_ROWS, BORDER_COLOUR);
     screen_box(BUILD_LEFT, BOX_TOP, BUILD_RIGHT, BOX_BOTTOM, BORDER_COLOUR);
+    screen_box(PATCH_LEFT - 1, INFO_TOP, PATCH_LEFT + VIEW_PATCH_COLUMNS,
+               INFO_BOTTOM, BORDER_COLOUR);
+    draw_info(c);
     draw_units(c);
     draw_build(c);
     screen_putsxy(0, EXIT_ROW, "c change  esc exit", COLOR_LIGHTGREY);

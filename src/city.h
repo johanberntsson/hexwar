@@ -17,6 +17,8 @@ extern byte city_name[MAX_CITIES];      // index into the founder's names
 extern byte city_build[MAX_CITIES];     // the KIND_* it is building, or
                                         // KIND_NONE for nothing (the AI's)
 extern word city_shields[MAX_CITIES];   // towards it, of unit_kind_cost[]
+extern byte city_size[MAX_CITIES];      // citizens, 1 and up (src/growth.h)
+extern byte city_food[MAX_CITIES];      // in the food box, of GROWTH_BOX
 
 // Bit p: player p has founded a city, so losing the last one is the end
 // (combat.c:player_alive()).
@@ -44,9 +46,8 @@ void city_destroy(byte c);
 // A city's name, ten characters at most so that it fits the panel.
 const char *city_name_of(byte c);
 
-// **Production, until there is population and food to work tiles with**:
-// a city makes the shields of its own hexagon (at least 1) plus those of its
-// best neighbour, as a size-1 city working one tile would.
+// Shields a turn: those of the hexagons city c works (city_work() in
+// src/growth.h).
 byte city_production(byte c);
 
 // Turns until city `c` finishes what it is building, at least 1.
@@ -55,7 +56,9 @@ byte city_turns_left(byte c);
 // One turn's production for city `c`, at the end of its owner's turn. When
 // the shields reach the cost, the unit appears on the city's hexagon and the
 // surplus carries over; returns its KIND_*, or KIND_NONE. With the unit list
-// full the shields wait at the cost until there is room.
+// full the shields wait at the cost until there is room, and so they do for
+// a settler until the city has a citizen to spare for it: a settler takes
+// one, so it needs size 2.
 byte city_produce(byte c);
 
 #endif // SEVENSHIPS_CITY_H

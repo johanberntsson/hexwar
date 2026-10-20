@@ -12,7 +12,7 @@
 // listing, computes it from the region's bytes and puts the same stamp in
 // the file's header -- so a disk with region files from another build is
 // refused rather than run. Initialised, so that it is in the PRG at all.
-word region_stamp[REGIONS] = { 0xffff };
+word region_stamp[REGIONS] = { 0xffff, 0xffff };
 
 // In pieces under 256 for _Stub_read (map_load() in map.c), and in
 // HIGH_BSS since the disk reads go through it, as text_load() does.

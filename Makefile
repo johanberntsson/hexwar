@@ -94,6 +94,7 @@ SRCS     = src/sevenships.c \
            src/game.c \
            src/ai.c \
            src/improve.c \
+           src/growth.c \
            src/combat.c \
            src/civ.c \
            src/popup.c \
@@ -104,7 +105,8 @@ SRCS     = src/sevenships.c \
 # The files whose code is in a MAP window region (src/region.h), compiled
 # without the shared instruction fragments that could be called across one.
 BANKED   = src/title.c src/cityscreen.c src/topcities.c src/save.c \
-           src/sheet.c src/help.c src/menu.c src/ai.c src/improve.c
+           src/sheet.c src/help.c src/menu.c src/ai.c src/improve.c \
+           src/growth.c
 
 # Assembly: src/bank.s, which banks BASIC out before main(), and
 # src/dispatch.s, the MAP window and the calls into it.
@@ -116,7 +118,7 @@ OBJS     = $(patsubst src/%.c,$(BUILD)/%.o,$(SRCS)) \
 ELF      = $(BUILD)/sevenships.elf
 PRG      = $(BUILD)/sevenships.prg
 # The code regions loaded into bank 1, one file each (src/region.h).
-REGION_FILES = $(BUILD)/sevenships.r1
+REGION_FILES = $(BUILD)/sevenships.r1 $(BUILD)/sevenships.r2
 
 # The map, made by tools/mapgen.py and read off the disk at start-up. Same seed,
 # same map: `make MAP_SEED=7` is how to look at another one, and MAP_LAND is the

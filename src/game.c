@@ -9,6 +9,7 @@
 // UNIT_NONE and the end-of-turn prompt in the panel.
 
 #include "game.h"
+#include "growth.h"
 #include "help.h"
 #include "improve.h"
 #include "ai.h"
@@ -306,6 +307,19 @@ static void end_turn(void)
     if (kind != ORDERS_NONE)
         message(kind == ORDERS_IRRIGATE ? "Irrigation" : "Mine", "finished");
     for (c = 0; c < city_count; ++c) {
+        // Food before shields, so a city that grows works its new hexagon
+        // at once; and a city built up to a settler can let it go.
+        kind = city_grow(c);
+        if (kind != GROWTH_NONE && city_owner[c] == PLAYER_HUMAN) {
+            line_clear();
+            if (kind == GROWTH_GREW) {
+                line_add("grew to ");
+                line_add_num(city_size[c]);
+            } else {
+                line_add("famine");
+            }
+            message(city_name_of(c), line);
+        }
         kind = city_produce(c);
         if (kind != KIND_NONE && city_owner[c] == PLAYER_HUMAN) {
             line_clear();

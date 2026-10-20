@@ -192,7 +192,7 @@ static const byte patch_dir[7] = {
 static const int patch_x[7] = { 4, 12, 0, 8, 16, 4, 12 };
 static const int patch_y[7] = { 0, 0, 3, 3, 3, 6, 6 };
 
-void view_draw_patch(byte col, byte row, byte ax, byte ay)
+void view_draw_patch(byte col, byte row, byte ax, byte ay, byte rings)
 {
     byte i, k, n, t, nx, ny;
     byte cell_x[7], cell_y[7];
@@ -227,6 +227,8 @@ void view_draw_patch(byte col, byte row, byte ax, byte ay)
     unit_hidden = 0;
     for (i = 0; i < 7; ++i) {
         if (cell_x[i] == 0xff) continue;
+        if (patch_dir[i] != DIR_NONE && ((rings >> patch_dir[i]) & 1))
+            view_draw_tile(col + patch_x[i], row + patch_y[i], TILE_SELECT);
         t = map_tile[cell_y[i]][cell_x[i]] | map_show;
         if ((t & (MAP_EXPLORED | MAP_OCCUPIED)) != (MAP_EXPLORED | MAP_OCCUPIED))
             continue;

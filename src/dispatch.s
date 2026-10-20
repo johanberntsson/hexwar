@@ -11,9 +11,10 @@
 ; Region r's map, lower half only: A is the offset's bits 8-15, X its bits
 ; 16-19 and in its top nibble the 8 KB blocks mapped -- $80 is block 3,
 ; $6000-$7FFF. Region 0's is the KERNAL's, taken at start-up; region r in
-; bank 1 is offset REGION_BASE(r) - $6000, $0D000 for region 1.
-map_a:      .byte   0, 0xd0
-map_x:      .byte   0, 0x80
+; bank 1 is offset REGION_BASE(r) - $6000, $0D000 for region 1 and $0F000
+; for region 2.
+map_a:      .byte   0, 0xd0, 0xf0
+map_x:      .byte   0, 0x80, 0x80
 cur_region: .byte   0
 
 region_init:
@@ -105,12 +106,11 @@ stub:       .macro  name, target, region
             stub    menu_key, menu_key_r0, 0
             stub    title_show, title_show_r0, 0
             stub    title_run, title_run_r0, 0
-            stub    city_screen, city_screen_r0, 0
-            stub    top_cities_screen, top_cities_screen_r0, 0
             stub    save_write, save_write_r0, 0
             stub    save_read, save_read_r0, 0
 
-; Region 1: the computer players and the builders' improvements.
+; Region 1: the computer players, the builders' improvements and the
+; cities' yields and growth.
             stub    ai_place, ai_place_r1, 1
             stub    ai_turn, ai_turn_r1, 1
             stub    ai_barbarians, ai_barbarians_r1, 1
@@ -118,3 +118,9 @@ stub:       .macro  name, target, region
             stub    improve_best, improve_best_r1, 1
             stub    improve_start, improve_start_r1, 1
             stub    improve_turn, improve_turn_r1, 1
+            stub    city_work, city_work_r1, 1
+            stub    city_grow, city_grow_r1, 1
+
+; Region 2: the city screen and Top Five Cities.
+            stub    city_screen, city_screen_r2, 2
+            stub    top_cities_screen, top_cities_screen_r2, 2

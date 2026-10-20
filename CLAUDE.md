@@ -205,9 +205,10 @@ buffers at the default `$FF80000` and corrupts the display.
 
 | Address | Size | Contents |
 |---|---|---|
-| `$2001-$5FFF`, `$8000-$9FFF` | 24 KB | the resident program: code, data, BSS, C stack. 1.8 KB free, all at `$58CE-$5FFF` |
-| `$6000-$7FFF` | 8 KB | the code window (`src/region.h`); as loaded, region 0 — the title, setup, city, Top Five and help screens, the menus, save and load, the sheet loader. 1.0 KB free |
-| `$13000-$14FFF` | 8 KB | region 1, from `SEVENSHIPS.R1`: the computer players and the builders' improvements. 4.0 KB free; room for regions 2-4 up to `$1AFFF` |
+| `$2001-$5FFF`, `$8000-$9FFF` | 24 KB | the resident program: code, data, BSS, C stack. 1.6 KB free, all at `$59A4-$5FFF` |
+| `$6000-$7FFF` | 8 KB | the code window (`src/region.h`); as loaded, region 0 — the title, setup and help screens, the menus, save and load, the sheet loader. 3.2 KB free |
+| `$13000-$14FFF` | 8 KB | region 1, from `SEVENSHIPS.R1`: the computer players, the builders' improvements, the cities' yields and growth. 3.1 KB free |
+| `$15000-$16FFF` | 8 KB | region 2, from `SEVENSHIPS.R2`: the city screen and Top Five Cities. 4.6 KB free; room for regions 3 and 4 up to `$1AFFF` |
 | `$1B000-$1EFFF` | 16 KB | the tile sheet's tiles 16-23, where regions 5 and 6 would have been: the overlays. 2 of 8 used |
 | `$A000-$BFFF` | 8 KB | `highram`, under the BASIC ROM, banked out by `src/bank.s`: `map_tile`, the unit and city arrays, the sprite blocks, the AI's headings, the staging buffers of the texts and the regions, the texts' line buffers, the sheet loader's buffers, the saved VIC registers; about 2.3 KB free — `HIGH_BSS` in `src/mega65.h` moves a variable there, and **the startup does not clear it** |
 | `$1600-$1EFF` | 2304 | `zpsave` (56 bytes, BASIC's zero page during the run), then `lowfree`: the popup's 400-byte text and the scratch buffers of the view and the minimap, 1.6 KB free — `LOW_FREE` in `src/mega65.h` moves a variable there |
@@ -465,9 +466,14 @@ help, the menus, save, 100 turns, retire and load left every unit and
 city array and the map identical, and `DIM` still works at READY after
 quitting. **Confirmed on a real MEGA65** the same day: title and setup,
 the city screen, the menus by mouse and MEGA+letter, HELP, Play 50 Turns,
-save, retire and load, and `DIM` after quitting. **Resident space is what to watch now**: 1.8 KB of it (20 Oct 2026,
-after the improvements), against 1.0 KB in region 0 and 4.0 KB in region
-1 plus three empty regions (5 and 6 are the tile sheet's now), so new
+save, retire and load, and `DIM` after quitting. **Resident space is what to watch now**: 1.6 KB of it (20 Oct 2026,
+after city growth), against 3.2 KB in region 0, 3.1 KB in region 1 and
+4.6 KB in region 2, plus two empty regions (5 and 6 are the tile sheet's
+now). **Region 2** came with city growth, when the city screen's new box
+left region 0 with 217 bytes: it took a `win2` memory in
+`sevenships.scm`, a third entry in `dispatch.s`'s map tables (offset
+`$0F000`), `REGIONS` 2 and the second file in the Makefile's
+`REGION_FILES`; `packprg.py` and `region.c` needed nothing. So new
 subsystems go into a region from the start, per-turn ones especially.
 `--no-cross-call --no-interprocedural-cross-jump` are on for the banked
 files only (the Makefile's `BANKED`).
@@ -751,7 +757,8 @@ before a menu opens (`set_orders_menu()` in `src/game.c`, through
 `menu_orders()`): Found City for a settler, Fortify for a warrior, and
 for anything else, or no unit wanting orders, it is empty and does not
 open; its items do what `b` and `f` do. World has **Top Five Cities**
-(`src/topcities.c`), a screen with five empty places for now, and Help
+(`src/topcities.c`, region 2): the five largest cities the player has
+seen, whoever's, with their people and size. Help
 has **Keyboard Control**, the help screen; both take over the screen and
 `draw_screen()` puts the map back, as after HELP. **Debug exists only
 with `DEBUG_MENU`**, which the Makefile defines unless `DEBUG=0`, and
@@ -917,23 +924,49 @@ and builders), picked like a menu. **It is the map screen's own cells
 rewritten**: text over the panel, the minimap and most of the window, and
 in the middle the window's own full-colour cells, showing 24x10 characters
 of the tile store that `view_draw_patch()` has cleared and drawn the seven
-hexagons into. So nothing is allocated for it, and on the way out
+hexagons into, with the select ring on each hexagon the city works.
+Under the patch a fourth box gives the size, the food box and the food a
+turn ("grows in 13 turns", "not growing" or "starving"), the shields and
+the trade. It is in region 2 with Top Five Cities. So nothing is allocated for it, and on the way out
 `draw_screen()` in `src/game.c` puts the whole map screen back —
 `screen_clear()`, `view_init()`, `minimap_show()` (cells only; the pixels
 were never touched) and the panel — and marks the view dirty, so the next
 frame's redraw replaces the patch. That redraw needs no clear, for the
 usual reason. The production box also shows the rate and the turns left.
 
-**Production** (`src/city.c`) stands in for population and food until they
-exist: a city makes the shields of its own hexagon, at least 1, plus those
-of its best neighbour — what a size-1 city working one tile would make.
-`terrain_shields[]` there is the table (hills and forest 2; grassland,
-plains, floodplain and mountains 1; water, tundra and desert 0), plus 2
-for a mine on hills and 1 on mountains or desert (`shields()`), so a
-grassland city by hills makes 3 a turn: a warrior
-(10) in four turns, a builder (20) in seven. Each city has `city_build` (a
+**Yields and growth** (`src/growth.c`, milestone 6, in region 1) are
+Civilization's. Every hexagon yields food, shields and trade by terrain:
+
+| | hills | grass | mount. | ocean | shallows | tundra | plains | forest | desert | floodpl. |
+|---|---|---|---|---|---|---|---|---|---|---|
+| food | 1 | 2 | 0 | 1 | 1 | 1 | 1 | 1 | 0 | 3 |
+| shields | 0 | 0 | 1 | 0 | 0 | 0 | 1 | 2 | 1 | 0 |
+| trade | 0 | 0 | 0 | 2 | 2 | 0 | 0 | 0 | 0 | 1 |
+
+plus 1 food for irrigation, and for a mine 3 shields on hills, 2 on
+mountains, 1 on desert. **A city of size n works its own hexagon (at least
+one shield) and the n best of its six neighbours**, picked by
+`city_work()` whenever they are wanted — 3×food + 2×shields + trade, or
+food above all if that leaves the city short — so nothing about them is
+stored. Radius 1 is the city screen's patch, and cities are 4 apart, so
+none ever share a hexagon; citizens beyond six work nothing and eat.
+Every citizen eats 2 food and the rest goes into `city_food[]`; at
+`GROWTH_BOX(size)` = (size + 1) × 10 the city grows and the box empties,
+and empty and still short it shrinks, down to 1 (the panel: "Mycenae /
+grew to 3", "famine"). **Without irrigation most cities stop at a size
+where the food a turn is exactly 0** — plains and the sea give 1 — as in
+Civilization; in a 150-turn autoplay they reached sizes 1 to 9, the
+largest ringed by irrigated grassland. Trade is shown but nothing uses it
+yet. `city_size[]` and `city_food[]` are saved (`SAVE_VERSION` 3).
+
+**Production** (`src/city.c`) is the shields of the hexagons a city works
+(`city_production()`), so a new grassland city makes 1 or 2 a turn: a
+warrior (10) in five to ten turns. **A settler takes a citizen**, so it
+waits at its cost until the city is size 2, and leaves it a size smaller.
+Each city has `city_build` (a
 `KIND_*`, warriors when founded) and `city_shields`. At the end of a turn,
-after `ai_turn()`, `end_turn()` calls `city_produce()` on every city; at
+after `ai_turn()`, `end_turn()` calls `city_grow()` and then
+`city_produce()` on every city; at
 the cost, the unit appears on the city's hexagon with its moves, so the
 coming turn asks for its orders first like any other, and the surplus
 carries over. The panel says "Mycenae / built Warrior" (the last city, if

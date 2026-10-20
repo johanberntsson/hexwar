@@ -100,10 +100,11 @@ extern int view_mark_x;
 // VIEW_PATCH_ROWS of the store from window cell (col, row). The rest of the
 // store is left alone. It is no longer the map afterwards, so the caller
 // redraws the view before the window shows the map again -- which needs no
-// clear, since view_redraw() covers every byte.
+// clear, since view_redraw() covers every byte. A neighbour whose bit DIR_*
+// is set in `rings` -- a city's worked hexagons -- gets the select ring.
 #define VIEW_PATCH_COLUMNS 24       // three tiles across
 #define VIEW_PATCH_ROWS 10          // three hexagon rows, and a tile's foot
-void view_draw_patch(byte col, byte row, byte ax, byte ay);
+void view_draw_patch(byte col, byte row, byte ax, byte ay, byte rings);
 
 // Block until the beam has just left the bottom of the window, which is where
 // a redraw has to start if it is to stay ahead of it.

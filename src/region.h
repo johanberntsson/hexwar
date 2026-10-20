@@ -46,7 +46,7 @@
 // fit below $1F600, where BASIC 65 keeps something of its own, but **regions
 // 5 and 6 are the tile sheet's** since milestone 6 (SHEET_HIGH in
 // src/sheet.h), so four.
-#define REGIONS 1
+#define REGIONS 2
 #define REGION_BASE(R) (0x13000UL + ((dword)(R) - 1) * REGION_SIZE)
 #define REGION_LIMIT 0x1B000UL
 #if 0x13000UL + REGIONS * 0x2000UL > REGION_LIMIT

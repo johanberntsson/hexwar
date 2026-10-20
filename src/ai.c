@@ -142,16 +142,31 @@ static word nearest(byte me, byte ax, byte ay)
     return best;
 }
 
-// The nearest site for a city within SETTLE_RANGE of (fx, fy), in
+// The resources a city on (ax, ay) would have: on it and its neighbours.
+// No two are neighbours (tools/mapgen.py), so at most three.
+static byte resources_round(byte ax, byte ay)
+{
+    byte dir, nx, ny, n = map_resource_at(ax, ay) != RES_NONE;
+    for (dir = 0; dir < 6; ++dir)
+        if (map_neighbour(ax, ay, dir, &nx, &ny)
+            && map_resource_at(nx, ny) != RES_NONE)
+            ++n;
+    return n;
+}
+
+// The best site for a city within SETTLE_RANGE of (fx, fy), in
 // (site_x, site_y); 0 if there is none. (fx, fy) itself may be occupied --
-// by the settler looking -- and anywhere else may not.
+// by the settler looking -- and anywhere else may not. The nearest, but a
+// resource in reach is worth half a hexagon's walk: the score is twice the
+// distance, plus three, less the resources (resources_round()).
 static byte site_x, site_y;
 
+#define NO_SITE 0x7fff
 static byte find_site(byte fx, byte fy)
 {
     int dx, dy, y;
     byte x, c, t, ok;
-    word d, best = 0xffff;
+    word d, best = NO_SITE;
 
     for (dy = -(SETTLE_RANGE / 2 + 1); dy <= SETTLE_RANGE / 2 + 1; ++dy) {
         y = (int)fy + dy;
@@ -160,7 +175,7 @@ static byte find_site(byte fx, byte fy)
         for (dx = -2 * SETTLE_RANGE; dx <= 2 * SETTLE_RANGE; ++dx) {
             x = (byte)((int)fx + dx + MAP_COLUMNS) & (MAP_COLUMNS - 1);
             d = distance(fx, fy, x, (byte)y);
-            if (d > SETTLE_RANGE || d >= best) continue;
+            if (d > SETTLE_RANGE || 2 * d >= best) continue;
             t = MAP_TERRAIN(x, y);
             if (t != TILE_GRASS && t != TILE_PLAINS && t != TILE_FLOODPLAIN
                 && t != TILE_HILLS) continue;
@@ -174,12 +189,14 @@ static byte find_site(byte fx, byte fy)
                     break;
                 }
             if (!ok) continue;
+            d = 2 * d + 3 - resources_round(x, (byte)y);
+            if (d >= best) continue;
             best = d;
             site_x = x;
             site_y = (byte)y;
         }
     }
-    return best != 0xffff;
+    return best != NO_SITE;
 }
 
 void ai_place(void)

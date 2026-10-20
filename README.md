@@ -79,7 +79,7 @@ quits back to BASIC's own screen.
 
 ## Credits
 
-Most of the terrain, city and unit tiles are from [OpenCiv](https://github.com/RyanGrieb/OpenCiv)
+Most of the terrain, city, unit and resource tiles are from [OpenCiv](https://github.com/RyanGrieb/OpenCiv)
 by Ryan Grieb, with art commissioned for it from lucasyoung988, brysia and
 pratamacam. They are licensed under
 [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/) (see OpenCiv's
@@ -88,7 +88,9 @@ pratamacam. They are licensed under
 
 They have been modified for this game: scaled to 32×32 pixels, reduced to a
 shared 240-colour palette, and widened at run time for the MEGA65's 640×200
-display.
+display. The cattle, copper and tin (OpenCiv's iron) resources are cut down
+to fit the middle of a hexagon, and the olives and wine are OpenCiv's orange
+trees recoloured.
 
 Additional graphics and tiles were created by myself for this game.
 

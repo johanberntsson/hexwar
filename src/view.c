@@ -131,6 +131,25 @@ void view_draw_tile(int x, int y, byte tile)
     }
 }
 
+static const word flag_addr[PLAYERS + 1] = {
+    VIEW_FLAG_ADDR(0), VIEW_FLAG_ADDR(1), VIEW_FLAG_ADDR(2),
+    VIEW_FLAG_ADDR(3), VIEW_FLAG_ADDR(4),
+};
+
+void view_draw_flag(int x, int y, byte owner)
+{
+    byte row;
+    // Unsigned, so that one test each takes the negative ones out too.
+    if ((word)x > VIEW_COLUMNS - 2 || (word)y >= VIEW_ROWS) return;
+    row = (byte)y;
+    if (source_bank != SHEET_EXPANDED_BANK) {
+        blit_source_bank(SHEET_EXPANDED_BANK);
+        source_bank = SHEET_EXPANDED_BANK;
+    }
+    blit(flag_addr[owner], VIEW_ROW_BANK(row),
+         VIEW_ROW_ADDR(row) + ((word)x << 6), 128);
+}
+
 // **Scrolling is a whole-view redraw, and that is the point.**
 //
 // Neither earlier attempt at this worked. The cc65 build tried to shift the
@@ -164,18 +183,39 @@ int view_mark_x;
 static byte pending_n[2];
 LOW_FREE static byte pending_ax[2][MAX_PENDING];
 LOW_FREE static int pending_tx[2][MAX_PENDING];
+static word overlay_off_x;      // view_redraw()'s off_x
 
+// **The resources go with them**, first, under any city or unit. They are
+// in the middle of their own hexagon, which nothing drawn later covers, so
+// a row behind is as good as straight after the terrain -- and their list is
+// by hexagon row, so this looks at the row's two or three resources across
+// the whole map instead of testing every hexagon in view, which cost 0.8 ms.
+// Drawn after the improvements, so that both can be told apart.
 static void draw_overlays(byte hy, int ty)
 {
     byte list = hy & 1;
     byte i, k, n;
     byte ay = hy >> 1;
     byte tiles[2];
+    word x;
+
+    n = map_res_first[hy + 1];
+    for (i = map_res_first[hy]; i < n; ++i) {
+        k = map_res_ax[i];
+        // Where its tile starts, across the seam if need be: in the window
+        // if from -8 to VIEW_COLUMNS - 1.
+        x = (MAP_CELL_X(k) + 8 - overlay_off_x) & (MAP_WIDTH_CHARS - 1);
+        if (x >= VIEW_COLUMNS + 8
+            || !((map_tile[ay][k] | map_show) & MAP_EXPLORED))
+            continue;
+        view_draw_tile((int)x - 8, ty, MAP_RESOURCE_TILE(map_res_kind[i]));
+    }
 
     for (i = 0; i < pending_n[list]; ++i) {
         n = unit_overlay(pending_ax[list][i], ay, tiles);
         for (k = 0; k < n; ++k)
             view_draw_tile(pending_tx[list][i], ty, tiles[k]);
+        if (n) view_draw_flag(pending_tx[list][i], ty, unit_overlay_owner);
     }
     pending_n[list] = 0;
     // The cursor's ring with them: only the row below overlaps its tile,
@@ -221,6 +261,9 @@ void view_draw_patch(byte col, byte row, byte ax, byte ay, byte rings)
         if (t & MAP_IMPROVEMENT)
             view_draw_tile(col + patch_x[i], row + patch_y[i],
                            MAP_OVERLAY_TILE(t));
+        if ((t & MAP_EXPLORED) && (n = map_resource_at(nx, ny)) != RES_NONE)
+            view_draw_tile(col + patch_x[i], row + patch_y[i],
+                           MAP_RESOURCE_TILE(n));
     }
     // The overlays after all the terrain, as view_redraw() does a row
     // behind it. The active unit does not blink here, so it is always shown.
@@ -235,6 +278,9 @@ void view_draw_patch(byte col, byte row, byte ax, byte ay, byte rings)
         n = unit_overlay(cell_x[i], cell_y[i], tiles);
         for (k = 0; k < n; ++k)
             view_draw_tile(col + patch_x[i], row + patch_y[i], tiles[k]);
+        if (n)
+            view_draw_flag(col + patch_x[i], row + patch_y[i],
+                           unit_overlay_owner);
     }
 }
 
@@ -267,6 +313,7 @@ void view_redraw(word off_x, word off_y)
     if (hy_last >= 2 * MAP_ROWS) hy_last = 2 * MAP_ROWS - 1;
 
     pending_n[0] = pending_n[1] = 0;
+    overlay_off_x = off_x;
 
     // **Iterate by hexagon row, not by array row.** Tiles overlap by one
     // character row, so a later draw has to be the lower one -- and within one

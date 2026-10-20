@@ -4,7 +4,7 @@
 // **FCI** (Full Colour Image) is the format tools/png2fci.py writes. A header
 // of nine bytes, a palette of RGB triples, the marker "IMG", and then the
 // pixels as a row-major grid of 8x8 characters, 64 bytes each, one byte of
-// palette index per pixel. res/tiles.fci is 72x4 characters: eighteen
+// palette index per pixel. res/tiles.fci is 108x4 characters: 27
 // 4x4-character tiles side by side, in the order tiles/Makefile lists them.
 // tools/mktiles.py writes it.
 //
@@ -21,8 +21,8 @@
 // a tile's address is its base plus row * 512 wherever it is. The first
 // SHEET_LOW_TILES are in bank 5, just above the view's tile store,
 // $57000-$5FFFF, the rest of the bank since the minimap moved into the
-// store's padding; the rest are in bank 1 at $1B000-$1EFFF, where code
-// regions 5 and 6 would have gone (src/region.h). CLAUDE.md, "When bank 5
+// store's padding; the rest are in bank 1 at $19000-$1EFFF, where code
+// regions 4 to 6 would have gone (src/region.h). CLAUDE.md, "When bank 5
 // fills up", has why there.
 //
 // **Not attic RAM, where it used to be.** Search And Rescue measured DMA *out
@@ -36,13 +36,13 @@
 #define SHEET_EXPANDED_BANK 0x05
 #define SHEET_EXPANDED_ADDR 0x7000u
 #define SHEET_LOW_TILES 18
-#define SHEET_HIGH 0x1B000UL
+#define SHEET_HIGH 0x19000UL
 #define SHEET_HIGH_BANK 0x01
-#define SHEET_HIGH_ADDR 0xB000u
-#define SHEET_HIGH_TILES 8
+#define SHEET_HIGH_ADDR 0x9000u
+#define SHEET_HIGH_TILES 12
 
 // The sheet as it is in the file.
-#define SHEET_COLUMNS 72
+#define SHEET_COLUMNS 108
 #define SHEET_ROWS 4
 
 // A tile is 4x4 characters in the file and 8x4 once expanded.
@@ -93,6 +93,9 @@
 #define TILE_OVERLAY_FIRST 16
 #define TILE_IRRIGATION 16
 #define TILE_MINE 17
+// The resources, from here on in RES_* order (src/map.h): resource r is
+// tile TILE_RESOURCE_FIRST - 1 + r. All in bank 1.
+#define TILE_RESOURCE_FIRST 18
 
 // The FCI on the disk. Capitals, because that is how diskutil.rb writes the
 // host name tiles.fci -- see MAP_FILE_NAME.

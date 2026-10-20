@@ -28,6 +28,10 @@ the sheet has today:
    arrangement and the grain the game's peoples lived on.
 6. Clean-up: one-hexagon lakes are filled in, and ocean next to land becomes
    shallow ocean.
+7. Resources (milestone 7, vision.md section 2): tin first, a few nodes in
+   the far north and south (the imports from the edge of the world), then
+   the rest by terrain, scattered at random and never next to each other;
+   see RESOURCE_TERRAIN.
 
 **The file layout**, which src/map.c reads; all of it little-endian:
 
@@ -39,12 +43,17 @@ the sheet has today:
     7   1   0
     8   4   the seed that made it
     12  4   0
-    16      layers, columns*rows bytes each, row-major [ay][ax]
+    16      layer 0, columns*rows bytes, row-major [ay][ax]
+    ...     layer 1, the resources as a list: a count (at most 255), then
+            three bytes each, hexagon row hy, column ax and resource,
+            sorted by hy and then ax
 
 Layer 0 is terrain. **Its values are tile numbers** -- TILE_* in src/sheet.h,
 mirrored in TERRAIN below -- because for now every terrain has exactly one
 tile. When they stop matching, this layer keeps meaning terrain and the game
-grows a terrain-to-tile table.
+grows a terrain-to-tile table. Layer 1 is the resources, RES_* in
+src/map.h: a list rather than a layer, since there are few and the game
+draws them a hexagon row at a time (see map_res_first in src/map.h).
 
 The coordinates are the game's: array cell (ax, ay) is the hexagon
 (ax, 2*ay + (ax & 1)) in doubled coordinates; see src/map.h.
@@ -60,7 +69,7 @@ from collections import deque
 # MAP_COLUMNS and MAP_ROWS in src/map.h. Keep the two in step.
 COLUMNS = 128
 ROWS = 20
-MAP_VERSION = 3
+MAP_VERSION = 4
 
 # TILE_* in src/sheet.h. Keep the two in step.
 (HILLS, GRASS, MOUNTAIN, OCEAN, SHALLOW_OCEAN, TUNDRA,
@@ -80,6 +89,32 @@ COLOURS = {
     FOREST: (16, 80, 24),
     DESERT: (240, 228, 140),
     FLOODPLAIN: (150, 210, 80),
+}
+
+# RES_* in src/map.h. Keep the two in step.
+(NO_RESOURCE, GRAIN, FISH, CATTLE, OLIVES, WINE, CEDAR, COPPER, TIN,
+ DYE) = range(10)
+# What each terrain may hold, and how likely each: (chance a hexagon has one,
+# [(resource, weight), ...]). Tin is placed separately; see resources().
+RESOURCE_TERRAIN = {
+    FLOODPLAIN: (0.20, [(GRAIN, 1)]),
+    GRASS: (0.10, [(GRAIN, 1), (CATTLE, 2)]),
+    PLAINS: (0.10, [(CATTLE, 2), (WINE, 1)]),
+    HILLS: (0.16, [(CATTLE, 1), (OLIVES, 2), (WINE, 2), (COPPER, 2)]),
+    MOUNTAIN: (0.08, [(COPPER, 1)]),
+    FOREST: (0.12, [(CEDAR, 1)]),
+    SHALLOW_OCEAN: (0.08, [(FISH, 3), (DYE, 1)]),
+}
+# MAP_RES_MAX in src/map.h: the list's count is a byte.
+MAX_RESOURCES = 255
+# Tin: this many nodes, on land within TIN_ROWS rows of the top or bottom.
+TIN_NODES = 4
+TIN_ROWS = 3
+# Preview colours, one per resource: a dot in the hexagon.
+RESOURCE_COLOURS = {
+    GRAIN: (255, 220, 0), FISH: (0, 255, 255), CATTLE: (255, 255, 255),
+    OLIVES: (40, 40, 0), WINE: (160, 0, 200), CEDAR: (0, 40, 30),
+    COPPER: (255, 120, 0), TIN: (200, 200, 230), DYE: (255, 0, 160),
 }
 
 # Rainfall thresholds; see generate(). In the warm band, below DESERT_RAIN
@@ -248,6 +283,43 @@ def rivers(rng, terrain, dist):
         made += 1
 
 
+def resources(rng, terrain):
+    """Step 7: a resource layer, NO_RESOURCE or one of the others per cell.
+    No two resources are neighbours, so a city's seven hexagons never hold
+    more than a few."""
+    res = [[NO_RESOURCE] * COLUMNS for _ in range(ROWS)]
+
+    def free(x, y):
+        return res[y][x] == NO_RESOURCE and all(
+            res[ny][nx] == NO_RESOURCE for nx, ny in neighbours(x, y))
+
+    edge = [(x, y) for y in range(ROWS) for x in range(COLUMNS)
+            if not inside(y, TIN_ROWS)
+            and terrain[y][x] in (MOUNTAIN, HILLS, TUNDRA)]
+    rng.shuffle(edge)
+    placed = 0
+    for x, y in edge:
+        if placed == TIN_NODES:
+            break
+        if free(x, y):
+            res[y][x] = TIN
+            placed += 1
+
+    cells = [(x, y) for y in range(ROWS) for x in range(COLUMNS)]
+    rng.shuffle(cells)
+    for x, y in cells:
+        chance, choices = RESOURCE_TERRAIN.get(terrain[y][x], (0, []))
+        if not choices or rng.random() >= chance or not free(x, y):
+            continue
+        pick = rng.uniform(0, sum(w for _, w in choices))
+        for r, w in choices:
+            pick -= w
+            if pick < 0:
+                break
+        res[y][x] = r
+    return res
+
+
 def latitude(ay):
     """0 at the equator, 1 at either pole."""
     centre = (ROWS - 1) / 2
@@ -318,19 +390,25 @@ def generate(seed, land_percent):
             if terrain[y][x] == OCEAN and any(
                     land[ny][nx] for nx, ny in neighbours(x, y)):
                 terrain[y][x] = SHALLOW_OCEAN
-    return terrain
+    return terrain, resources(rng, terrain)
 
 
-def write_map(path, seed, terrain):
-    header = b"HXM" + struct.pack("<BBBBBII", MAP_VERSION, COLUMNS, ROWS, 1, 0,
+def write_map(path, seed, terrain, res):
+    header = b"HXM" + struct.pack("<BBBBBII", MAP_VERSION, COLUMNS, ROWS, 2, 0,
                                   seed & 0xFFFFFFFF, 0)
     assert len(header) == 16
     body = bytes(t for row in terrain for t in row)
+    found = sorted((2 * y + (x & 1), x, res[y][x])
+                   for y in range(ROWS) for x in range(COLUMNS) if res[y][x])
+    if len(found) > MAX_RESOURCES:
+        sys.exit("mapgen: %d resources, more than %d" % (len(found),
+                                                          MAX_RESOURCES))
+    body += bytes([len(found)]) + bytes(b for entry in found for b in entry)
     with open(path, "wb") as f:
         f.write(header + body)
 
 
-def write_png(path, terrain):
+def write_png(path, terrain, res):
     """A rough preview: each hexagon a 6x8 brick, odd columns half a row down,
     which is the same arrangement the game draws. The map wraps east-west, so
     the left and right edges of the picture join."""
@@ -344,6 +422,10 @@ def write_png(path, terrain):
             for py in range(top, top + 2 * rh):
                 for px in range(x * cw, x * cw + cw):
                     pixels[py][px] = colour
+            if res[y][x]:
+                for py in range(top + rh - 1, top + rh + 1):
+                    for px in range(x * cw + 2, x * cw + 4):
+                        pixels[py][px] = RESOURCE_COLOURS[res[y][x]]
     raw = b"".join(b"\0" + bytes(c for p in row for c in p) for row in pixels)
 
     def chunk(kind, data):
@@ -369,10 +451,19 @@ def main():
     if not 5 <= args.land <= 70:
         sys.exit("mapgen: --land must be between 5 and 70")
 
-    terrain = generate(args.seed, args.land)
-    write_map(args.output, args.seed, terrain)
+    terrain, res = generate(args.seed, args.land)
+    write_map(args.output, args.seed, terrain, res)
     if args.png:
-        write_png(args.png, terrain)
+        write_png(args.png, terrain, res)
+    counts = {}
+    for row in res:
+        for r in row:
+            if r:
+                counts[r] = counts.get(r, 0) + 1
+    names = ("", "grain", "fish", "cattle", "olives", "wine", "cedar",
+             "copper", "tin", "dye")
+    print("mapgen: resources " + ", ".join(
+        "%s %d" % (names[r], counts.get(r, 0)) for r in range(1, 10)))
 
 
 if __name__ == "__main__":

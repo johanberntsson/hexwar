@@ -241,7 +241,15 @@ static void draw_hover(void)
                 line_add_unit(unit_owner[u], unit_kind[u]);
                 line_add("  ");
             }
-            line_add(terrain_name[MAP_TERRAIN(ax, ay)]);
+            // The terrain and its resource, "Hills+Copper"; with a city or
+            // a unit, the resource instead of the terrain, which is what
+            // there is room for -- "Canaanite Builder  Cattle+irr 127,19".
+            x = map_resource_at(ax, ay);
+            if (x == RES_NONE || (c == CITY_NONE && u == UNIT_NONE)) {
+                line_add(terrain_name[MAP_TERRAIN(ax, ay)]);
+                if (x != RES_NONE) line_add("+");
+            }
+            if (x != RES_NONE) line_add(text_line(TEXT_LIST_RESOURCES, x));
             x = map_tile[ay][ax] & MAP_IMPROVEMENT;
             // Short, so that "Canaanite Builder  Mountains+mine 127,31"
             // still fits in the 40 columns.
@@ -295,7 +303,9 @@ static void centre_on(byte ax, byte ay)
 // Where a people just met was seen, brought into view above the middle of
 // the window, which the greeting's popup is about to cover -- or below it,
 // near the bottom of the map, where the view cannot go far enough down.
-#define MET_ROW 2               // the window row of the tile's top
+// Row 1, so that whichever of the player's is next to it is in view too
+// if it is below, as it is half the time.
+#define MET_ROW 1               // the window row of the tile's top
 #define MET_ROW_BELOW 17
 static void show_met(void)
 {

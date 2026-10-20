@@ -99,7 +99,9 @@ void unit_mark(byte ax, byte ay);
 // What view_redraw() draws over the terrain of an occupied hexagon, bottom
 // first: the city, then the unit on top -- the active one if it is here,
 // unless unit_hidden; in a city, never a fortified one. Writes up to two tile numbers into `tiles` and returns
-// how many.
+// how many, and leaves whose they are in unit_overlay_owner for the flag
+// (view_draw_flag()).
 byte unit_overlay(byte ax, byte ay, byte *tiles);
+extern byte unit_overlay_owner;
 
 #endif // SEVENSHIPS_UNIT_H

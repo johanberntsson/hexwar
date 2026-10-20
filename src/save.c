@@ -28,6 +28,12 @@ struct block { void *at; word size; };
 
 static const struct block blocks[] = {
     { map_tile, sizeof map_tile },
+    // From the map file and never changed, but saved with the terrain it
+    // belongs to.
+    { &map_res_count, sizeof map_res_count },
+    { map_res_first, sizeof map_res_first },
+    { map_res_ax, sizeof map_res_ax },
+    { map_res_kind, sizeof map_res_kind },
     { unit_kind, sizeof unit_kind },
     { unit_owner, sizeof unit_owner },
     { unit_ax, sizeof unit_ax },

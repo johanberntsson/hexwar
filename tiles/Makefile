@@ -15,13 +15,19 @@ TERRAIN = tile_plains_hill.png tile_grass.png tile_mountain.png tile_ocean.png \
           tile_shallow_ocean.png tile_tundra.png tile_plains.png \
           tile_plains.png+tile_forest.png tile_desert.png tile_floodplains.png
 # The overlays come after: drawn over a terrain, never instead of one, and
-# in bank 1 from tile 16 on (src/sheet.h). overlay_mine.png is the mine cut
+# in bank 5 up to tile 17 and bank 1 after it (src/sheet.h). overlay_mine.png is the mine cut
 # out of alltiles' plains and tundra hill mines (what the two have in common
 # and neither bare hill has); overlay_irrigation.png is a placeholder.
 OVERLAYS = overlay_irrigation.png overlay_mine.png
+# The resources, overlays too, in RES_* order (src/map.h) from tile 18: all
+# in bank 1. res_cattle, res_copper and res_tin are alltiles' cattle, copper
+# and iron cut to pixel lines 8-23; res_olives and res_wine its orange trees
+# recoloured; res_grain, res_fish, res_cedar and res_dye placeholders.
+RESOURCES = res_grain.png res_fish.png res_cattle.png res_olives.png \
+            res_wine.png res_cedar.png res_copper.png res_tin.png res_dye.png
 TILES = $(TERRAIN) tile_city.png tile_select.png \
         unit_settler.png unit_warrior.png unit_builder.png tile_undiscovered.png \
-        $(OVERLAYS)
+        $(OVERLAYS) $(RESOURCES)
 
 all: ../res/tiles.fci
 

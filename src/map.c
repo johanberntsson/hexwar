@@ -1,22 +1,13 @@
-#include <fcntl.h>
-#include <string.h>
-#include <calypsi/stubs.h>
-
 #include "map.h"
 #include "minimap.h"
 
 HIGH_BSS byte map_tile[MAP_ROWS][MAP_COLUMNS];
+HIGH_BSS byte map_res_count;
+HIGH_BSS byte map_res_first[2 * MAP_ROWS + 1];
+HIGH_BSS byte map_res_ax[MAP_RES_MAX];
+HIGH_BSS byte map_res_kind[MAP_RES_MAX];
 #ifdef DEBUG_MENU
 byte map_show;
-#endif
-
-// The file's header; tools/mapgen.py documents the whole layout.
-#define MAP_HEADER_SIZE 16
-
-// map_load() reads a row per call and relies on each being under 256 bytes;
-// see the note there. Column numbers are bytes everywhere else anyway.
-#if MAP_COLUMNS > 255
-#error "map_load reads a row per _Stub_read call, which must be under 256 bytes"
 #endif
 
 // One step in each direction, in doubled coordinates; DIR_* order. File scope
@@ -38,6 +29,16 @@ byte map_neighbour(byte ax, byte ay, byte dir, byte *nax, byte *nay)
     *nax = (byte)hx;
     *nay = (byte)((hy - (hx & 1)) >> 1);
     return 1;
+}
+
+byte map_resource_at(byte ax, byte ay)
+{
+    byte hy = (byte)(2 * ay) + (ax & 1);
+    byte i, end = map_res_first[hy + 1];
+
+    for (i = map_res_first[hy]; i < end; ++i)
+        if (map_res_ax[i] == ax) return map_res_kind[i];
+    return RES_NONE;
 }
 
 byte map_direction(byte ax, byte ay, byte bx, byte by)
@@ -111,43 +112,4 @@ void map_cell_at(word cx, word cy, byte *ax, byte *ay)
             }
         }
     }
-}
-
-// Straight to the Calypsi stubs rather than through stdio: a FILE layer would
-// buffer what is already being read into its final place, and costs code.
-// _Stub_read is the KERNAL's CHRIN, one byte a call, so 4096 bytes is a
-// moment rather than an instant -- which is fine once, at start-up.
-byte map_load(void)
-{
-    static byte header[MAP_HEADER_SIZE];
-    byte ok = 0;
-    int fd = _Stub_open(MAP_FILE_NAME, O_RDONLY | O_BINARY);
-
-    if (fd < 0) return 0;
-
-    // "HXM" is compared as written: Calypsi does not turn literals into
-    // PETSCII, and mapgen.py writes these bytes as ASCII.
-    if (_Stub_read(fd, header, MAP_HEADER_SIZE) == MAP_HEADER_SIZE
-        && memcmp(header, "HXM", 3) == 0
-        && header[3] == MAP_VERSION
-        && header[4] == MAP_COLUMNS
-        && header[5] == MAP_ROWS
-        && header[6] >= 1) {
-        // Layer 0, terrain, is read straight into place, a row at a time.
-        // Any later layers are not wanted yet and are left unread.
-        //
-        // **A row at a time because _Stub_read miscounts otherwise.** When
-        // the file ends on the last byte of a 256-byte page of the request,
-        // it sees end-of-file and returns before carrying into the count's
-        // high byte: one 4096-byte read of the whole layer, which ends the
-        // file, reports 3840. A request under 256 bytes takes the other path
-        // in stub_read.s and counts correctly. 80x50 never showed this,
-        // because 4000 bytes end mid-page.
-        byte ay;
-        ok = 1;
-        for (ay = 0; ay < MAP_ROWS && ok; ++ay)
-            ok = _Stub_read(fd, map_tile[ay], MAP_COLUMNS) == MAP_COLUMNS;
-    }
-    _Stub_close(fd);
-    return ok;
 }

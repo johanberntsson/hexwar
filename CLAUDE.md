@@ -205,15 +205,15 @@ buffers at the default `$FF80000` and corrupts the display.
 
 | Address | Size | Contents |
 |---|---|---|
-| `$2001-$5FFF`, `$8000-$9FFF` | 24 KB | the resident program: code, data, BSS, C stack. 1.1 KB free, all at `$5BE5-$5FFF` |
-| `$6000-$7FFF` | 8 KB | the code window (`src/region.h`); as loaded, region 0 — the title, setup and help screens, the menus, save and load, the sheet loader. 3.2 KB free |
-| `$13000-$14FFF` | 8 KB | region 1, from `SEVENSHIPS.R1`: the computer players, the builders' improvements, the cities' yields and growth. 1.4 KB free |
-| `$15000-$16FFF` | 8 KB | region 2, from `SEVENSHIPS.R2`: the city screen, Top Five Cities and diplomacy. 2.4 KB free; room for regions 3 and 4 up to `$1AFFF` |
-| `$1B000-$1EFFF` | 16 KB | the tile sheet's tiles 18-25, where regions 5 and 6 would have been; none used yet |
-| `$A000-$BFFF` | 8 KB | `highram`, under the BASIC ROM, banked out by `src/bank.s`: `map_tile`, the unit and city arrays, the sprite blocks, the AI's headings, the staging buffers of the texts and the regions, the texts' line buffers, the sheet loader's buffers, the saved VIC registers, the AI's exploration memory; about 3.4 KB free (the map shrank to 2.5 KB) — `HIGH_BSS` in `src/mega65.h` moves a variable there, and **the startup does not clear it** |
+| `$2001-$5FFF`, `$8000-$9FFF` | 24 KB | the resident program: code, data, BSS, C stack. 616 bytes free, nearly all at `$5D98-$5FFF` |
+| `$6000-$7FFF` | 8 KB | the code window (`src/region.h`); as loaded, region 0 — the title, setup and help screens, the menus, save and load, the sheet's and the map's loaders, the owners' flags. 2.3 KB free |
+| `$13000-$14FFF` | 8 KB | region 1, from `SEVENSHIPS.R1`: the computer players, the builders' improvements, the cities' yields and growth. 1.2 KB free |
+| `$15000-$16FFF` | 8 KB | region 2, from `SEVENSHIPS.R2`: the city screen, Top Five Cities and diplomacy. 2.4 KB free; room for region 3 up to `$18FFF` |
+| `$19000-$1EFFF` | 24 KB | the tile sheet's tiles 18-29, where regions 4 to 6 would have been; 18-26 are the resources |
+| `$A000-$BFFF` | 8 KB | `highram`, under the BASIC ROM, banked out by `src/bank.s`: `map_tile`, the unit and city arrays, the sprite blocks, the AI's headings, the staging buffers of the texts and the regions, the texts' line buffers, the sheet loader's buffers, the saved VIC registers, the AI's exploration memory, the resource list; about 2.8 KB free — `HIGH_BSS` in `src/mega65.h` moves a variable there, and **the startup does not clear it** |
 | `$1600-$1EFF` | 2304 | `zpsave` (56 bytes, BASIC's zero page during the run), then `lowfree`: the popup's 400-byte text and the scratch buffers of the view and the minimap, 1.6 KB free — `LOW_FREE` in `src/mega65.h` moves a variable there |
 | `$12000` | 4000 | screen RAM, 80x25 cells of 2 bytes |
-| `$40000-$56FFF` | 94208 | the view's tile store, 23 rows of 4096: 3840 for the window, then 256 holding four of the minimap's characters (all 80 of them, 92 slots) |
+| `$40000-$56FFF` | 94208 | the view's tile store, 23 rows of 4096: 3840 for the window, then 256 holding four of the minimap's characters (all 80 of them, rows 0-19) or, in rows 20-22, two of the owners' flags (92 slots) |
 | `$57000-$5FFFF` | 36864 | the x-expanded tile sheet's tiles 0-17, 2 KB each: all the room there is |
 | `$8000000` | ~1 KB | attic RAM: the texts, `TEXT.PAK`'s body (`src/text.h`); the rest of the 8 MB free |
 | `$FF81000` | 4000 | colour RAM |
@@ -252,18 +252,19 @@ tile or another full-colour surface needs room:
    characters fitted the padding altogether, which made it 18. Checked headlessly: pixel-identical to the old layout,
    including after a retire and with Show Map on.
 
-   1b. **Bank 1, code regions 5 and 6** — *done* (20 Oct 2026, for
-   milestone 6's overlays). `$1B000-$1EFFF` holds the tiles after bank 5's
-   (`SHEET_HIGH` in `src/sheet.h`; 16-23 at first, 18-25 since the map
-   shrank), so four code regions are left (`REGION_LIMIT` in
-   `src/region.h` has an `#error`). The sheet is stored a tile at a time
+   1b. **Bank 1, code regions 4 to 6** — *done* (20 Oct 2026, for
+   milestone 6's overlays, and region 4 for milestone 7's resources).
+   `$19000-$1EFFF` holds the tiles after bank 5's, twelve of them
+   (`SHEET_HIGH` in `src/sheet.h`; 16-23 at first in `$1B000-$1EFFF`,
+   18-25 since the map shrank, 18-29 since the resources), so three code
+   regions are left (`REGION_LIMIT` in `src/region.h` has an `#error`). The sheet is stored a tile at a time
    (2 KB each, 512 bytes a row), so a tile's address is its base plus
    `row * 512` in either bank, and `view_draw_tile()` changes the DMA's
    source bank (`blit_source_bank()`) only when a tile is in the other one.
    More of bank 1 can go the same way, a region (four tiles) at a time,
    against room for code. **Confirmed on a real MEGA65** (20 Oct 2026): the
    overlays drew from bank 1 and scrolling was still fast (they are back in
-   bank 5 since it grew to 18 tiles, so bank 1 has none for now); and
+   bank 5 since it grew to 18 tiles; the resources are bank 1's now); and
    region 2, at `$15000`, with city growth.
 2. **The C64 ROM, which C65 mode never runs.** A dump of the running game
    shows C64 BASIC at `$2A000` (`CBMBASIC` at `$2A004`) and the GO64
@@ -411,7 +412,7 @@ return to BASIC. Screen RAM is below it at `$12000-$12F9F`; above it,
 `$1F600-$1F6FF` holds something at READY and `$1F800-$1FFFF` is the C65's
 colour RAM window, so neither is to be used. MAP offsets are in 256-byte
 steps, so two 24 KB regions fit (`$13000-$18FFF`, `$19000-$1EFFF`) with
-1.5 KB over. (**Since milestone 6 the top 16 KB of it, `$1B000-$1EFFF`, is
+1.5 KB over. (**Since milestone 7 the top 24 KB of it, `$19000-$1EFFF`, is
 the tile sheet's**; see **When bank 5 fills up**, step 1b.) On a real MEGA65 (19 Oct 2026) the first try of BASIC after
 quitting hung in `DIM` — but so did the plain game in xemu, with nothing
 in bank 1: it was the zero page not being put back (see **Quitting**
@@ -467,10 +468,10 @@ help, the menus, save, 100 turns, retire and load left every unit and
 city array and the map identical, and `DIM` still works at READY after
 quitting. **Confirmed on a real MEGA65** the same day: title and setup,
 the city screen, the menus by mouse and MEGA+letter, HELP, Play 50 Turns,
-save, retire and load, and `DIM` after quitting. **Resident space is what to watch now**: 1.1 KB of it (20 Oct 2026,
-after city growth, the AI pass, diplomacy and exploring, and the fixes
-after them), against 3.2 KB
-in region 0, 1.4 KB in region 1 and 2.4 KB in region 2, plus two empty regions (5 and 6 are the tile sheet's
+save, retire and load, and `DIM` after quitting. **Resident space is what to watch now**: 616 bytes of it (20 Oct 2026,
+after city growth, the AI pass, diplomacy and exploring, the fixes after
+them, the resources and the owners' flags), against 2.3 KB
+in region 0, 1.2 KB in region 1 and 2.4 KB in region 2, plus one empty region (4 to 6 are the tile sheet's
 now). **Region 2** came with city growth, when the city screen's new box
 left region 0 with 217 bytes: it took a `win2` memory in
 `sevenships.scm`, a third entry in `dispatch.s`'s map tables (offset
@@ -510,7 +511,8 @@ erosion pass, rivers, then shallow ocean next to land. **Rivers are not drawn
 yet** — `tile_river.png` is a 17x3 texture, not a tile — but where one
 crosses desert or plains it leaves a line of floodplain, the Nile's
 arrangement. Its docstring is the file format: a 16-byte header (`"HXM"`,
-version, columns, rows, layer count, seed) followed by 4096-byte layers. Layer
+version, columns, rows, layer count, seed), then layer 0, a byte a cell, and
+layer 1, the resources as a sorted list (see **Resources**). Layer
 0 is terrain, and **its values are `TILE_*` numbers** because every
 terrain has exactly one tile, which is why the ten terrain tiles come first
 in the sheet (`TERRAIN_COUNT`) and the city, units and the rest after them.
@@ -919,8 +921,20 @@ turn of first contact in 150 turns of autoplay (a throwaway build that
 records it): see TODO.txt. Other players'
 units and cities are drawn like the human's — only on explored hexagons —
 and told apart by the hover readout ("Hittite Warrior", "Barbarian
-Warrior") and on the minimap by colour: the human white, then red,
-purple and orange, and the barbarians brown.
+Warrior"), on the minimap by colour — the human white, then red,
+purple and orange, and the barbarians brown (`player_colour[]` in
+`src/minimap.c`) — and **on the map by a flag** in the same colour at the
+top left of the unit's or city's tile. Without it every people's units
+looked alike, and a player told "You have met the Egyptians" took their
+warrior for one of their own (20 Oct 2026). There was no tile room for a
+recoloured copy of each unit per people, so the flags are two characters
+each (a 7x5 pennant on a pole), drawn by `make_flags()` in `src/sheet.c`
+at boot into the tile store's row padding past the minimap (rows 20-22,
+`VIEW_FLAG_ROW` in `src/view.h`; the minimap has an `#error` to keep
+out), and `view_draw_flag()` copies one after `unit_overlay()`'s tiles,
+which leaves the owner in `unit_overlay_owner`: one 128-byte blit a unit
+or city in view, from bank 5. A flag half off the window's edge is not
+drawn.
 
 **Before improving the AI, read what Civ 1's actually does.**
 `documentation/civ1-civ2-ai-analysis-sources.txt` lists the write-ups,
@@ -1073,18 +1087,59 @@ coordinates still fit its 40 columns. `map_reset()` clears them with the
 rest. **Roads need a bit**, and the map byte has none left: terrain is
 down to four bits (`MAP_TERRAIN_MASK` 0x0f, ten of sixteen values used).
 
-**Contact** (`src/diplomacy.c`, region 2): a people is met once one of
-its units or cities stands on a hexagon the player has explored — the
-real `MAP_EXPLORED` bit, not Show Map's. `diplomacy_contact()` checks
-after each of the player's moves and at the end of every turn (a
-`contact` flag in `game.c`). It returns the peoples newly met as a
-bitmask and leaves in `diplomacy_ax/ay` where one was seen, a city if
-any; `show_met()` in `game.c` moves the view to put that hexagon in
-window row 2, above the popup (or row 17, below it, near the bottom of
-the map), and after the next redraw `diplomacy_greet()` greets each new
-people with a popup —
-before 20 Oct 2026 it greeted wherever the view was, and the newcomer
-could be anywhere on the explored map: "You have met the Hittites. Their ruler is Suppiluliuma,
+**Resources** (milestone 7, vision.md §2) are nine, `RES_*` in
+`src/map.h`, tiles 18-26 in bank 1, in this order:
+
+| | where | adds |
+|---|---|---|
+| grain | floodplain, grassland | 2 food |
+| fish | shallows | 2 food |
+| cattle | grassland, plains, hills | 1 food, 1 shield |
+| olives | hills | 1 food, 2 trade |
+| wine | hills, plains | 3 trade |
+| cedar | forest | 2 shields |
+| copper | hills, mountains | 2 shields |
+| tin | hills, mountains, tundra in the 3 rows at the top and bottom | 1 shield |
+| purple dye | shallows | 3 trade |
+
+`mapgen.py` places them (step 7): four tin nodes at the edges of the
+world, then the rest by `RESOURCE_TERRAIN`'s chances, **never two next to
+each other**, about 80-100 a map. They never change, and add to the yield
+in `yield()` in `src/growth.c` like an improvement, so the computer's
+`city_work()` picks them up without being told; `find_site()` in
+`src/ai.c` counts a resource in reach as half a hexagon of walking. Copper
+and tin will gate bronze (TODO.txt, milestone 7b); for now they are
+shields. **They are a list, not a layer**: `map_res_first[hy]` is where
+hexagon row `hy`'s entries start in `map_res_ax[]`/`map_res_kind[]`, about
+550 bytes in `HIGH_BSS`, saved with the game (`SAVE_VERSION` 8), and
+`map_resource_at()` searches a row's two or three. A nibble a hexagon was
+tried first and its test in `view_redraw()`'s inner loop cost 0.8 ms of
+the frame whatever was in view; with the list, `draw_overlays()` draws a
+hexagon row's resources a row behind the terrain, before its cities and
+units, which is safe since the art is inside the hexagon (lines 8-23).
+Measured (CIA2 round `view_redraw()`, interrupts off, Show Map, the
+densest window on seed 1 with nine resources): 16.5 ms against 15.4 ms
+with the list empty, about 120 µs a resource. The hover readout says
+"Hills+Copper 0/3/0"; with a city or unit there, the resource replaces
+the terrain to keep within 40 columns ("Canaanite Builder  Cattle+irr").
+The names are a text, `list_resources.txt`. The map loader moved to
+region 0 with the list (`src/mapload.c`), which more than paid for it.
+
+**Contact** (`src/diplomacy.c`, region 2): **a people is met when one of
+its units or cities is next to one of the player's**, as in
+Civilization. Until 20 Oct 2026 it was anywhere on a hexagon the player
+had explored, and that greeted peoples whose warrior was four hexagons
+from anything of the player's — confusing, and not how any Civ game
+does it. `diplomacy_contact()` looks at the six neighbours of each of the
+player's units and cities, only those with `MAP_OCCUPIED` set, after
+each of the player's moves and at the end of every turn (a `contact`
+flag in `game.c`; during Play 50 Turns only at the end of it). It returns
+the peoples newly met as a bitmask and leaves in `diplomacy_ax/ay` where
+one is; `show_met()` in `game.c` moves the view to put that hexagon in
+window row 1, above the popup, so that the player's own unit next to it
+is in view as well (or row 17, below the popup, near the bottom of the
+map), and after the next redraw `diplomacy_greet()` greets each new
+people with a popup: "You have met the Hittites. Their ruler is Suppiluliuma,
 Great King of Hatti." `diplomacy_met`, a bit per player, is saved
 (`SAVE_VERSION` 5) and never cleared during a game. **Advisors →
 Diplomacy** lists every people — the player's own first, then for each
@@ -1494,14 +1549,18 @@ in xemu by building once with `input_real_hw = 1` forced in
 
 ## Assets
 
-`res/tiles.fci` is 72x4 characters — eighteen 4x4 tiles side by side, in the
+`res/tiles.fci` is 108x4 characters — 27 4x4 tiles side by side, in the
 order `tiles/Makefile` lists the PNGs: ten terrains (hills, grass, mountain, ocean, shallow ocean, tundra, plains, forest,
 desert, floodplain), then the city, a selection ring
 (the tile-select cursor),
 three units (settler, warrior, builder), the black hexagon of unexplored
-land, and the overlays, irrigation and mine; `TILE_*` in `src/sheet.h`.
-**Tiles 18 and up go in bank 1** (see **When bank 5 fills up**, step 1b);
-there are none yet.
+land, the overlays, irrigation and mine, and the nine resources (see
+**Resources**); `TILE_*` in `src/sheet.h`.
+**Tiles 18 and up go in bank 1** (see **When bank 5 fills up**, step 1b):
+the resources. `res_cattle`, `res_copper` and `res_tin` are `alltiles/`'
+cattle, copper and iron cut to lines 8-23, `res_olives` and `res_wine` its
+orange trees recoloured, and `res_grain`, `res_fish`, `res_cedar` and
+`res_dye` placeholders drawn for them.
 `overlay_mine.png` is the mine cut out of `alltiles/`' plains and tundra
 hill mines — the pixels the two share and neither bare hill has — and
 cropped to lines 8-23; `overlay_irrigation.png` is a placeholder drawn for
@@ -1559,9 +1618,9 @@ A new tile needs all of these, and nothing checks that they agree:
    non-terrain tiles or the map layer grows a lookup table (see `map_tile`).
 5. room: each tile is 2 KB expanded, and the sheet must stop at the end
    of bank 5 (an `#error` in `src/sheet.h`): from `$57000`, **18 tiles in
-   bank 5 and 8 more in bank 1** (`SHEET_LOW_TILES`, `SHEET_HIGH`), 18
-   used, so the next one is the first in bank 1. The tile store's own `#error` in `src/view.c` keeps the store
-   and the sheet apart, and `src/sheet.h` has one for the total. Past 24:
+   bank 5 and 12 more in bank 1** (`SHEET_LOW_TILES`, `SHEET_HIGH`), 27
+   used, so three are left. The tile store's own `#error` in `src/view.c` keeps the store
+   and the sheet apart, and `src/sheet.h` has one for the total. Past 30:
    see **When bank 5 fills up**.
 6. for an overlay: art inside pixel lines 8-23, or it costs the redraw
    twice as much (see **Drawing**).

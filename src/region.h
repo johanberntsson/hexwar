@@ -44,11 +44,11 @@
 
 // The regions in bank 1: region r of them is at REGION_BASE(r). Six would
 // fit below $1F600, where BASIC 65 keeps something of its own, but **regions
-// 5 and 6 are the tile sheet's** since milestone 6 (SHEET_HIGH in
-// src/sheet.h), so four.
+// 4 to 6 are the tile sheet's** -- 5 and 6 since milestone 6, 4 since the
+// resources of milestone 7 (SHEET_HIGH in src/sheet.h) -- so three.
 #define REGIONS 2
 #define REGION_BASE(R) (0x13000UL + ((dword)(R) - 1) * REGION_SIZE)
-#define REGION_LIMIT 0x1B000UL
+#define REGION_LIMIT 0x19000UL
 #if 0x13000UL + REGIONS * 0x2000UL > REGION_LIMIT
 #error "the code regions run into the tile sheet in bank 1"
 #endif

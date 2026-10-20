@@ -47,6 +47,24 @@
 #if (64 * VIEW_COLUMNS) > VIEW_ROW_STRIDE
 #error "a window row does not fit in VIEW_ROW_STRIDE"
 #endif
+
+// **The owners' flags**: whose a unit or city is, a pennant in the player's
+// colour (player_colour[] in src/minimap.h) at the top left of its tile,
+// since every people's units and cities share their tiles. Each is two
+// characters, 128 bytes, kept in the row padding the minimap leaves free:
+// rows VIEW_FLAG_ROW on, two flags a row, all in bank 5 -- so a flag is one
+// short blit from the sheet's own bank. sheet_load() draws them.
+#define VIEW_FLAG_ROW 20
+#define VIEW_FLAG_ADDR(O)                                                   \
+    ((word)(VIEW_ROW_ADDR(VIEW_FLAG_ROW + ((O) >> 1)) + 64 * VIEW_COLUMNS   \
+            + 128 * ((O) & 1)))
+#define VIEW_FLAG(O)                                                        \
+    (TILE_STORE + VIEW_ROW_STRIDE * (VIEW_FLAG_ROW + ((O) >> 1))            \
+     + 64UL * VIEW_COLUMNS + 128UL * ((O) & 1))
+#if (64 * VIEW_COLUMNS) + 256 > VIEW_ROW_STRIDE \
+    || VIEW_FLAG_ROW + 2 >= VIEW_ROWS || VIEW_FLAG_ROW < 16
+#error "the flags are two to a row's padding, in bank 5"
+#endif
 #if (TILE_STORE & 0xffff) != 0
 #error "VIEW_ROW_BANK assumes the store starts on a 64 KB boundary"
 #endif
@@ -76,6 +94,10 @@ void view_clear(void);
 // clipped to the window. The position may be negative: a tile half off the
 // left edge draws its right-hand part, which is what a scrolled view needs.
 void view_draw_tile(int x, int y, byte tile);
+
+// The flag of `owner` (VIEW_FLAG_ROW) on the tile at (x, y), as
+// view_draw_tile() takes them: whole, or not at all near an edge.
+void view_draw_flag(int x, int y, byte owner);
 
 // Draw the map into the window. (off_x, off_y) is the map-space character
 // coordinate that lands on the window's top left corner, so incrementing off_x

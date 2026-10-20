@@ -1,8 +1,8 @@
 // Contact between the peoples, and the Diplomacy screen (Advisors on the
 // menu bar): who the player has met, and what is known of them.
 //
-// **A people is met when one of its units or cities is on a hexagon the
-// player has explored** -- seen, that is, as the map draws it. Checked by
+// **A people is met when one of its units or cities is next to one of the
+// player's units or cities**, as in Civilization. Checked by
 // diplomacy_contact() after each of the player's moves and at the end of
 // every turn, and remembered in diplomacy_met, which is saved: a people
 // once met stays met. Milestone 8's diplomacy (TODO.txt) builds on it.
@@ -16,10 +16,10 @@
 // Bit p: the human has met player p. game_init() clears it.
 extern byte diplomacy_met;
 
-// Note any people newly seen, as met, and return them as a bitmask (bit
-// p, as diplomacy_met), 0 if none. diplomacy_ax/ay are then where one of
-// them was seen -- a city of theirs if any is in sight -- for the caller to
-// bring into view before diplomacy_greet() says who they are.
+// Note any people newly next to the player's units or cities, as met, and
+// return them as a bitmask (bit p, as diplomacy_met), 0 if none.
+// diplomacy_ax/ay are then where one of them is, for the caller to bring
+// into view before diplomacy_greet() says who they are.
 byte diplomacy_contact(void);
 extern byte diplomacy_ax, diplomacy_ay;
 

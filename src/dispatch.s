@@ -97,8 +97,9 @@ stub:       .macro  name, target, region
             .endm
 
 ; Region 0: the screens, the menus, the save file and the tile sheet's
-; loader.
+; and the map's loaders.
             stub    sheet_load, sheet_load_r0, 0
+            stub    map_load, map_load_r0, 0
             stub    help_screen, help_screen_r0, 0
             stub    menu_orders, menu_orders_r0, 0
             stub    menu_draw, menu_draw_r0, 0

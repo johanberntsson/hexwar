@@ -1,0 +1,11 @@
+# The resources, by RES_* in src/map.h; line 0 is RES_NONE and never shown.
+None
+Grain
+Fish
+Cattle
+Olives
+Wine
+Cedar
+Copper
+Tin
+Purple dye

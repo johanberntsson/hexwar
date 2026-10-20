@@ -37,12 +37,16 @@ Milestone 6: yields and city growth -- DONE but for roads (20 Oct 2026)
   (8 left in bank 1 after bank 5's 18) and roads need a map bit (a 512-byte bitmap would do)
 - Per-continent policy (attack/defend/transport) when there are boats and wars
 
-Milestone 7: resources
-- Grain, fishing, cattle, wine & olive oil, cedar, copper, tin, purple dye (vision.md section 2)
-- Decide where the resource layer lives first: a 4 KB layer doesn't fit in highram (about
-  2.7 KB free); a sparse list or spare bits in map_tile might
-- mapgen.py places them; drawn as overlays on the terrain; they add to yields
-- Copper + tin gate a bronze unit, so strategic goods matter from the start
+Milestone 7: resources -- DONE but for bronze (20 Oct 2026)
+- DONE: grain, fish, cattle, olives, wine, cedar, copper, tin, purple dye (vision.md
+  section 2), nine tiles in bank 1 (code region 4 given up for them); a list by hexagon row
+  in highram, not a layer; mapgen.py step 7 places them (tin only at the top and bottom
+  edges, no two adjacent); drawn a row behind the terrain; they add to yields; the hover
+  readout names them; find_site() values them; saved (SAVE_VERSION 8)
+- Placeholder art to replace: res_grain, res_fish, res_cedar, res_dye (and res_olives and
+  res_wine are recoloured orange trees)
+- Milestone 7b: copper + tin gate a bronze unit, so strategic goods matter from the start.
+  Needs a rule for having a resource (worked by a city, or in its radius?) and a unit tile
 
 Milestone 8: basic diplomacy
 - Contact between peoples; peace, war, ceasefire; an attitude value per pair
@@ -64,7 +68,10 @@ Meeting the other peoples took 60-150 turns, or never happened (map seed 7, 150 
   (8x4-cell blocks), going round water, no recall from further than 4 hexagons
 - Every people starts with a warrior beside its settler; no guards before the barbarians
 - First contact now (autoplay, 150 turns): seed 1 turn 45, seed 7 turn 68, seed 3 turn 90.
-  The rest are often on other landmasses, and need boats
+  The rest are often on other landmasses, and need boats. (Measured when contact was any
+  explored hexagon; since 20 Oct 2026 it needs units or cities next to each other, as in
+  Civilization, so it comes later -- seed 1 met the Canaanites by turn 101, checked only
+  at the end of each Play 50 Turns)
 
 Advisors/Diplomacy: the peoples met, with some basic info; the menu bar is now
 Game, Orders, Advisors, World, Debug, Help

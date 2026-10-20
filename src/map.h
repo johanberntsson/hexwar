@@ -92,6 +92,37 @@ extern byte map_tile[MAP_ROWS][MAP_COLUMNS];
 #define MAP_TERRAIN(AX, AY) (map_tile[AY][AX] & MAP_TERRAIN_MASK)
 #define MAP_IS_EXPLORED(AX, AY) ((map_tile[AY][AX] | map_show) & MAP_EXPLORED)
 
+// **The resources** (milestone 7, vision.md section 2), from the map file and
+// never changed. Drawn as an overlay over the terrain (MAP_RESOURCE_TILE)
+// and added to the yield (hex_yield() in src/growth.h).
+//
+// **A list sorted by hexagon row, not a layer.** There are about a hundred
+// on a map, two or three a hexagon row across all 128 columns, so
+// view_redraw() looks at those few a row rather than at every hexagon in
+// view -- which, as a nibble a hexagon, cost 0.8 ms of the frame. Entries
+// map_res_first[hy] to map_res_first[hy + 1] - 1 are hexagon row hy's, in
+// column order: column map_res_ax[i], resource map_res_kind[i]. In
+// HIGH_BSS, about 550 bytes.
+#define MAP_RES_MAX 255
+extern byte map_res_count;
+extern byte map_res_first[2 * MAP_ROWS + 1];
+extern byte map_res_ax[MAP_RES_MAX];
+extern byte map_res_kind[MAP_RES_MAX];
+#define RES_NONE 0
+#define RES_GRAIN 1             // floodplain and grassland: food
+#define RES_FISH 2              // shallows: food
+#define RES_CATTLE 3            // grassland, plains, hills: food and shields
+#define RES_OLIVES 4            // hills: food and trade
+#define RES_WINE 5              // hills and plains: trade
+#define RES_CEDAR 6             // forest: shields; ships, one day
+#define RES_COPPER 7            // hills and mountains: shields; bronze
+#define RES_TIN 8               // the far north and south: bronze
+#define RES_DYE 9               // shallows: trade
+#define RES_COUNT 10
+// The resource on (ax, ay), RES_NONE if none: a search of its row's few.
+byte map_resource_at(byte ax, byte ay);
+#define MAP_RESOURCE_TILE(R) (TILE_RESOURCE_FIRST - 1 + (R))
+
 // **Debug/Show Map, for debugging the computer players**: MAP_EXPLORED to
 // draw every hexagon as if explored, 0 for the fog of war. Everything that
 // draws ORs it into the map byte before looking at the bit, so the real
@@ -137,7 +168,7 @@ void map_explore(byte ax, byte ay);
 // which is the bytes of ASCII "SEVENSHIPS.MAP", and Calypsi passes literals
 // through unchanged.
 #define MAP_FILE_NAME "SEVENSHIPS.MAP"
-#define MAP_VERSION 3
+#define MAP_VERSION 4
 
 // The cell whose hexagon is under map-space character (cx, cy), cx below
 // MAP_WIDTH_CHARS. Tiles overlap, so a character can lie inside two tiles'
@@ -145,8 +176,9 @@ void map_explore(byte ax, byte ay);
 // glass, where a character is half as wide as it is tall.
 void map_cell_at(word cx, word cy, byte *ax, byte *ay);
 
-// Read the terrain layer of MAP_FILE_NAME into map_tile. Returns 0 if the
-// file cannot be opened or is not a map of this size and version.
+// Read the terrain layer of MAP_FILE_NAME into map_tile and the resource
+// list into map_res_*. Returns 0 if the file cannot be opened or is not
+// a map of this size and version.
 byte map_load(void);
 
 #endif // SEVENSHIPS_MAP_H

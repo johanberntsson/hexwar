@@ -141,14 +141,18 @@ void unit_mark(byte ax, byte ay)
     minimap_plot(ax, ay);
 }
 
+byte unit_overlay_owner;
+
 byte unit_overlay(byte ax, byte ay, byte *tiles)
 {
     byte n = 0, v;
     byte u = unit_at(ax, ay);
+    byte c = city_at(ax, ay);
     // In a city a fortified unit is not drawn, so that the city can be
     // seen; the city screen lists it. The active unit always is.
-    if (city_at(ax, ay) != CITY_NONE) {
+    if (c != CITY_NONE) {
         tiles[n++] = TILE_CITY;
+        unit_overlay_owner = city_owner[c];
         if (u != unit_active) {
             u = UNIT_NONE;
             for (v = 0; v < MAX_UNITS; ++v)
@@ -157,7 +161,9 @@ byte unit_overlay(byte ax, byte ay, byte *tiles)
                     u = v;
         }
     }
-    if (u != UNIT_NONE && !(u == unit_active && unit_hidden))
+    if (u != UNIT_NONE && !(u == unit_active && unit_hidden)) {
         tiles[n++] = unit_kind_tile[unit_kind[u]];
+        unit_overlay_owner = unit_owner[u];
+    }
     return n;
 }

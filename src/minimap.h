@@ -37,6 +37,10 @@
 #define MINIMAP_PAD_SLOTS ((VIEW_ROW_STRIDE - 64 * VIEW_COLUMNS) / 64)     // 4
 #define MINIMAP_PAD_CHARS (MINIMAP_PAD_SLOTS * VIEW_ROWS)                  // 92
 
+// Each player's colour, a system palette entry, by owner (the barbarians
+// last): the minimap's dots and the map's flags.
+extern const byte player_colour[];
+
 // Write the minimap's character numbers and frame into the screen and draw
 // all of it. Once, when the game screen goes up.
 void minimap_init(void);

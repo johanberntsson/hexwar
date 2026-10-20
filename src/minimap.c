@@ -9,8 +9,8 @@
 #if MINIMAP_COLUMNS * 8 != MAP_COLUMNS || MINIMAP_ROWS * 8 != 2 * MAP_ROWS
 #error "the minimap is a pixel a hexagon column and a line a hexagon row"
 #endif
-#if MINIMAP_COLUMNS * MINIMAP_ROWS > MINIMAP_PAD_CHARS
-#error "the minimap no longer fits in the tile store's row padding"
+#if MINIMAP_COLUMNS * MINIMAP_ROWS > MINIMAP_PAD_SLOTS * VIEW_FLAG_ROW
+#error "the minimap no longer fits in the tile store's row padding above the flags"
 #endif
 
 // Pixel values are palette indices, and 0-15 are the system colours that
@@ -26,8 +26,8 @@
 #define PAL_UNEXPLORED PAL_BLACK
 
 // Cities and units in their player's colour, the human's white and the
-// barbarians' brown.
-static const byte player_colour[PLAYERS + 1] = {
+// barbarians' brown; the flags on the map (view_draw_flag()) as well.
+const byte player_colour[PLAYERS + 1] = {
     PAL_WHITE, PAL_RED, PAL_PURPLE, PAL_ORANGE, PAL_BROWN,
 };
 

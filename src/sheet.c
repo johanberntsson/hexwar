@@ -6,7 +6,10 @@
 #include <calypsi/stubs.h>
 
 #include "sheet.h"
+#include "minimap.h"
 #include "screen.h"
+#include "unit.h"
+#include "view.h"
 
 #pragma clang section text="r0text" rodata="r0rodata"
 
@@ -140,6 +143,47 @@ static byte read_sheet(int fd)
     return 1;
 }
 
+// **The owners' flags** (VIEW_FLAG_ROW in src/view.h), drawn here rather
+// than read: a pennant on a pole, in source pixels, which are widened to two
+// as the sheet's are. 'c' is the owner's colour; the pole and the border are
+// greys, since palette index 0 is transparent. File scope: see the Calypsi
+// notes in CLAUDE.md about small const arrays inside a function.
+static const char flag_shape[8][9] = {
+    "pkkkkkkk",
+    "pkccccck",
+    "pkccccck",
+    "pkccccck",
+    "pkkkkkkk",
+    "p.......",
+    "p.......",
+    "p.......",
+};
+#define FLAG_POLE 12            // grey
+#define FLAG_BORDER 11          // dark grey
+
+static void make_flags(void)
+{
+    byte o, x, y, c;
+    byte *p;
+
+    for (o = 0; o <= PLAYERS; ++o) {
+        for (y = 0; y < 8; ++y)
+            for (x = 0; x < 8; ++x) {
+                switch (flag_shape[y][x]) {
+                case 'p': c = FLAG_POLE; break;
+                case 'k': c = FLAG_BORDER; break;
+                case 'c': c = player_colour[o]; break;
+                default: c = 0;
+                }
+                // Source pixel x is expanded pixels 2x and 2x + 1: character
+                // x / 4 of the two, column 2 * (x % 4) of its line.
+                p = expanded_pair + 64 * (x >> 2) + 8 * y + 2 * (x & 3);
+                p[0] = p[1] = c;
+            }
+        lcopy((dword)(word)expanded_pair, VIEW_FLAG(o), sizeof expanded_pair);
+    }
+}
+
 byte sheet_load(void)
 {
     byte ok;
@@ -147,5 +191,6 @@ byte sheet_load(void)
     if (fd < 0) return 0;
     ok = read_sheet(fd);
     _Stub_close(fd);
+    if (ok) make_flags();
     return ok;
 }

@@ -29,36 +29,50 @@ byte diplomacy_ax, diplomacy_ay;
 #define BLOCK_ROWS 5            // rows a people takes, with a blank one
 #define STATE_LEFT 56           // "at war", "at peace", "not yet met"
 
-// Whether (ax, ay) is on a hexagon the player has explored -- really,
-// whatever Show Map says, or a debugging session would meet everybody.
-#define SEEN(AX, AY) (map_tile[AY][AX] & MAP_EXPLORED)
+// **Contact is next to each other, as in Civilization**: a people is met
+// when one of its units or cities is on a hexagon next to one of the
+// player's units or cities -- not, as at first, anywhere the player had
+// explored, which greeted peoples whose warrior was four hexagons off and
+// looked like nobody at all. So this looks round the player's own, a few
+// dozen hexagons, and only at those with MAP_OCCUPIED set. A hexagon holds
+// one owner's units and cities (moving onto another's is an attack), so
+// the city, or else the top unit, says whose it is.
+static byte newly;
+
+static void look(byte ax, byte ay)
+{
+    byte c, p;
+
+    if (!(map_tile[ay][ax] & MAP_OCCUPIED)) return;
+    c = city_at(ax, ay);
+    p = c != CITY_NONE ? city_owner[c] : unit_owner[unit_at(ax, ay)];
+    if (p == PLAYER_HUMAN || p == PLAYER_BARBARIAN
+        || (((diplomacy_met | newly) >> p) & 1))
+        return;
+    newly |= (byte)(1 << p);
+    diplomacy_ax = ax;
+    diplomacy_ay = ay;
+}
+
+static void look_round(byte ax, byte ay)
+{
+    byte dir, nx, ny;
+    for (dir = 0; dir < 6; ++dir)
+        if (map_neighbour(ax, ay, dir, &nx, &ny)) look(nx, ny);
+}
 
 byte diplomacy_contact(void)
 {
-    byte i, p, seen = 0;
+    byte i;
 
-    for (i = 0; i < MAX_UNITS; ++i) {
-        p = unit_owner[i];
-        if (unit_kind[i] != KIND_NONE && p != PLAYER_HUMAN
-            && p != PLAYER_BARBARIAN && SEEN(unit_ax[i], unit_ay[i])
-            && !((diplomacy_met >> p) & 1) && !((seen >> p) & 1)) {
-            seen |= (byte)(1 << p);
-            diplomacy_ax = unit_ax[i];
-            diplomacy_ay = unit_ay[i];
-        }
-    }
-    // A city after the units, so that it is what is shown if there is one.
-    for (i = 0; i < city_count; ++i) {
-        p = city_owner[i];
-        if (p != PLAYER_HUMAN && SEEN(city_ax[i], city_ay[i])
-            && !((diplomacy_met >> p) & 1)) {
-            seen |= (byte)(1 << p);
-            diplomacy_ax = city_ax[i];
-            diplomacy_ay = city_ay[i];
-        }
-    }
-    diplomacy_met |= seen;
-    return seen;
+    newly = 0;
+    for (i = 0; i < MAX_UNITS; ++i)
+        if (unit_kind[i] != KIND_NONE && unit_owner[i] == PLAYER_HUMAN)
+            look_round(unit_ax[i], unit_ay[i]);
+    for (i = 0; i < city_count; ++i)
+        if (city_owner[i] == PLAYER_HUMAN) look_round(city_ax[i], city_ay[i]);
+    diplomacy_met |= newly;
+    return newly;
 }
 
 void diplomacy_greet(byte met)

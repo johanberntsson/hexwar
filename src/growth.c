@@ -34,6 +34,19 @@ static const byte mine_shields[TERRAIN_COUNT] = {
     3, 0, 2, 0, 0, 0, 0, 0, 1, 0
 };
 
+// What a resource adds, by RES_* (src/map.h): Civilization's specials add
+// two to four, and these keep to that. Tin and copper are worth more than
+// their shields once there is bronze (TODO.txt, milestone 7b).
+static const byte resource_food[RES_COUNT] = {
+    0, 2, 2, 1, 1, 0, 0, 0, 0, 0
+};
+static const byte resource_shields[RES_COUNT] = {
+    0, 0, 0, 1, 0, 0, 2, 2, 1, 0
+};
+static const byte resource_trade[RES_COUNT] = {
+    0, 0, 0, 0, 2, 3, 0, 0, 0, 3
+};
+
 // What hexagon (ax, ay) yields, into these: hex_yield() hands them out.
 byte hex_food, hex_shields, hex_trade;
 
@@ -45,6 +58,11 @@ static void yield(byte ax, byte ay)
     hex_food = terrain_food[t];
     hex_shields = terrain_shields[t];
     hex_trade = terrain_trade[t];
+    t = map_resource_at(ax, ay);
+    hex_food += resource_food[t];
+    hex_shields += resource_shields[t];
+    hex_trade += resource_trade[t];
+    t = m & MAP_TERRAIN_MASK;
     if (m & MAP_IRRIGATED) ++hex_food;
     if (m & MAP_MINED) hex_shields += mine_shields[t];
     // **Civilization's grassland shields**: half the grassland and river

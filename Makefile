@@ -82,6 +82,7 @@ SRCS     = src/sevenships.c \
            src/sheet.c \
            src/view.c \
            src/map.c \
+           src/mapload.c \
            src/minimap.c \
            src/input.c \
            src/unit.c \
@@ -106,7 +107,7 @@ SRCS     = src/sevenships.c \
 # The files whose code is in a MAP window region (src/region.h), compiled
 # without the shared instruction fragments that could be called across one.
 BANKED   = src/title.c src/cityscreen.c src/topcities.c src/diplomacy.c \
-           src/save.c src/sheet.c src/help.c src/menu.c src/ai.c \
+           src/save.c src/sheet.c src/mapload.c src/help.c src/menu.c src/ai.c \
            src/improve.c src/growth.c
 
 # Assembly: src/bank.s, which banks BASIC out before main(), and
@@ -145,7 +146,8 @@ TEXTS    = $(RES)/text/help.txt \
            $(RES)/text/list_titles.txt \
            $(RES)/text/list_levels.txt \
            $(RES)/text/list_level_notes.txt \
-           $(RES)/text/list_cities.txt
+           $(RES)/text/list_cities.txt \
+           $(RES)/text/list_resources.txt
 TEXT_PAK = $(BUILD)/text.pak
 TEXT_IDS = $(BUILD)/textid.h
 

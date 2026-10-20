@@ -156,7 +156,8 @@ The C65 ROM boots AUTOBOOT.C65 automatically. `main()` then:
 2. reads TILES.FCI, a character at a time. Each character is widened to twice
    its width, because a pixel of this screen mode is half as wide as it is
    tall, and copied into the expanded sheet in bank 5 (`sheet_load`);
-3. reads SEVENSHIPS.MAP into `map_tile` (`map_load`);
+3. reads SEVENSHIPS.MAP: the terrain into `map_tile`, and the resources,
+   a list sorted by hexagon row, into `map_res_*` (`map_load`);
 4. sets up the pointer sprites (`input_init`) and runs the title menu
    (`title_run`): Start Game, Load Saved Game or Quit.
    Start Game then asks for a people (Mycenaeans, Hittites, Egyptians or
@@ -202,15 +203,15 @@ window shows one region of code at a time. The figures below are from the linker
 | \$1600-\$1637 | 0.05 | `zpsave`: BASIC's zero page \$02-\$39, saved at start-up and put back on exit |
 | \$1638-\$18e0 | 0.7 | the `lowfree` section (`LOW_FREE`): the popup's text and the scratch buffers of the view and the minimap |
 | \$18e1-\$1eff | 1.5 | free |
-| \$2001-\$56f2 | 13.7 | BASIC stub, startup and resident code |
-| \$56f3-\$5751 | 0.1 | initialised data: the DMA lists |
-| \$5752-\$5851 | 0.25 | C stack |
-| \$5852-\$59a3 | 0.3 | BSS: small state |
-| \$59a4-\$5fff | 1.6 | free |
-| \$6000-\$7fff | 8 | the code window; region 0 as loaded (4.8 KB used) |
+| \$2001-\$5af7 | 14.7 | BASIC stub, startup and resident code |
+| \$5af8-\$5b20 | 0.04 | initialised data: the DMA lists |
+| \$5b21-\$5c20 | 0.25 | C stack |
+| \$5c21-\$5d97 | 0.4 | BSS: small state |
+| \$5d98-\$5fff | 0.6 | free |
+| \$6000-\$7fff | 8 | the code window; region 0 as loaded (5.7 KB used) |
 | \$8000-\$9ffe | 8 | resident constant data and code |
-| \$a000-\$b7d0 | 6.0 | `highbss` (`HIGH_BSS`): the map `map_tile` (terrain, improvements, explored and occupied bits), the unit and city arrays (the cities' size and food box among them), the sprite blocks, the AI's headings, the staging buffers of the texts and the regions, the texts' line buffers, the sheet loader's buffers and row extents, and the saved VIC registers |
-| \$b7d1-\$bfff | 2.0 | free |
+| \$a000-\$b4b0 | 5.2 | `highbss` (`HIGH_BSS`): the map `map_tile` (terrain, improvements, explored and occupied bits), the unit and city arrays (the cities' size and food box among them), the sprite blocks, the AI's headings, the staging buffers of the texts and the regions, the texts' line buffers, the sheet loader's buffers and row extents, the saved VIC registers, and the resources, a list by hexagon row |
+| \$b4b1-\$bfff | 2.8 | free |
 
 The long texts and the names are not in this table at all: they are in
 TEXT.PAK, read into Attic RAM at start-up, which is most of why the
@@ -251,11 +252,11 @@ PRG's own \$6000-\$7fff, and regions 1 and up are loaded from their own
 files (SEVENSHIPS.R1, ...) into bank 1 from \$13000 at start-up. That is
 BASIC 65's variable area, unused while the game runs. Region 0 holds the
 screens that are not the map -- title, setup, help -- with the menus,
-save and load and the tile sheet's loader; region 1 holds the computer
-players, the builders' improvements and the cities' yields and growth;
-region 2 the city screen, Top Five Cities and diplomacy. Four regions fit,
-up to \$1afff; above them, \$1b000-\$1efff holds the last eight tiles of
-the tile sheet.
+save and load and the loaders of the tile sheet and the map; region 1
+holds the computer players, the builders' improvements and the cities'
+yields and growth; region 2 the city screen, Top Five Cities and
+diplomacy. Three regions fit, up to \$18fff; above them, \$19000-\$1efff
+holds the last twelve tiles of the tile sheet.
 
 Resident code calls a function in a region through a stub of the same
 name (`src/dispatch.s`), which maps the region in, makes the call, and
@@ -275,9 +276,9 @@ and the main loop stay resident, where a call costs nothing.
 | \$12000-\$12f9f | 4 | Screen RAM, 80x25 cells of two bytes |
 | \$13000-\$14fff | 8 | Code region 1 |
 | \$15000-\$16fff | 8 | Code region 2 |
-| \$1b000-\$1efff | 16 | The expanded tile sheet's tiles 18-25, none used yet |
+| \$19000-\$1efff | 24 | The expanded tile sheet's tiles 18-29: the resources, 18-26 |
 | \$20000-\$3ffff | 128 | The C65 ROM, left in place |
-| \$40000-\$56fff | 92 | The tile store: the map window's character definitions, and 92 of the minimap's in the row padding |
+| \$40000-\$56fff | 92 | The tile store: the map window's character definitions, and in the row padding the minimap's 80 and the owners' flags |
 | \$57000-\$5ffff | 36 | The expanded tile sheet's tiles 0-17 |
 | \$08000000- | 8192 | Attic RAM: the texts from TEXT.PAK at the bottom, the rest free |
 | \$0ff81000-\$0ff81f9f | 4 | Colour RAM |
@@ -303,13 +304,13 @@ the store is 94208 bytes, which leaves banks 2 and 3, the ROM, alone. A larger
 window would need the ROM banked out, with everything that brings with it;
 `src/view.h` stops the build if the store outgrows \$60000.
 
-**The expanded sheet** is the tile art as it is drawn: 18 tiles of 8x4
+**The expanded sheet** is the tile art as it is drawn: 27 tiles of 8x4
 characters, 2 KB each, stored a tile at a time. It is in chip RAM rather
 than in Attic RAM because the redraw copies about 160 KB out of it, and DMA
 reading Attic RAM is about seven times slower than reading chip RAM on the
 real machine. The VIC never reads it -- it is only a DMA source -- so it
 need not be in bank 5: the first 18 tiles fill bank 5 to its end, and the
-rest go in bank 1, where two code regions would have been. Each
+rest go in bank 1, where three code regions would have been. Each
 part lies in one bank, so a source address is 16 bits, and the redraw
 changes the DMA's source bank only when it moves from one part to the
 other. While loading it, the program notes which characters of each tile

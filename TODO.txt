@@ -102,6 +102,44 @@ Milestone 9: trade
   computer players build one and explore with it. Cedar 12% -> 25% of forests
 - Later: AI ferrying, physical trade fleets, emporia
 
+Milestone 10: the end game -- the Bronze Age Collapse (DRAFT, vision.md sections 4 and 5)
+A game is 400 turns, as Civ 1's: growth and rivalry first, then the Crisis, then the end.
+- Calendar: 1600 BC to about 1025 BC. Now it is 10 years a turn, which reaches 1200 BC at
+  turn 40. Instead e.g. 2 years a turn to turn 175 (1250 BC), then 1 a turn, so the Crisis
+  starts about turn 225 (1200 BC) and lasts 175 turns. Year and turn on the panel as now;
+  "Turns left" somewhere (Advisors?). Saved already (game_turn, game_year)
+- Omens before the Crisis (turns ~200-225): letters from the others in the Amarna voice
+  ("My father, behold, the enemy's ships came; my cities were burned") and rumours, so the
+  player can build guards and galleys before it starts. Civ has no such phase; vision.md
+  does ("Pleas for help that cannot come")
+- The Sea Peoples: a naval barbarian, PLAYER_BARBARIAN or a second raider owner. Fleets
+  of galleys appear on the shallows near the richest coastal cities (size, trade goods,
+  deals) and land 1-2 units each, raid, burn or take cities, and sink galleys. Waves grow
+  through the Crisis. Art: the galley tile with a barbarian flag (no tile room) or a
+  recoloured one once there is room. The AI must guard its coast: more guards in coastal
+  cities, galleys to fight back
+- Network fracture: trade deals break when a partner loses the city with the good, or a
+  raid cuts the sea route (a deal could need the two to be joined by shallows or land);
+  losing copper or tin ends bronze, so no more spearmen (vision.md section 4.2)
+- Systemic shocks, one every N turns of the Crisis, by chance and weighted by region:
+  drought (food -1 on plains, desert and grassland for some turns: cities starve and
+  shrink), earthquake (a city loses size or an improvement), famine/plague (a large city
+  shrinks), rebellion (a city that has starved or lost its guards goes over to the
+  barbarians). Each with a popup and a panel line. Climate stress grows towards the end
+- Collapse of the computer players: a people that loses its capital or half its cities
+  may break up (cities to the barbarians, Civ 1's civil war), so the map ends in a dark age
+- The end at turn 400, or earlier if only one people is left (or the human is out, as now):
+  a final screen with each people's score and who survived. Score, after Civ 1's:
+  citizens (1 a citizen), cities, goods held, deals, and a big bonus for having survived the
+  Crisis with cities left; later Legacy points for monuments (vision.md 5B, needs wonders,
+  a milestone of its own). Victory: survived with the highest score. Retire (Game menu)
+  shows the same screen. A Top Five style "Score" under World during the game
+- Memory: a region of its own (crisis.c: events, Sea Peoples, scoring; once a turn from
+  end_turn(), like diplomacy_turn()); state saved (SAVE_VERSION). The score screen could be
+  a text in attic plus numbers, as the help screen
+- Test: Play 50 Turns to 400 with AUTOPLAY_TURNS=200, and see that the game ends, that
+  peoples survive the Crisis about half the time, and that the score screen is right
+
 --- DONE ---
 
 Made room before milestone 8 (21 Oct 2026): the code regions are kept in attic RAM and

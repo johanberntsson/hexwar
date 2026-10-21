@@ -33,9 +33,11 @@ RESOURCES = res_grain.png res_fish.png res_cattle.png res_olives.png \
 # res_olives and res_wine are.
 MINES = res_copper_mine.png res_tin_mine.png
 IRRIGATED = res_cattle_pasture.png res_olives_grove.png res_wine_vineyard.png
+# Last, the galley (milestone 9), alltiles' as it is: the sheet's last tile.
 TILES = $(TERRAIN) tile_city.png tile_select.png \
         unit_settler.png unit_warrior.png unit_builder.png tile_undiscovered.png \
-        $(OVERLAYS) $(RESOURCES) $(MINES) unit_spearman.png $(IRRIGATED)
+        $(OVERLAYS) $(RESOURCES) $(MINES) unit_spearman.png $(IRRIGATED) \
+        unit_galley.png
 
 all: ../res/tiles.fci
 

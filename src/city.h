@@ -37,6 +37,9 @@ void city_reset(void);
 // The city on (ax, ay), or CITY_NONE.
 byte city_at(byte ax, byte ay);
 
+// Whether city c is next to the shallows, where a galley it builds sails.
+byte city_coastal(byte c);
+
 // Found a city for `owner` on (ax, ay). CITY_NONE if there is one there
 // already or the list is full.
 byte city_found(byte owner, byte ax, byte ay);

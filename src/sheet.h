@@ -42,7 +42,7 @@
 #define SHEET_HIGH_TILES 16
 
 // The sheet as it is in the file.
-#define SHEET_COLUMNS 132
+#define SHEET_COLUMNS 136
 #define SHEET_ROWS 4
 
 // A tile is 4x4 characters in the file and 8x4 once expanded.
@@ -105,6 +105,7 @@
 #define TILE_CATTLE_PASTURE 30
 #define TILE_OLIVES_GROVE 31
 #define TILE_WINE_VINEYARD 32
+#define TILE_GALLEY 33          // the last there is room for
 
 // The FCI on the disk. Capitals, because that is how diskutil.rb writes the
 // host name tiles.fci -- see MAP_FILE_NAME.

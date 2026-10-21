@@ -40,6 +40,16 @@ byte city_at(byte ax, byte ay)
     return CITY_NONE;
 }
 
+byte city_coastal(byte c)
+{
+    byte dir, nx, ny;
+    for (dir = 0; dir < 6; ++dir)
+        if (map_neighbour(city_ax[c], city_ay[c], dir, &nx, &ny)
+            && MAP_TERRAIN(nx, ny) == TILE_SHALLOW_OCEAN)
+            return 1;
+    return 0;
+}
+
 byte city_found(byte owner, byte ax, byte ay)
 {
     byte c = city_count;

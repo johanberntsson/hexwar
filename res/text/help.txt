@@ -7,7 +7,7 @@
 {key}{:  =|pad 1  3}{tab 10}{text}south-west, south-east
 {key}click{tab 10}{text}next to the unit: there
 {tab 10}onto an enemy: attack
-
+{tab 10}onto a galley: board
 {head}Orders
 {key}b{tab 10}{text}found a city (settler)
 {key}f{tab 10}{text}fortify

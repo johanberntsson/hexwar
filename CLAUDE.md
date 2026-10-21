@@ -205,11 +205,11 @@ buffers at the default `$FF80000` and corrupts the display.
 
 | Address | Size | Contents |
 |---|---|---|
-| `$2001-$5FFF`, `$8000-$9FFF` | 24 KB | the resident program: code, data, BSS, C stack. 234 bytes free, nearly all at `$5F1F-$5FFF` |
+| `$2001-$5FFF`, `$8000-$9FFF` | 24 KB | the resident program: code, data, BSS, C stack. 377 bytes free, nearly all at `$5E87-$5FFF` |
 | `$6000-$7FFF` | 8 KB | the code window (`src/region.h`); as loaded, region 0 — the title, setup and help screens, the menus, save and load, the sheet's and the map's loaders, the owners' flags. 2.3 KB free |
 | `$13000-$14FFF` | 8 KB | code slot 1: region 1, from `SEVENSHIPS.R1` by way of attic: the computer players, the cities' yields and growth, bronze. 1.3 KB free |
 | `$15000-$16FFF` | 8 KB | code slot 2, shared: region 2 (the city screen, Top Five Cities, the builders' improvements; 2.7 KB free) region 3 (diplomacy; 2.3 KB free) or region 4 (trade; 5.9 KB free), whichever was called last |
-| `$17000-$1EFFF` | 32 KB | the tile sheet's tiles 18-33, where regions 3 to 6 would have been: the resources, the improved resources, the spearman; one tile free |
+| `$17000-$1EFFF` | 32 KB | the tile sheet's tiles 18-33, where regions 3 to 6 would have been: the resources, the improved resources, the spearman, the galley; **full** |
 | `$A000-$BFFF` | 8 KB | `highram`, under the BASIC ROM, banked out by `src/bank.s`: `map_tile`, the unit and city arrays, the sprite blocks, the AI's headings, the staging buffers of the texts and the regions, the texts' line buffers, the sheet loader's buffers, the saved VIC registers, the AI's exploration memory, the resource list, the peoples' relations and attitudes and the letters' names, the trade deals; about 2.5 KB free — `HIGH_BSS` in `src/mega65.h` moves a variable there, and **the startup does not clear it** |
 | `$1600-$1EFF` | 2304 | `zpsave` (56 bytes, BASIC's zero page during the run), then `lowfree`: the popup's 400-byte text and the scratch buffers of the view and the minimap, 1.6 KB free — `LOW_FREE` in `src/mega65.h` moves a variable there |
 | `$12000` | 4000 | screen RAM, 80x25 cells of 2 bytes |
@@ -501,10 +501,17 @@ entry in each of `dispatch.s`'s per-region tables (`slot_of`,
 `region_stamp[]`'s initialiser in `src/region.c`, and its file in the
 Makefile's `REGION_FILES`; `packprg.py` needs nothing. Attic's bank 1
 holds eight regions as the tables stand. **Resident space is what to
-watch now**: 234 bytes (21 Oct 2026, after milestone 9's trade; the
-slot copying cost 140, and each stub is 13), against 2.3 KB in region 0,
-1.2 KB in region 1, 2.7 KB in region 2, 2.3 KB in region 3 and 5.9 KB
-in region 4. **Confirmed on a real MEGA65** (21
+watch now**: 377 bytes (21 Oct 2026, after the galley; the slot
+copying cost 140, and each stub is 13), against 1.2 KB in region 0, 1.1
+KB in region 1, 2.6 KB in region 2, 2.3 KB in region 3 and 5.9 KB in
+region 4. **The way to resident room is `game.c`**, whose static
+functions are most of the resident code (the listing shows them all as
+`game_run`, 11.9 KB): for the galley, the end of a turn (`end_turn()`,
+now `game_end_turn()`), Play 50 Turns and `game_init()` moved into
+`src/turn.c` in region 0, which needs no copying, sharing `game.c`'s
+state through `src/gameint.h` (game.c's names `#define`d to `game_`
+ones) — 915 bytes, and a 300-turn autoplay byte-identical. Menu
+commands, `attack()`, `draw_hover()` and `found_city()` could follow. **Confirmed on a real MEGA65** (21
 Oct 2026): the slot copying, through long autoplays, the city screen and
 the Diplomacy screen in turn, and save and load. Code that is not hot can move out of the resident program into
 a region. So new subsystems go into a region from the start, per-turn
@@ -768,12 +775,13 @@ at `$17000` up, the map loader in region 0, the owners' flags, contact by
 adjacency with the view moved to the newcomer, bronze and the spearman,
 and the info line following the active unit; and (the same day)
 milestone 8's diplomacy, "well enough", so its tuning is still open
-(TODO.txt). **Not yet tried on one**: trade.
+(TODO.txt); and trade ("looking good"). **Not yet tried on one**: the
+galley, and `src/turn.c`.
 
-**Where to start next time**: TODO.txt. The rest of milestone 9 is
-ships, which need tiles (one left) and a map that lets units onto water.
-The resident program has 234 bytes: the next stubs or resident code may
-need something moved out into a region first.
+**Where to start next time**: TODO.txt — the computer players' use of
+galleys (ferrying settlers and armies), then the merchant fleets and
+emporia. **The tile sheet is full** (34 of 34): another tile needs room
+first (**When bank 5 fills up**).
 
 **The title screen comes first** (`src/title.c`): `title_show()` puts the
 title up once the texts are read and before the sheet and the map are,
@@ -1309,7 +1317,41 @@ people already traded with ends the deal (20 off its attitude). Each
 people's block shows the trade on its fifth row. In 300 turns of
 autoplay on seed 1: the human's side sent dye to the Canaanites for
 copper, and the Canaanites copper to the Hittites for wine. Saved
-(`SAVE_VERSION` 10). Still to come: ships, fleets, emporia.
+(`SAVE_VERSION` 10). Still to come: fleets and emporia.
+
+**Galleys** (milestone 9, `KIND_GALLEY`, Civilization's trireme, after
+asking the user which ship first) need cedar (`player_has()`) and a
+coastal city — one next to the shallows, `city_coastal()` in
+`src/city.c` — cost 40, move 3, attack and defence 1, and **sail the
+shallows and their own cities only**: the open sea is for later ships,
+and the shallows join the main landmasses on seeds 1 and 3 and four of
+five on seed 7 (checked from the map files). **A land unit on a water
+hexagon is aboard the galley there**, `GALLEY_HOLD` (2) to a galley:
+`unit_can_enter(owner, kind, ax, ay)` (the kind is new) says
+`ENTER_BOARD` for a step onto one's own galley with room, which the
+human's moves take as a move and the computer's `!= ENTER_OK` tests
+refuse, `ENTER_WATER` otherwise — a land unit never attacks a ship —
+and `ENTER_LAND` for a galley onto land, the open sea or another's city
+("Galleys keep to the shallows"). Boarding sentries the unit
+(`ORDERS_FORTIFY`, set in `unit_move_to()`), a galley moving off the
+water takes those aboard with it (from a city it takes nobody), and
+`unit_wake_cargo()` wakes them when the galley stops next to land — its
+last move, or space — so they are asked next and step ashore. At sea
+`unit_overlay()` draws the galley, not those aboard, unless one of them
+has the orders. Combat needs nothing new: the best defender on the
+hexagon fights and, at sea as outside a city, the stack dies with it.
+**The computer players** build one galley each, over the unit cap if
+need be, once they have `GALLEY_CITIES` (3) cities, cedar and a coastal
+city, and it explores like a warrior (`explore()`, round the coast);
+they do not carry anybody yet. **Cedar** went from 12% to 25% of forests
+in `mapgen.py`, since 4 cedar a map gave no galleys at all: now 14-23.
+In 300 turns of autoplay galleys were built on seeds 3 and 7 (on seed 7
+the human's side traded cedar for tin and built one too); on seed 3 they
+did not yet bring the peoples together. Checked headlessly with a
+throwaway start (a warrior and a galley at (28,9) on seed 1, the blink
+turned off for the screenshots): boarding, the galley drawn over its
+cargo, three moves east with the warrior aboard, and landing on the
+next turn.
 
 **Popups** (`src/popup.c`) are a box of word-wrapped text over the middle
 of the map window, closed by a click anywhere, fire, Return, space or Esc.
@@ -1718,14 +1760,15 @@ in xemu by building once with `input_real_hw = 1` forced in
 
 ## Assets
 
-`res/tiles.fci` is 132x4 characters — 33 4x4 tiles side by side, in the
+`res/tiles.fci` is 136x4 characters — 34 4x4 tiles side by side, in the
 order `tiles/Makefile` lists the PNGs: ten terrains (hills, grass, mountain, ocean, shallow ocean, tundra, plains, forest,
 desert, floodplain), then the city, a selection ring
 (the tile-select cursor),
 three units (settler, warrior, builder), the black hexagon of unexplored
 land, the overlays, irrigation and mine, the nine resources (see
-**Resources**), mined copper and tin, the spearman, and irrigated
-cattle, olives and wine (see **Bronze**);
+**Resources**), mined copper and tin, the spearman, irrigated
+cattle, olives and wine (see **Bronze**), and the galley (see
+**Galleys**, `alltiles/`' `unit_galley.png` as it is);
 `TILE_*` in `src/sheet.h`.
 **Tiles 18 and up go in bank 1** (see **When bank 5 fills up**, step 1b):
 the resources. `res_cattle`, `res_copper` and `res_tin` are `alltiles/`'
@@ -1791,8 +1834,8 @@ A new tile needs all of these, and nothing checks that they agree:
    non-terrain tiles or the map layer grows a lookup table (see `map_tile`).
 5. room: each tile is 2 KB expanded, and the sheet must stop at the end
    of bank 5 (an `#error` in `src/sheet.h`): from `$57000`, **18 tiles in
-   bank 5 and 16 more in bank 1** (`SHEET_LOW_TILES`, `SHEET_HIGH`), 33
-   used, so one is left. The tile store's own `#error` in `src/view.c` keeps the store
+   bank 5 and 16 more in bank 1** (`SHEET_LOW_TILES`, `SHEET_HIGH`), all
+   34 used since the galley. The tile store's own `#error` in `src/view.c` keeps the store
    and the sheet apart, and `src/sheet.h` has one for the total. Past 34:
    see **When bank 5 fills up**; code regions no longer need bank 1's
    room beyond the two slots, so more of it could be tiles at a slot's

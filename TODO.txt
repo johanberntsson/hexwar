@@ -1,8 +1,13 @@
 --- OPEN ---
 
-NEXT: the rest of milestone 9 -- merchant ships (need cedar; tiles, one left, and units on
-water), then fleets and emporia. Resident space is 234 bytes. Roads still need tiles (and a
-map bit or a 320-byte bitmap)
+NEXT: the computer players' galleys carry settlers and armies to other landmasses (they only
+explore now); then merchant fleets and emporia. The tile sheet is full (34 of 34): a new tile
+needs room first (CLAUDE.md "When bank 5 fills up"). Resident space 377 bytes; game.c's cold
+functions (menu commands, attack, draw_hover) are the next to move out (src/turn.c did 915)
+
+Galleys on seed 3 did not bring the peoples together in 300 turns: an exploring galley rarely
+ends up next to anybody. Galleys sail the shallows only; seed 7 has a landmass the shallows
+do not reach.
 
 Trade to tune once played: AIs only ask one turn in eight; goods are few (most peoples
 own one or two), so deals are rare -- two in 300 turns of autoplay on seed 1.
@@ -16,6 +21,10 @@ Peoples on separate landmasses never meet before there are boats (map seeds 3 an
 Place them two to a continent, more land (MAP_LAND), or leave it for milestone 9's ships
 
 There's no visual feedback who wins or loses when attacking or being attacked
+
+Add more help texts, like Help/Terrain Types/Grassland, Plain etc. The same for Help/Military Units
+
+If there's space on the disk, try adding some larger pictures for the start screen, and win/fail
 
 --- IDEAS, not yet decided implement or not --
 
@@ -88,7 +97,10 @@ Milestone 9: trade
   good received counts for bronze; partners like each other more; AIs ask for what they
   lack (copper/tin first) and demand tribute when strong and cold; the human answers by
   letter and proposes (or ends a trade) with T on Advisors/Diplomacy (src/trade.c, region 4)
-- Later: merchant ships (need cedar), physical trade fleets, emporia
+- DONE (21 Oct 2026): the galley (Civ 1's trireme): cedar and a coastal city, the shallows
+  only, carries 2 land units (step onto it to board; woken when it stops next to land);
+  computer players build one and explore with it. Cedar 12% -> 25% of forests
+- Later: AI ferrying, physical trade fleets, emporia
 
 --- DONE ---
 

@@ -68,11 +68,10 @@ static const byte patch_cy[7] = { 2, 2, 5, 5, 5, 8, 8 };
 
 // What a city can be told to build, in the order CHANGE lists it. A
 // settler from a city of size 1 waits at its cost until the city grows.
-// The spearman, last, only with bronze (player_bronze()); without it CHANGE
-// says what is missing, and BUILDABLE is one less.
-static const byte buildable[] = {
-    KIND_WARRIOR, KIND_SETTLER, KIND_BUILDER, KIND_SPEARMAN
-};
+// Then the spearman, only with bronze (player_bronze()), and the galley,
+// only with cedar in a coastal city; without them CHANGE says what is
+// missing. change() fills it.
+static byte buildable[KINDS];
 static byte buildable_n;
 #define BUILDABLE buildable_n
 
@@ -304,8 +303,15 @@ static void change(byte c)
     byte sel = 0, i, key, was;
     byte copper = player_has(PLAYER_HUMAN, RES_COPPER);
     byte tin = player_has(PLAYER_HUMAN, RES_TIN);
+    byte cedar = player_has(PLAYER_HUMAN, RES_CEDAR);
+    byte coast = city_coastal(c), row;
 
-    buildable_n = sizeof buildable - !(copper && tin);
+    buildable[0] = KIND_WARRIOR;
+    buildable[1] = KIND_SETTLER;
+    buildable[2] = KIND_BUILDER;
+    buildable_n = 3;
+    if (copper && tin) buildable[buildable_n++] = KIND_SPEARMAN;
+    if (cedar && coast) buildable[buildable_n++] = KIND_GALLEY;
 
     for (i = 0; i < BUILDABLE; ++i)
         if (buildable[i] == city_build[c]) sel = i;
@@ -316,13 +322,17 @@ static void change(byte c)
     screen_putsxy(TEXT_LEFT(BUILD_LEFT) + 12, LIST_ROW - 1, "shields",
                   COLOR_LIGHTGREY);
     for (i = 0; i < BUILDABLE; ++i) draw_choice(i, sel);
+    row = LIST_ROW + BUILDABLE + 1;
     if (!(copper && tin)) {
-        screen_putsxy(TEXT_LEFT(BUILD_LEFT), LIST_ROW + BUILDABLE + 1,
+        screen_putsxy(TEXT_LEFT(BUILD_LEFT), row++,
                       "Spearman needs bronze:", COLOR_LIGHTGREY);
-        screen_putsxy(TEXT_LEFT(BUILD_LEFT), LIST_ROW + BUILDABLE + 2,
+        screen_putsxy(TEXT_LEFT(BUILD_LEFT), row++,
                       copper ? "tin" : tin ? "copper" : "copper and tin",
                       COLOR_LIGHTGREY);
     }
+    if (coast && !cedar)
+        screen_putsxy(TEXT_LEFT(BUILD_LEFT), row, "Galley needs cedar",
+                      COLOR_LIGHTGREY);
 
     for (;;) {
         screen_wait_raster(SCREEN_ROW_LINE(SCREEN_ROWS - 1));

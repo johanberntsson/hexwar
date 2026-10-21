@@ -61,11 +61,13 @@ most important routines included in each source file.
 | &nbsp;&nbsp;&nbsp;_menu\_run_ | one menu, picked by pointer or keyboard, once round per frame |
 |  |  |
 | game.c | the turn loop, the player's orders and the panel |
-| &nbsp;&nbsp;&nbsp;_game\_init_ | sets up a new game with one settler |
 | &nbsp;&nbsp;&nbsp;_game\_run_ | the main loop, once round per frame |
-| &nbsp;&nbsp;&nbsp;_end\_turn_ | runs the computer player and starts the next turn |
 |  |  |
-| unit.c | units: create, move, remove, and which one wants orders |
+| turn.c | the end of a turn and the start of a game, out of game.c into region 0 |
+| &nbsp;&nbsp;&nbsp;_game\_init_ | sets up a new game with a settler and a warrior |
+| &nbsp;&nbsp;&nbsp;_game\_end\_turn_ | runs the computer players, diplomacy and the cities, and starts the next turn |
+|  |  |
+| unit.c | units: create, move, remove, which one wants orders, and galleys with those aboard |
 | &nbsp;&nbsp;&nbsp;_unit\_next_ | the next unit that needs orders this turn |
 | &nbsp;&nbsp;&nbsp;_unit\_mark_ | keeps the map's "occupied" bit up to date |
 | &nbsp;&nbsp;&nbsp;_unit\_overlay_ | what is drawn over the terrain of an occupied hexagon |
@@ -151,7 +153,7 @@ to `release/`), holding five files:
 | **File** |  **Contents** |
 | -- |  ---- |
 | AUTOBOOT.C65 | the program, a C65-mode PRG loaded at \$2001 |
-| TILES.FCI | the tile sheet: a palette and 16 tiles of 4x4 full colour characters |
+| TILES.FCI | the tile sheet: a palette and 34 tiles of 4x4 full colour characters |
 | SEVENSHIPS.MAP | the map: a 16-byte header and one 4096-byte layer of terrain |
 | TEXT.PAK | the texts -- the title, help and new-game screens, the opening popup, and the lists of names -- with their markup |
 | SEVENSHIPS.R1 | code region 1, the computer players and the cities' growth: a header and the code, kept in Attic RAM and run at \$6000 from bank 1 |
@@ -216,15 +218,15 @@ window shows one region of code at a time. The figures below are from the linker
 | \$1600-\$1637 | 0.05 | `zpsave`: BASIC's zero page \$02-\$39, saved at start-up and put back on exit |
 | \$1638-\$18e0 | 0.7 | the `lowfree` section (`LOW_FREE`): the popup's text and the scratch buffers of the view and the minimap |
 | \$18e1-\$1eff | 1.5 | free |
-| \$2001-\$5c55 | 15.1 | BASIC stub, startup and resident code |
-| \$5c56-\$5ca2 | 0.1 | initialised data: the DMA lists |
-| \$5ca3-\$5da2 | 0.25 | C stack |
-| \$5da3-\$5f1e | 0.4 | BSS: small state |
-| \$5f1f-\$5fff | 0.2 | free |
-| \$6000-\$7fff | 8 | the code window; region 0 as loaded (5.7 KB used) |
+| \$2001-\$5b7e | 14.9 | BASIC stub, startup and resident code |
+| \$5b7f-\$5c04 | 0.1 | initialised data: the DMA lists |
+| \$5c05-\$5d04 | 0.25 | C stack |
+| \$5d05-\$5e86 | 0.4 | BSS: small state |
+| \$5e87-\$5fff | 0.4 | free |
+| \$6000-\$7fff | 8 | the code window; region 0 as loaded (6.8 KB used) |
 | \$8000-\$9ffe | 8 | resident constant data and code |
-| \$a000-\$b5ec | 5.5 | `highbss` (`HIGH_BSS`): the map `map_tile` (terrain, improvements, explored and occupied bits), the unit and city arrays (the cities' size and food box among them), the peoples' relations and attitudes, the trade deals, the sprite blocks, the AI's headings, the staging buffers of the texts and the regions, the texts' line buffers, the sheet loader's buffers and row extents, the saved VIC registers, and the resources, a list by hexagon row |
-| \$b5ed-\$bfff | 2.5 | free |
+| \$a000-\$b5f4 | 5.5 | `highbss` (`HIGH_BSS`): the map `map_tile` (terrain, improvements, explored and occupied bits), the unit and city arrays (the cities' size and food box among them), the peoples' relations and attitudes, the trade deals, the sprite blocks, the AI's headings, the staging buffers of the texts and the regions, the texts' line buffers, the sheet loader's buffers and row extents, the saved VIC registers, and the resources, a list by hexagon row |
+| \$b5f5-\$bfff | 2.5 | free |
 
 The long texts and the names are not in this table at all: they are in
 TEXT.PAK, read into Attic RAM at start-up, which is most of why the
@@ -326,7 +328,7 @@ the store is 94208 bytes, which leaves banks 2 and 3, the ROM, alone. A larger
 window would need the ROM banked out, with everything that brings with it;
 `src/view.h` stops the build if the store outgrows \$60000.
 
-**The expanded sheet** is the tile art as it is drawn: 33 tiles of 8x4
+**The expanded sheet** is the tile art as it is drawn: 34 tiles of 8x4
 characters, 2 KB each, stored a tile at a time. It is in chip RAM rather
 than in Attic RAM because the redraw copies about 160 KB out of it, and DMA
 reading Attic RAM is about seven times slower than reading chip RAM on the
@@ -463,6 +465,10 @@ A click on a hexagon next to the selected unit moves the unit there, a click
 on one of the player's cities opens the city screen, and a click on one of
 the player's own units selects that unit, waking it if it was fortified. A
 click anywhere else on the map centres the view on that hexagon.
+
+A galley sails the shallows. A land unit boards it by moving onto it, two
+to a galley, and goes where the galley goes; when the galley stops next
+to land, those aboard are asked for orders and can step ashore.
 
 Everything can be done from the keyboard alone, since not every MEGA65 has
 a mouse. Tab starts tile select, as in Civilization: a blinking yellow ring

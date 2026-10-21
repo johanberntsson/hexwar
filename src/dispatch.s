@@ -182,6 +182,9 @@ stub:       .macro  name, target, region
             stub    title_run, title_run_r0, 0
             stub    save_write, save_write_r0, 0
             stub    save_read, save_read_r0, 0
+            stub    game_init, game_init_r0, 0
+            stub    game_end_turn, game_end_turn_r0, 0
+            stub    game_autoplay, game_autoplay_r0, 0
 
 ; Region 1, slot 1: the computer players and the cities' yields and
 ; growth.

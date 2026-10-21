@@ -105,7 +105,7 @@ RESOURCE_TERRAIN = {
     HILLS: (0.16, [(CATTLE, 1), (OLIVES, 2), (WINE, 2), (COPPER, 2),
                    (TIN, 1.3)]),
     MOUNTAIN: (0.12, [(COPPER, 3), (TIN, 2)]),
-    FOREST: (0.12, [(CEDAR, 1)]),
+    FOREST: (0.25, [(CEDAR, 1)]),     # 0.12 left 4 a map, too few for galleys
     SHALLOW_OCEAN: (0.08, [(FISH, 3), (DYE, 1)]),
 }
 # MAP_RES_MAX in src/map.h: the list's count is a byte.

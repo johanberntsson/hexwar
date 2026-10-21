@@ -9,6 +9,7 @@
 // UNIT_NONE and the end-of-turn prompt in the panel.
 
 #include "game.h"
+#include "gameint.h"
 #include "growth.h"
 #include "help.h"
 #include "improve.h"
@@ -34,25 +35,22 @@
 
 #define PANEL_WIDTH VIEW_LEFT
 
-#define START_YEAR 1600         // BC; the Crisis is due about 1200
-#define YEARS_PER_TURN 10
-
 #define TEXT_COLOUR COLOR_LIGHTGREEN
 
 // Where the view sits on the map, in screen characters; see view_redraw().
-static word off_x;
-static word off_y;
+word off_x;
+word off_y;
 
-static byte dirty;              // the view wants redrawing
-static byte contact;            // see whether a people has come in sight
-static byte greet;              // peoples just met, greeted after a redraw
-static byte hover_dirty;        // the readout of what is under the arrow
-static byte hover_unit;         // ... or on hover_ax/ay; see draw_hover()
+byte dirty;              // the view wants redrawing
+byte contact;            // see whether a people has come in sight
+byte greet;              // peoples just met, greeted after a redraw
+byte hover_dirty;        // the readout of what is under the arrow
+byte hover_unit;         // ... or on hover_ax/ay; see draw_hover()
 static byte hover_ax, hover_ay;
-static byte game_over;
-static byte quit;
-static byte retired;            // quit by Game/Retire, for the title screen
-static byte loaded;             // from a saved game: no opening popup
+byte game_over;
+byte quit;
+byte retired;            // quit by Game/Retire, for the title screen
+byte loaded;             // from a saved game: no opening popup
 word game_turn;
 word game_year;
 
@@ -60,7 +58,7 @@ word game_year;
 // a ring on a hexagon, the cursor keys (or the unit's moving keys) move it,
 // Return does what a click on it would, and Tab or Esc puts it away. While
 // it is up the ring blinks rather than the active unit.
-static byte selecting;
+byte selecting;
 static byte sel_ax, sel_ay;
 static byte sel_hidden;         // the ring's half of the blink
 
@@ -80,16 +78,16 @@ static const char *const terrain_name[] = {
 // ------------------------------------------------------------------- text
 
 // A line of text built up a piece at a time, so that no printf is linked.
-static char line[41];
+char line[41];
 static byte line_len;
 
-static void line_clear(void)
+void line_clear(void)
 {
     line_len = 0;
     line[0] = 0;
 }
 
-static void line_add(const char *s)
+void line_add(const char *s)
 {
     while (*s && line_len < sizeof line - 1) line[line_len++] = *s++;
     line[line_len] = 0;
@@ -103,7 +101,7 @@ static void line_add_unit(byte owner, byte kind)
     line_add(unit_kind_name[kind]);
 }
 
-static void line_add_num(word v)
+void line_add_num(word v)
 {
     char digits[6];
     byte i = sizeof digits - 1;
@@ -131,7 +129,7 @@ static void panel_text(byte row, const char *s, byte colour)
 #define ROW_MESSAGE 19          // two rows
 
 // Two lines of message in the panel. `second` may be `line`.
-static void message(const char *first, const char *second)
+void message(const char *first, const char *second)
 {
     panel_text(ROW_MESSAGE, first, COLOR_YELLOW);
     panel_text(ROW_MESSAGE + 1, second, COLOR_YELLOW);
@@ -151,7 +149,7 @@ static void draw_frame(void)
                       "F1 for the keys", TEXT_COLOUR);
 }
 
-static void draw_status(void)
+void draw_status(void)
 {
     line_clear();
     line_add_num(game_year);
@@ -332,7 +330,7 @@ static void hover_on(byte ax, byte ay)
 
 // Hand the orders to the next unit after `after` that wants some, bringing
 // it into view. With none left, the panel asks for the end of the turn.
-static void select_unit(byte after)
+void select_unit(byte after)
 {
     byte was = unit_active;
     byte u = unit_next(PLAYER_HUMAN, after);
@@ -350,84 +348,6 @@ static void select_unit(byte after)
 }
 
 
-// Then every city's production, the computer's included, so that a unit
-// finished now is ready for the turn about to begin. With more than one
-// city finishing, the panel names the last.
-static void end_turn(void)
-{
-    byte c, kind;
-
-    message("", "");
-    news = NEWS_NONE;
-    for (c = PLAYER_FIRST_AI; c < PLAYERS; ++c) ai_turn(c);
-    ai_barbarians(game_turn);
-    diplomacy_turn();
-    kind = improve_turn();
-    if (kind != ORDERS_NONE)
-        message(kind == ORDERS_IRRIGATE ? "Irrigation" : "Mine", "finished");
-    for (c = 0; c < city_count; ++c) {
-        // Food before shields, so a city that grows works its new hexagon
-        // at once; and a city built up to a settler can let it go.
-        kind = city_grow(c);
-        if (kind != GROWTH_NONE && city_owner[c] == PLAYER_HUMAN) {
-            line_clear();
-            if (kind == GROWTH_GREW) {
-                line_add("grew to ");
-                line_add_num(city_size[c]);
-            } else {
-                line_add("famine");
-            }
-            message(city_name_of(c), line);
-        }
-        kind = city_produce(c);
-        if (kind != KIND_NONE && city_owner[c] == PLAYER_HUMAN) {
-            line_clear();
-            line_add("built ");
-            line_add(unit_kind_name[kind]);
-            message(city_name_of(c), line);
-            dirty = 1;
-        }
-    }
-    // Being attacked matters more than what was built.
-    if (news != NEWS_NONE) {
-        static const char *const what[] = {
-            "", "repelled", "a unit lost", "a city lost"
-        };
-        line_clear();
-        line_add(player_adjective(news_owner));
-        line_add(" attack");
-        message(line, what[news]);
-    }
-    dirty = 1;
-    hover_dirty = 1;
-    contact = 1;
-    ++game_turn;
-    game_year -= YEARS_PER_TURN;
-    unit_begin_turn(PLAYER_HUMAN);
-    draw_status();
-    select_unit(UNIT_NONE);
-}
-
-#ifdef DEBUG_MENU
-// Debug: the computer plays the human's side for `n` turns, through the
-// same ai_turn() as everybody else, or until Esc or the game is over. The
-// panel's turn and the minimap keep up as it goes; the view is redrawn
-// once, at the end, by the caller.
-#ifndef AUTOPLAY_TURNS
-#define AUTOPLAY_TURNS 50       // `make AUTOPLAY_TURNS=250` for long tests
-#endif
-
-static void autoplay(byte n)
-{
-    diplomacy_auto = 1;
-    while (n-- && !game_over) {
-        ai_turn(PLAYER_HUMAN);
-        end_turn();
-        if (input_poll() == KEY_ESC) break;
-    }
-    diplomacy_auto = 0;
-}
-#endif
 
 // --------------------------------------------------------------- orders
 
@@ -476,9 +396,13 @@ static void move_active(byte dir)
     byte nx, ny, t;
 
     if (!map_neighbour(unit_ax[u], unit_ay[u], dir, &nx, &ny)) return;
-    t = unit_can_enter(PLAYER_HUMAN, nx, ny);
+    t = unit_can_enter(PLAYER_HUMAN, unit_kind[u], nx, ny);
     if (t == ENTER_WATER) {
         message("Cannot swim", "");
+        return;
+    }
+    if (t == ENTER_LAND) {
+        message("Galleys keep", "to the shallows");
         return;
     }
     if (t == ENTER_FOREIGN) {
@@ -488,6 +412,7 @@ static void move_active(byte dir)
     message("", "");
     unit_move_to(u, nx, ny);
     --unit_moves[u];
+    if (!unit_moves[u]) unit_wake_cargo(u);
     dirty = 1;
     contact = 1;
     hover_on(nx, ny);
@@ -579,6 +504,7 @@ static void unit_key(byte key)
     case 'b': found_city(); break;
     case KEY_SPACE:                         // no orders this turn
         unit_moves[u] = 0;
+        unit_wake_cargo(u);
         select_unit(u);
         break;
     case 'w':                               // ask again after the others
@@ -670,7 +596,7 @@ static void menu_command(byte command)
         hover_dirty = 1;
         break;
     case MENU_PLAY_50:
-        autoplay(AUTOPLAY_TURNS);
+        game_autoplay(AUTOPLAY_TURNS);
         break;
 #endif
     case MENU_SAVE:
@@ -760,7 +686,7 @@ static void click(void)
         return;
     }
     if (!pointer_hex(&ax, &ay)) {
-        if (unit_active == UNIT_NONE && !game_over) end_turn();
+        if (unit_active == UNIT_NONE && !game_over) game_end_turn();
         return;
     }
     click_hex(ax, ay);
@@ -850,72 +776,6 @@ static void place_mark(void)
 
 // --------------------------------------------------------------- the game
 
-// The land cell nearest (cx, cy) of the given terrain, searching outwards in
-// square rings of the array. Not hexagon distance, but this only has to find
-// somewhere sensible to start.
-static byte find_terrain(byte cx, byte cy, byte want, byte *rx, byte *ry)
-{
-    int r, dx, dy, y;
-    byte x;
-
-    for (r = 0; r < MAP_COLUMNS / 2; ++r) {
-        for (dy = -r; dy <= r; ++dy) {
-            y = (int)cy + dy;
-            if (y < 0 || y >= MAP_ROWS) continue;
-            for (dx = -r; dx <= r; ++dx) {
-                if (dx != -r && dx != r && dy != -r && dy != r) continue;
-                x = (byte)((int)cx + dx + MAP_COLUMNS) & (MAP_COLUMNS - 1);
-                if (MAP_TERRAIN(x, y) == want) {
-                    *rx = x;
-                    *ry = (byte)y;
-                    return 1;
-                }
-            }
-        }
-    }
-    return 0;
-}
-
-void game_init(void)
-{
-    byte cx, cy, ax, ay;
-
-    // Nothing left over from a game before this one.
-    map_reset();
-    unit_reset();
-    city_reset();
-    combat_reset();
-    game_over = quit = retired = loaded = 0;
-    diplomacy_reset();
-    contact = 1;
-    greet = 0;
-    hover_unit = 0;
-    selecting = 0;
-
-    // START_OFF_X / START_OFF_Y are what let a headless run check
-    // scrolling: `make START_OFF_X=41` against a plain build must shift the
-    // map exactly eight pixels and leave the panel alone. The settler goes
-    // on the grassland nearest the middle of that view, so it is the same
-    // settler in both builds and neither has to recentre on it.
-    off_x = START_OFF_X;
-    off_y = START_OFF_Y;
-    map_cell_at(off_x + VIEW_COLUMNS / 2, off_y + VIEW_ROWS / 2, &cx, &cy);
-    if (!find_terrain(cx, cy, TILE_GRASS, &ax, &ay)
-        && !find_terrain(cx, cy, TILE_HILLS, &ax, &ay)) {
-        ax = cx;
-        ay = cy;
-    }
-    // Every people starts with a settler and a warrior on its hexagon, so
-    // that there is somebody to explore from the first turn.
-    unit_create(KIND_SETTLER, PLAYER_HUMAN, ax, ay);
-    unit_create(KIND_WARRIOR, PLAYER_HUMAN, ax, ay);
-    ai_place();
-
-    game_turn = 1;
-    game_year = START_YEAR;
-    dirty = 1;
-    hover_dirty = 1;
-}
 
 // The popup a new game opens with.
 byte game_load(void)
@@ -1064,7 +924,7 @@ byte game_run(void)
                 menu_command(menu_key(key));
             }
             else if (unit_active != UNIT_NONE) unit_key(key);
-            else if (key == KEY_RETURN) end_turn();
+            else if (key == KEY_RETURN) game_end_turn();
             break;
         }
     }

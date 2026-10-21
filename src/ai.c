@@ -247,7 +247,7 @@ static byte step(byte u, byte dir)
 {
     byte nx, ny;
     if (!map_neighbour(unit_ax[u], unit_ay[u], dir, &nx, &ny)) return 0;
-    if (unit_can_enter(unit_owner[u], nx, ny) != ENTER_OK) return 0;
+    if (unit_can_enter(unit_owner[u], unit_kind[u], nx, ny) != ENTER_OK) return 0;
     unit_move_to(u, nx, ny);
     --unit_moves[u];
     return 1;
@@ -328,7 +328,7 @@ static void explore_out(byte u)
 
     for (d = 0; d < 6; ++d, r >>= 1) {
         if (!map_neighbour(unit_ax[u], unit_ay[u], d, &nx, &ny)) continue;
-        if (unit_can_enter(unit_owner[u], nx, ny) != ENTER_OK) continue;
+        if (unit_can_enter(unit_owner[u], unit_kind[u], nx, ny) != ENTER_OK) continue;
         score = 1 + (r & 1);
         if (d == heading) score += 2;
         if (c != CITY_NONE)
@@ -359,7 +359,7 @@ static void approach(byte u, byte bx, byte by)
 
     for (dir = 0; dir < 6; ++dir) {
         if (!map_neighbour(unit_ax[u], unit_ay[u], dir, &nx, &ny)) continue;
-        if (unit_can_enter(unit_owner[u], nx, ny) != ENTER_OK) continue;
+        if (unit_can_enter(unit_owner[u], unit_kind[u], nx, ny) != ENTER_OK) continue;
         d = distance(nx, ny, bx, by);
         if (d < best_d) {
             best_d = d;
@@ -397,6 +397,9 @@ static byte home(byte u)
     }
     return best;
 }
+
+// A player builds a galley once it has this many cities, and cedar.
+#define GALLEY_CITIES 3
 
 // How many of p's units other than u are fortified in city c.
 static byte guards(byte p, byte u, byte c)
@@ -606,6 +609,12 @@ static void move_unit(byte u)
         }
         hunt(u, AI_RANGE);
         break;
+    case KIND_GALLEY:
+        // Galleys explore the coasts, to the land nobody of theirs has
+        // seen, which is how a people on an island meets the others. They
+        // carry nobody yet.
+        explore(u);
+        break;
     case KIND_BUILDER:
         // 5. Copper and tin next to any of its people's cities first, for
         // bronze (strategic_site()). Then improve the hexagons round its
@@ -646,7 +655,7 @@ static void move_unit(byte u)
 void ai_turn(byte p)
 {
     byte c, u, cap, kind, guard;
-    byte cities = 0, settlers, builders, explorers = 0;
+    byte cities = 0, settlers, builders, galleys, explorers = 0;
     byte units = unit_count_kind(p, KIND_NONE) - unit_count_kind(p, KIND_SETTLER);
 
     if (!player_alive(p)) return;
@@ -664,6 +673,7 @@ void ai_turn(byte p)
     if (cap > AI_UNIT_MAX) cap = AI_UNIT_MAX;
     settlers = unit_count_kind(p, KIND_SETTLER);
     builders = unit_count_kind(p, KIND_BUILDER);
+    galleys = unit_count_kind(p, KIND_GALLEY);
     for (u = 0; u < MAX_UNITS; ++u)
         if (unit_kind[u] == KIND_WARRIOR && unit_owner[u] == p
             && unit_orders[u] != ORDERS_FORTIFY)
@@ -700,6 +710,11 @@ void ai_turn(byte p)
                    && find_site(city_ax[c], city_ay[c])) {
             kind = KIND_SETTLER;
             ++settlers;
+        } else if (!galleys && cities >= GALLEY_CITIES && city_coastal(c)
+                   && player_has(p, RES_CEDAR)) {
+            // One galley, to explore the coasts, over the cap if need be.
+            kind = KIND_GALLEY;
+            ++galleys;
         } else if (units >= cap) {
             kind = KIND_NONE;
         } else if (builders < cities && work_site(c)) {
@@ -721,7 +736,7 @@ void ai_turn(byte p)
 // Land with nobody on it.
 static byte empty_land(byte ax, byte ay)
 {
-    return unit_can_enter(PLAYER_BARBARIAN, ax, ay) == ENTER_OK
+    return unit_can_enter(PLAYER_BARBARIAN, KIND_WARRIOR, ax, ay) == ENTER_OK
            && !(map_tile[ay][ax] & MAP_OCCUPIED);
 }
 

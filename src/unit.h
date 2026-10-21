@@ -19,6 +19,16 @@
 #define KIND_WARRIOR 2
 #define KIND_BUILDER 3
 #define KIND_SPEARMAN 4         // bronze: needs copper and tin (growth.h)
+#define KIND_GALLEY 5           // cedar and a coastal city; carries GALLEY_HOLD
+#define KINDS 6
+
+// **A galley** (milestone 9, Civilization's trireme) sails the shallows
+// and its own cities, never the open sea or land, and carries GALLEY_HOLD
+// land units: a land unit on a water hexagon is aboard the galley there.
+// It boards by stepping onto the galley, is sentried (ORDERS_FORTIFY) as
+// it does, goes wherever the galley goes from the water, and is woken by
+// unit_wake_cargo() when the galley stops next to land.
+#define GALLEY_HOLD 2
 
 // Standing orders: what a unit does instead of asking for any.
 #define ORDERS_NONE 0
@@ -86,12 +96,20 @@ byte unit_count_kind(byte owner, byte kind);
 // last in the list -- or UNIT_NONE.
 byte unit_at(byte ax, byte ay);
 
-// Whether a unit of `owner` may step onto (ax, ay): not into water, and not
-// onto another player's unit or city, which is an attack (combat.h).
+// Whether a unit of `kind` and `owner` may step onto (ax, ay): a land unit
+// not into water but onto its own galley with room (ENTER_BOARD, which the
+// computer players never do yet), a galley only onto the shallows or its
+// own city; and not onto another player's unit or city, which is an attack
+// (combat.h) -- except a land unit's onto a ship.
 #define ENTER_OK 0
-#define ENTER_WATER 1
+#define ENTER_WATER 1           // a land unit, and no galley to board
 #define ENTER_FOREIGN 2
-byte unit_can_enter(byte owner, byte ax, byte ay);
+#define ENTER_BOARD 3
+#define ENTER_LAND 4            // a galley, and land or the open sea
+byte unit_can_enter(byte owner, byte kind, byte ax, byte ay);
+
+// Galley u has stopped: wake the units aboard if it is next to land.
+void unit_wake_cargo(byte u);
 
 // Set or clear MAP_OCCUPIED on (ax, ay) from what is there now. Anything that
 // puts a unit or a city on a hexagon, or takes one off, calls this.

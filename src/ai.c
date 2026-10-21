@@ -1,6 +1,5 @@
 // In region 1 (src/region.h): called through the stubs in src/dispatch.s,
 // under these names here.
-#define ai_place ai_place_r1
 #define ai_turn ai_turn_r1
 #define ai_barbarians ai_barbarians_r1
 
@@ -11,16 +10,11 @@
 #include "growth.h"
 #include "improve.h"
 #include "map.h"
+#include "path.h"
 #include "sheet.h"
 #include "unit.h"
 
 #pragma clang section text="r1text" rodata="r1rodata"
-
-// How far apart the starting settlers should be, in hexagons, and how many
-// tries each spacing gets before the next, closer one is accepted.
-#define START_SPACING 16
-#define START_SPACING_STEP 4
-#define START_TRIES 200
 
 // A computer player stops building units, settlers apart, at AI_UNIT_BASE
 // plus AI_UNITS_A_CITY for each city, up to AI_UNIT_MAX -- a guard and a
@@ -68,7 +62,8 @@ HIGH_BSS byte ai_heading[MAX_UNITS];
 // SEEN_COLUMNS x SEEN_ROWS cells, 16 across and 8 down, a bit each --
 // ai_seen[p][block column], bit block row. A block is seen once one of p's
 // units or cities has been in it. ai_land says which blocks have any land
-// at all, worked out by ai_place() from the map, which never changes.
+// at all, worked out by ai_place() (src/aiplace.c) from the map, which
+// never changes.
 #define SEEN_COLUMNS 8
 #define SEEN_ROWS 4
 #define SEEN_X (MAP_COLUMNS / SEEN_COLUMNS)
@@ -76,7 +71,7 @@ HIGH_BSS byte ai_heading[MAX_UNITS];
 #error "ai_seen in ai.h is 16 bytes a player, a bit a block row"
 #endif
 HIGH_BSS byte ai_seen[PLAYERS][SEEN_X];
-HIGH_BSS static byte ai_land[SEEN_X];
+HIGH_BSS byte ai_land[SEEN_X];
 
 // An explorer that has come no nearer its block in this many turns gives
 // it up as out of reach -- over the water -- and counts it as seen.
@@ -168,23 +163,28 @@ static byte resources_round(byte ax, byte ay)
 static byte site_x, site_y;
 
 #define NO_SITE 0x7fff
+// With a galley a player looks FERRY_RANGE far for a site, over the water
+// (find_far_site()); otherwise SETTLE_RANGE.
+#define FERRY_RANGE 16
+static byte site_range = SETTLE_RANGE;
+
 static byte find_site(byte fx, byte fy)
 {
-    int dx, dy, y;
+    int dx, dy, y, rows = site_range / 2 + 1, columns = 2 * site_range;
     byte x, c, t, ok;
     word d, best = NO_SITE;
 
-    for (dy = -(SETTLE_RANGE / 2 + 1); dy <= SETTLE_RANGE / 2 + 1; ++dy) {
+    for (dy = -rows; dy <= rows; ++dy) {
         y = (int)fy + dy;
         if (y < 2 || y > MAP_ROWS - 3) continue;    // as ai_place()
         // A hexagon east is two columns.
-        for (dx = -2 * SETTLE_RANGE; dx <= 2 * SETTLE_RANGE; ++dx) {
+        for (dx = -columns; dx <= columns; ++dx) {
             x = (byte)((int)fx + dx + MAP_COLUMNS) & (MAP_COLUMNS - 1);
-            d = distance(fx, fy, x, (byte)y);
-            if (d > SETTLE_RANGE || 2 * d >= best) continue;
             t = MAP_TERRAIN(x, y);
             if (t != TILE_GRASS && t != TILE_PLAINS && t != TILE_FLOODPLAIN
                 && t != TILE_HILLS) continue;
+            d = distance(fx, fy, x, (byte)y);
+            if (d > site_range || 2 * d >= best) continue;
             if ((map_tile[y][x] & MAP_OCCUPIED) && d) continue;
             if (land_neighbours(x, (byte)y) < SITE_LAND) continue;
             ok = 1;
@@ -205,42 +205,6 @@ static byte find_site(byte fx, byte fy)
     return best != NO_SITE;
 }
 
-void ai_place(void)
-{
-    byte p, ax, ay, tries, t;
-    word spacing;
-
-    // Nobody has been anywhere yet; and where the land is.
-    for (ax = 0; ax < SEEN_X; ++ax) {
-        for (p = 0; p < PLAYERS; ++p) ai_seen[p][ax] = 0;
-        ai_land[ax] = 0;
-    }
-    for (ay = 0; ay < MAP_ROWS; ++ay)
-        for (ax = 0; ax < MAP_COLUMNS; ++ax) {
-            t = MAP_TERRAIN(ax, ay);
-            if (t != TILE_OCEAN && t != TILE_SHALLOW_OCEAN)
-                ai_land[ax / SEEN_COLUMNS] |= (byte)(1 << (ay / SEEN_ROWS));
-        }
-
-    for (p = PLAYER_FIRST_AI; p < PLAYERS; ++p) {
-        for (spacing = START_SPACING;; spacing -= START_SPACING_STEP) {
-            for (tries = 0; tries < START_TRIES; ++tries) {
-                ax = rnd() & (MAP_COLUMNS - 1);
-                ay = 2 + rnd() % (MAP_ROWS - 4);    // not on the edge rows
-                if (MAP_TERRAIN(ax, ay) == TILE_GRASS
-                    && !(map_tile[ay][ax] & MAP_OCCUPIED)
-                    && land_neighbours(ax, ay) >= 4
-                    && nearest(OWNER_ANY, ax, ay) >= spacing)
-                    goto found;
-            }
-            if (spacing <= START_SPACING_STEP) break;   // no room: none
-        }
-        continue;
-found:
-        unit_create(KIND_SETTLER, p, ax, ay);
-        unit_create(KIND_WARRIOR, p, ax, ay);   // as the human's, game.c
-    }
-}
 
 // One step of unit u in direction dir, if it may go there.
 static byte step(byte u, byte dir)
@@ -557,9 +521,179 @@ static byte to_work(byte u, byte c)
     return 1;
 }
 
+// A site for player p within reach of (fx, fy): SETTLE_RANGE, or with a
+// galley FERRY_RANGE, over the water.
+static byte first_of(byte p, byte kind, byte work);
+
+static byte find_far_site(byte p, byte fx, byte fy)
+{
+    byte found = find_site(fx, fy);
+    if (!found && first_of(p, KIND_GALLEY, 0) != UNIT_NONE) {
+        site_range = FERRY_RANGE;
+        found = find_site(fx, fy);
+        site_range = SETTLE_RANGE;
+    }
+    return found;
+}
+
+// ------------------------------------------------------------- ferrying
+
+// **Galleys ferry settlers** that cannot walk to their site -- it is over
+// the water -- as Civilization's computer players ferry theirs, but
+// without its continent numbers: a settler that has come no nearer its
+// site in FERRY_PATIENCE turns, while its people has a galley, asks for
+// one (unit_work[] = WANTS_FERRY) and waits on the coast; the galley comes
+// alongside and the settler boards it; the galley then sails for the
+// nearest site from the sea (find_site() from where it is), and next to
+// land within reach of it wakes the settler, who steps ashore and walks
+// on. One galley a people, and armies are not ferried yet.
+#define FERRY_PATIENCE 6
+#define WANTS_FERRY 0xff
+#define LANDING_RANGE 2
+
+static byte is_water(byte ax, byte ay)
+{
+    byte t = MAP_TERRAIN(ax, ay);
+    return t == TILE_OCEAN || t == TILE_SHALLOW_OCEAN;
+}
+
+static byte next_to_land(byte ax, byte ay)
+{
+    byte dir, nx, ny;
+    for (dir = 0; dir < 6; ++dir)
+        if (map_neighbour(ax, ay, dir, &nx, &ny) && !is_water(nx, ny))
+            return 1;
+    return 0;
+}
+
+static byte next_to_water(byte ax, byte ay)
+{
+    byte dir, nx, ny;
+    for (dir = 0; dir < 6; ++dir)
+        if (map_neighbour(ax, ay, dir, &nx, &ny) && is_water(nx, ny))
+            return 1;
+    return 0;
+}
+
+// p's first unit of `kind`, with unit_work[] `work` if that is not 0.
+static byte first_of(byte p, byte kind, byte work)
+{
+    byte v;
+    for (v = 0; v < MAX_UNITS; ++v)
+        if (unit_kind[v] == kind && unit_owner[v] == p
+            && (!work || unit_work[v] == work))
+            return v;
+    return UNIT_NONE;
+}
+
+// Land units aboard galley u.
+static byte cargo(byte u)
+{
+    byte v, n = 0;
+    if (!is_water(unit_ax[u], unit_ay[u])) return 0;
+    for (v = 0; v < MAX_UNITS; ++v)
+        if (unit_kind[v] != KIND_NONE && unit_kind[v] != KIND_GALLEY
+            && unit_ax[v] == unit_ax[u] && unit_ay[v] == unit_ay[u])
+            ++n;
+    return n;
+}
+
+// Settler u, waiting for a ferry: aboard a galley next to it, or towards
+// the galley until it is on the coast. With the galley gone it gives up.
+static void ferry_wait(byte u)
+{
+    byte dir, nx, ny, g = first_of(unit_owner[u], KIND_GALLEY, 0);
+
+    if (g == UNIT_NONE) {
+        unit_work[u] = 0;
+        explore(u);
+        return;
+    }
+    for (dir = 0; dir < 6; ++dir)
+        if (map_neighbour(unit_ax[u], unit_ay[u], dir, &nx, &ny)
+            && unit_can_enter(unit_owner[u], KIND_SETTLER, nx, ny)
+                   == ENTER_BOARD) {
+            unit_move_to(u, nx, ny);        // aboard, and sentried
+            unit_work[u] = 0;
+            unit_moves[u] = 0;
+            return;
+        }
+    if (!is_water(unit_ax[u], unit_ay[u])
+        && next_to_water(unit_ax[u], unit_ay[u])) {
+        unit_moves[u] = 0;                  // on the coast: wait
+        return;
+    }
+    approach(u, unit_ax[g], unit_ay[g]);
+}
+
+// Settler u, aboard and woken next to land: ashore, on the land next to it
+// nearest its site.
+static void go_ashore(byte u)
+{
+    byte dir, nx, ny, best = DIR_NONE;
+    word d, best_d = 0xffff;
+
+    if (find_site(unit_ax[u], unit_ay[u]))
+        for (dir = 0; dir < 6; ++dir) {
+            if (!map_neighbour(unit_ax[u], unit_ay[u], dir, &nx, &ny)
+                || unit_can_enter(unit_owner[u], KIND_SETTLER, nx, ny)
+                       != ENTER_OK)
+                continue;
+            d = distance(nx, ny, site_x, site_y);
+            if (d < best_d) {
+                best_d = d;
+                best = dir;
+            }
+        }
+    if (best == DIR_NONE || !step(u, best)) unit_moves[u] = 0;
+}
+
+// One step of galley u towards (tx, ty) along the shallows (sea_route(),
+// src/path.c, rather than approach(), which got stuck behind every
+// peninsula). Whether it went.
+static byte sail(byte u, byte tx, byte ty)
+{
+    byte dir = sea_route(unit_ax[u], unit_ay[u], tx, ty);
+    return dir != DIR_NONE && step(u, dir);
+}
+
+// Galley u: with a settler aboard, to its site; without, to a settler
+// waiting for it; with nobody to ferry, exploring the coasts. A settler it
+// cannot reach is let go, to walk or to ask again later.
+static void ferry(byte u)
+{
+    byte s, p = unit_owner[u], ax = unit_ax[u], ay = unit_ay[u];
+
+    if (cargo(u)) {
+        if (find_far_site(p, ax, ay)) {
+            if (distance(ax, ay, site_x, site_y) <= LANDING_RANGE
+                && next_to_land(ax, ay)) {
+                unit_wake_cargo(u);
+                unit_moves[u] = 0;
+                return;
+            }
+            if (sail(u, site_x, site_y)) return;
+        }
+        explore(u);
+        return;
+    }
+    s = first_of(p, KIND_SETTLER, WANTS_FERRY);
+    if (s == UNIT_NONE) {
+        explore(u);
+        return;
+    }
+    if (distance(ax, ay, unit_ax[s], unit_ay[s]) == 1 && is_water(ax, ay)) {
+        unit_moves[u] = 0;                  // alongside: it boards
+    } else if (!sail(u, unit_ax[s], unit_ay[s])) {
+        unit_work[s] = 0;                   // out of reach
+        explore(u);
+    }
+}
+
 static void move_unit(byte u)
 {
     byte c, w, ax = unit_ax[u], ay = unit_ay[u];
+    word d;
 
     if (unit_owner[u] == PLAYER_BARBARIAN) {
         if (!attack_near(u, BARB_ODDS)) hunt(u, BARB_RANGE);
@@ -569,14 +703,31 @@ static void move_unit(byte u)
     case KIND_SETTLER:
         // 1. With no city, found one where it stands; it was put on good
         // land. A settler built later makes for the nearest site and
-        // founds a city there, or explores if there is none in reach.
+        // founds a city there, or explores if there is none in reach --
+        // or, coming no nearer it, waits for a galley (ferry_wait()).
+        if (is_water(ax, ay)) {
+            go_ashore(u);
+            return;
+        }
         if (home(u) != CITY_NONE) {
-            if (!find_site(ax, ay)) {
+            if (!find_far_site(unit_owner[u], ax, ay)) {
                 explore(u);
                 return;
             }
             if (site_x != ax || site_y != ay) {
+                if (unit_work[u] == WANTS_FERRY) {
+                    ferry_wait(u);
+                    return;
+                }
+                d = distance(ax, ay, site_x, site_y);
                 approach(u, site_x, site_y);
+                if (distance(unit_ax[u], unit_ay[u], site_x, site_y) < d)
+                    unit_work[u] = 0;
+                else if (unit_work[u] < FERRY_PATIENCE)
+                    ++unit_work[u];
+                else if (first_of(unit_owner[u], KIND_GALLEY, 0)
+                         != UNIT_NONE)
+                    unit_work[u] = WANTS_FERRY;
                 return;
             }
         }
@@ -610,10 +761,10 @@ static void move_unit(byte u)
         hunt(u, AI_RANGE);
         break;
     case KIND_GALLEY:
-        // Galleys explore the coasts, to the land nobody of theirs has
-        // seen, which is how a people on an island meets the others. They
-        // carry nobody yet.
-        explore(u);
+        // Galleys ferry settlers (ferry()), and otherwise explore the
+        // coasts, to the land nobody of theirs has seen, which is how a
+        // people on an island meets the others.
+        ferry(u);
         break;
     case KIND_BUILDER:
         // 5. Copper and tin next to any of its people's cities first, for
@@ -707,7 +858,7 @@ void ai_turn(byte p)
             ++explorers;
         } else if (cities + settlers < AI_CITY_CAP && city_size[c] >= 2
                    && (work_food > 2 * city_size[c] + 1 || !settlers)
-                   && find_site(city_ax[c], city_ay[c])) {
+                   && find_far_site(p, city_ax[c], city_ay[c])) {
             kind = KIND_SETTLER;
             ++settlers;
         } else if (!galleys && cities >= GALLEY_CITIES && city_coastal(c)

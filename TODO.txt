@@ -1,9 +1,14 @@
 --- OPEN ---
 
-NEXT: the computer players' galleys carry settlers and armies to other landmasses (they only
-explore now); then merchant fleets and emporia. The tile sheet is full (34 of 34): a new tile
-needs room first (CLAUDE.md "When bank 5 fills up"). Resident space 377 bytes; game.c's cold
-functions (menu commands, attack, draw_hover) are the next to move out (src/turn.c did 915)
+NEXT: what is left of milestone 9 -- ferrying armies (an AI at war with a people over the
+water), merchant fleets and emporia -- or milestone 10, the end game (drafted below). The
+tile sheet is full (34 of 34): a new tile needs room first (CLAUDE.md "When bank 5 fills
+up"). Room is short everywhere but regions 2-4: resident 376 bytes, region 0 440, region 1
+312 (more of ai.c can move out, as ai_place() did)
+
+The AI ferries settlers now, but rarely: most peoples reach AI_CITY_CAP (6) on their own land
+before they have a galley. Raise the cap (7-8, MAX_CITIES is 32 shared) if overseas cities
+are wanted sooner.
 
 Galleys on seed 3 did not bring the peoples together in 300 turns: an exploring galley rarely
 ends up next to anybody. Galleys sail the shallows only; seed 7 has a landmass the shallows
@@ -100,7 +105,10 @@ Milestone 9: trade
 - DONE (21 Oct 2026): the galley (Civ 1's trireme): cedar and a coastal city, the shallows
   only, carries 2 land units (step onto it to board; woken when it stops next to land);
   computer players build one and explore with it. Cedar 12% -> 25% of forests
-- Later: AI ferrying, physical trade fleets, emporia
+- DONE (21 Oct 2026): AI ferrying of settlers: a settler that cannot walk to its site asks
+  for the galley, boards, and is landed near the site; galleys route along the shallows by a
+  breadth-first search (src/path.c); with a galley the AI looks 16 hexagons for a site
+- Later: ferrying armies, physical trade fleets, emporia
 
 Milestone 10: the end game -- the Bronze Age Collapse (DRAFT, vision.md sections 4 and 5)
 A game is 400 turns, as Civ 1's: growth and rivalry first, then the Crisis, then the end.

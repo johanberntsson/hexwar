@@ -188,7 +188,6 @@ stub:       .macro  name, target, region
 
 ; Region 1, slot 1: the computer players and the cities' yields and
 ; growth.
-            stub    ai_place, ai_place_r1, 1
             stub    ai_turn, ai_turn_r1, 1
             stub    ai_barbarians, ai_barbarians_r1, 1
             stub    player_owns, player_owns_r1, 1
@@ -215,8 +214,9 @@ stub:       .macro  name, target, region
             stub    diplomacy_greet, diplomacy_greet_r3, 3
             stub    diplomacy_screen, diplomacy_screen_r3, 3
 
-; Region 4, slot 2: trade.
+; Region 4, slot 2: trade, and routes over the sea.
             stub    trade_reset, trade_reset_r4, 4
             stub    trade_turn, trade_turn_r4, 4
             stub    trade_agree, trade_agree_r4, 4
             stub    trade_propose, trade_propose_r4, 4
+            stub    sea_route, sea_route_r4, 4

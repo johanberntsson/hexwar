@@ -30,6 +30,8 @@ extern byte ai_heading[MAX_UNITS];
 // Where each player's units have been, in blocks of 8x4 cells, for its
 // explorers; for save.c.
 extern byte ai_seen[PLAYERS][16];
+// Bit by: block (bx, by) has land; set by ai_place().
+extern byte ai_land[16];
 
 // Player p's turn: moves back, what each city builds, and every unit's
 // move. Production itself is end_turn()'s, for every player at once.

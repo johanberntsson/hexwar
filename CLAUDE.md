@@ -205,13 +205,13 @@ buffers at the default `$FF80000` and corrupts the display.
 
 | Address | Size | Contents |
 |---|---|---|
-| `$2001-$5FFF`, `$8000-$9FFF` | 24 KB | the resident program: code, data, BSS, C stack. 377 bytes free, nearly all at `$5E87-$5FFF` |
-| `$6000-$7FFF` | 8 KB | the code window (`src/region.h`); as loaded, region 0 — the title, setup and help screens, the menus, save and load, the sheet's and the map's loaders, the owners' flags. 2.3 KB free |
-| `$13000-$14FFF` | 8 KB | code slot 1: region 1, from `SEVENSHIPS.R1` by way of attic: the computer players, the cities' yields and growth, bronze. 1.3 KB free |
-| `$15000-$16FFF` | 8 KB | code slot 2, shared: region 2 (the city screen, Top Five Cities, the builders' improvements; 2.7 KB free) region 3 (diplomacy; 2.3 KB free) or region 4 (trade; 5.9 KB free), whichever was called last |
+| `$2001-$5FFF`, `$8000-$9FFF` | 24 KB | the resident program: code, data, BSS, C stack. 376 bytes free, nearly all at `$5E88-$5FFF` |
+| `$6000-$7FFF` | 8 KB | the code window (`src/region.h`); as loaded, region 0 — the title, setup and help screens, the menus, save and load, the sheet's and the map's loaders, the owners' flags, the end of a turn and a game's start (`src/turn.c`), the computer players' starts (`src/aiplace.c`). 440 bytes free |
+| `$13000-$14FFF` | 8 KB | code slot 1: region 1, from `SEVENSHIPS.R1` by way of attic: the computer players and their ferrying, the cities' yields and growth, bronze. 312 bytes free |
+| `$15000-$16FFF` | 8 KB | code slot 2, shared: region 2 (the city screen, Top Five Cities, the builders' improvements; 2.7 KB free) region 3 (diplomacy; 2.3 KB free) or region 4 (trade and the galleys' routes; 5.5 KB free), whichever was called last |
 | `$17000-$1EFFF` | 32 KB | the tile sheet's tiles 18-33, where regions 3 to 6 would have been: the resources, the improved resources, the spearman, the galley; **full** |
 | `$A000-$BFFF` | 8 KB | `highram`, under the BASIC ROM, banked out by `src/bank.s`: `map_tile`, the unit and city arrays, the sprite blocks, the AI's headings, the staging buffers of the texts and the regions, the texts' line buffers, the sheet loader's buffers, the saved VIC registers, the AI's exploration memory, the resource list, the peoples' relations and attitudes and the letters' names, the trade deals; about 2.5 KB free — `HIGH_BSS` in `src/mega65.h` moves a variable there, and **the startup does not clear it** |
-| `$1600-$1EFF` | 2304 | `zpsave` (56 bytes, BASIC's zero page during the run), then `lowfree`: the popup's 400-byte text and the scratch buffers of the view and the minimap, 1.6 KB free — `LOW_FREE` in `src/mega65.h` moves a variable there |
+| `$1600-$1EFF` | 2304 | `zpsave` (56 bytes, BASIC's zero page during the run), then `lowfree`: the popup's 400-byte text and the scratch buffers of the view and the minimap, and the sea routes' search (`src/path.c`), 990 bytes free — `LOW_FREE` in `src/mega65.h` moves a variable there |
 | `$12000` | 4000 | screen RAM, 80x25 cells of 2 bytes |
 | `$40000-$56FFF` | 94208 | the view's tile store, 23 rows of 4096: 3840 for the window, then 256 holding four of the minimap's characters (all 80 of them, rows 0-19) or, in rows 20-22, two of the owners' flags (92 slots) |
 | `$57000-$5FFFF` | 36864 | the x-expanded tile sheet's tiles 0-17, 2 KB each: all the room there is |
@@ -501,10 +501,14 @@ entry in each of `dispatch.s`'s per-region tables (`slot_of`,
 `region_stamp[]`'s initialiser in `src/region.c`, and its file in the
 Makefile's `REGION_FILES`; `packprg.py` needs nothing. Attic's bank 1
 holds eight regions as the tables stand. **Resident space is what to
-watch now**: 377 bytes (21 Oct 2026, after the galley; the slot
-copying cost 140, and each stub is 13), against 1.2 KB in region 0, 1.1
-KB in region 1, 2.6 KB in region 2, 2.3 KB in region 3 and 5.9 KB in
-region 4. **The way to resident room is `game.c`**, whose static
+watch now**: 376 bytes (21 Oct 2026, after the AI's ferrying; the
+slot copying cost 140, and each stub is 13), against 440 bytes in region
+0, 312 in region 1, 2.6 KB in region 2, 2.3 KB in region 3 and 5.5 KB in
+region 4. **Regions 0 and 1 are nearly full too**: region 1's next room
+is more of `ai.c` moving out (as `ai_place()` went to `src/aiplace.c`
+in region 0, called directly from `game_init()` there, no stub), and new
+code goes to regions 2-4 or a new region 5 where it does not run in a
+loop against another slot-2 region. **The way to resident room is `game.c`**, whose static
 functions are most of the resident code (the listing shows them all as
 `game_run`, 11.9 KB): for the galley, the end of a turn (`end_turn()`,
 now `game_end_turn()`), Play 50 Turns and `game_init()` moved into
@@ -776,11 +780,11 @@ adjacency with the view moved to the newcomer, bronze and the spearman,
 and the info line following the active unit; and (the same day)
 milestone 8's diplomacy, "well enough", so its tuning is still open
 (TODO.txt); and trade ("looking good"). **Not yet tried on one**: the
-galley, and `src/turn.c`.
+galley, and `src/turn.c`; the computer players' ferrying.
 
-**Where to start next time**: TODO.txt — the computer players' use of
-galleys (ferrying settlers and armies), then the merchant fleets and
-emporia. **The tile sheet is full** (34 of 34): another tile needs room
+**Where to start next time**: TODO.txt — milestone 10's end game is
+drafted there; the merchant fleets and emporia and ferrying armies are
+what is left of milestone 9. **The tile sheet is full** (34 of 34): another tile needs room
 first (**When bank 5 fills up**).
 
 **The title screen comes first** (`src/title.c`): `title_show()` puts the
@@ -1342,8 +1346,30 @@ has the orders. Combat needs nothing new: the best defender on the
 hexagon fights and, at sea as outside a city, the stack dies with it.
 **The computer players** build one galley each, over the unit cap if
 need be, once they have `GALLEY_CITIES` (3) cities, cedar and a coastal
-city, and it explores like a warrior (`explore()`, round the coast);
-they do not carry anybody yet. **Cedar** went from 12% to 25% of forests
+city. **It ferries settlers** (`ferry()` in `src/ai.c`, Civilization's
+way without its continent numbers): a settler that comes no nearer its
+site in `FERRY_PATIENCE` (6) turns, while its people has a galley, asks
+for one (`unit_work[]` = `WANTS_FERRY`, the count capped so that it
+cannot wrap round to it) and waits on the coast; the galley sails
+alongside, the settler boards (`ferry_wait()`), the galley sails for the
+nearest site from where it is and, next to land within
+`LANDING_RANGE` (2) of it, wakes the settler, who steps ashore
+(`go_ashore()`) and walks on. **With a galley a people looks
+`FERRY_RANGE` (16) hexagons for a site, not `SETTLE_RANGE` (6)**
+(`find_far_site()`), both for building a settler and for the settler's
+target — a people whose land is full would otherwise never build one —
+and `find_site()` tests the terrain before the distance, so a far search
+is tens of milliseconds. **Galleys sail by `sea_route()`** (`src/path.c`,
+region 4): a breadth-first search from the target out over the shallows
+until it reaches the galley, the cell that reached it being the first
+step, again for every step; a visited bitmap (320 bytes) and a 128-cell
+queue in `LOW_FREE`. The greedy `approach()` it replaced got stuck
+behind every peninsula. With nobody to ferry the galley explores
+(`explore()`). Armies are not ferried yet. Counted with throwaway
+counters in 300 turns on seed 3: two settlers asked, boarded and went
+ashore; on seeds 1 and 7 none asked, since most peoples reach
+`AI_CITY_CAP` (6) on their own land first — raising the cap is the lever
+if overseas cities are wanted sooner. **Cedar** went from 12% to 25% of forests
 in `mapgen.py`, since 4 cedar a map gave no galleys at all: now 14-23.
 In 300 turns of autoplay galleys were built on seeds 3 and 7 (on seed 7
 the human's side traded cedar for tin and built one too); on seed 3 they

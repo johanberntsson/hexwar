@@ -104,6 +104,9 @@ most important routines included in each source file.
 | &nbsp;&nbsp;&nbsp;_diplomacy\_turn_ | once a turn: who has met whom, the attitudes, and the computer players' declarations and offers |
 | &nbsp;&nbsp;&nbsp;_diplomacy\_greet_ | the letters to the player, in popups, the offers answered Yes or No |
 |  |  |
+| path.c | routes along the shallows for galleys: a breadth-first search |
+| aiplace.c | where the computer players start, out of ai.c into region 0 |
+|  |  |
 | trade.c | goods exchanged between the peoples, as gifts or for other goods |
 | &nbsp;&nbsp;&nbsp;_trade\_turn_ | once a turn: deals end with the peace, and the computer players ask for goods or tribute |
 | &nbsp;&nbsp;&nbsp;_trade\_propose_ | the player's proposal on the Diplomacy screen |
@@ -159,7 +162,7 @@ to `release/`), holding five files:
 | SEVENSHIPS.R1 | code region 1, the computer players and the cities' growth: a header and the code, kept in Attic RAM and run at \$6000 from bank 1 |
 | SEVENSHIPS.R2 | code region 2, the city screen, Top Five Cities and the builders' improvements, the same way |
 | SEVENSHIPS.R3 | code region 3, diplomacy, the same way |
-| SEVENSHIPS.R4 | code region 4, trade, the same way |
+| SEVENSHIPS.R4 | code region 4, trade and the galleys' routes, the same way |
 
 The C65 ROM boots AUTOBOOT.C65 automatically. `main()` then:
 
@@ -216,13 +219,13 @@ window shows one region of code at a time. The figures below are from the linker
 | -- |  - | ---- |
 | \$0002-\$0039 | 0.1 | Calypsi's pseudo registers, in zero page |
 | \$1600-\$1637 | 0.05 | `zpsave`: BASIC's zero page \$02-\$39, saved at start-up and put back on exit |
-| \$1638-\$18e0 | 0.7 | the `lowfree` section (`LOW_FREE`): the popup's text and the scratch buffers of the view and the minimap |
-| \$18e1-\$1eff | 1.5 | free |
+| \$1638-\$1b20 | 1.2 | the `lowfree` section (`LOW_FREE`): the popup's text, the scratch buffers of the view and the minimap, and the galleys' route search |
+| \$1b21-\$1eff | 1.0 | free |
 | \$2001-\$5b7e | 14.9 | BASIC stub, startup and resident code |
-| \$5b7f-\$5c04 | 0.1 | initialised data: the DMA lists |
-| \$5c05-\$5d04 | 0.25 | C stack |
-| \$5d05-\$5e86 | 0.4 | BSS: small state |
-| \$5e87-\$5fff | 0.4 | free |
+| \$5b7f-\$5c05 | 0.1 | initialised data: the DMA lists |
+| \$5c06-\$5d05 | 0.25 | C stack |
+| \$5d06-\$5e87 | 0.4 | BSS: small state |
+| \$5e88-\$5fff | 0.4 | free |
 | \$6000-\$7fff | 8 | the code window; region 0 as loaded (6.8 KB used) |
 | \$8000-\$9ffe | 8 | resident constant data and code |
 | \$a000-\$b5f4 | 5.5 | `highbss` (`HIGH_BSS`): the map `map_tile` (terrain, improvements, explored and occupied bits), the unit and city arrays (the cities' size and food box among them), the peoples' relations and attitudes, the trade deals, the sprite blocks, the AI's headings, the staging buffers of the texts and the regions, the texts' line buffers, the sheet loader's buffers and row extents, the saved VIC registers, and the resources, a list by hexagon row |
@@ -279,7 +282,7 @@ holds the screens that are not the map -- title, setup, help -- with the
 menus, save and load and the loaders of the tile sheet and the map;
 region 1 holds the computer players and the cities' yields and growth;
 region 2 the city screen, Top Five Cities and the builders'
-improvements; region 3 diplomacy; region 4 trade.
+improvements; region 3 diplomacy; region 4 trade and the galleys' routes.
 
 Resident code calls a function in a region through a stub of the same
 name (`src/dispatch.s`), which maps the region in (copying it into its

@@ -1,0 +1,6 @@
+# A computer player refuses what the player proposed (arguments as in
+# letter_greet.txt).
+Say to {arg 0}, {arg 1}: thus says {arg 2}, {arg 3}. Why does my \
+brother write to me thus? I will not do it.
+
+The {arg 4} refuse.

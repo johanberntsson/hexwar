@@ -1,0 +1,14 @@
+# The letters between rulers (src/diplomacy.c), in the formulas of the
+# Amarna and Ugarit letters (vision.md section 3). Every letter gets the
+# same arguments: {arg 0} the ruler written to and {arg 1} their title,
+# {arg 2} the ruler writing and {arg 3} their title, {arg 4} the writer's
+# people. The texts from letter_war.txt on must stay in the Makefile's
+# order, which is LETTER_* in src/diplomacy.c. A popup holds 400
+# characters, the names included.
+#
+# This one is the first, when a people is met.
+You have met the {arg 4}.
+
+Say to {arg 0}, {arg 1}, my brother: thus says {arg 2}, {arg 3}, your \
+brother. For me all goes well. For you, your household, your chariots \
+and your land, may all go well. Let there be peace between our lands.

@@ -1,0 +1,7 @@
+# A computer player at war with the player asks for a ceasefire, which
+# the popup puts as a question (arguments as in letter_greet.txt).
+Say to {arg 0}, {arg 1}, my brother: thus says {arg 2}, {arg 3}. Enough \
+blood has been spilled between our lands. Let our soldiers lay down \
+their spears for a time.
+
+Agree to a ceasefire with the {arg 4}?

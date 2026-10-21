@@ -1,11 +1,19 @@
 --- OPEN ---
 
-NEXT: milestone 8 (diplomacy) in code region 3, which has 6.6 KB free. Code that calls
-diplomacy in a loop must not be in region 2 (same slot; see src/region.h). Roads still need
-tiles (one left; and a map bit or a 320-byte bitmap)
+NEXT: milestone 9 (trade), in a region of its own (region 4; CLAUDE.md "Growing past
+32 KB" has what a new region takes). Gifts would give diplomacy something to offer:
+tribute, and the letters' gift exchange. Roads still need tiles (one left; and a map bit
+or a 320-byte bitmap)
+
+Diplomacy to tune once it has been played: wars come from crowding (cities of two
+peoples within 7 hexagons), and in 300 turns of autoplay on seed 1 only the Egyptians
+and Canaanites fought. A computer player accepts a ceasefire the turn the human declares
+war on it if it is the weaker.
 
 Peoples on separate landmasses never meet before there are boats (map seeds 3 and 7).
 Place them two to a continent, more land (MAP_LAND), or leave it for milestone 9's ships
+
+There's no visual feedback who wins or loses when attacking or being attacked
 
 --- IDEAS, not yet decided implement or not --
 
@@ -61,13 +69,16 @@ Milestone 7: resources -- DONE (20 Oct 2026)
   sheet's): irrigated cattle (pasture), olives and wine (orchard recoloured). One tile
   left. Fish's improved tile (boats) waits for a work boat
 
-Milestone 8: basic diplomacy
-- Contact between peoples; peace, war, ceasefire; an attitude value per pair
-- Computer players declare war (and make peace) themselves
-- Letters in the Amarna formulas (vision.md section 3), as templates in attic texts
-- DONE ahead of it: contact (a people is met when seen; saved, with a greeting popup) and
-  Advisors/Diplomacy listing the peoples met with ruler, war/peace, cities, citizens, units
-  (20 Oct 2026: the view now moves to whoever was met, above the popup)
+Milestone 8: basic diplomacy -- DONE (21 Oct 2026)
+- DONE: contact between all the peoples (adjacency); war, ceasefire (16 turns, then war)
+  and peace; an attitude per pair (temper per people, drift, grievances: war declared,
+  units by cities, cities crowding each other, refused offers; colder to the human by level)
+- DONE: computer players declare war, ask for ceasefires and offer peace by Civ 1's rules
+  (OpenCivOne Diplomacy.cs: one turn in four per pair, the stronger declares)
+- DONE: letters in the Amarna formulas, res/text/letter_*.txt, as popups; offers answered
+  Yes/No. The human proposes ceasefire/peace or declares war on Advisors/Diplomacy
+- Not yet: tribute and gifts (need trade), the vassals' formula, alliances, news of wars
+  between the others
 
 Milestone 9: trade
 - Start with gift exchange of goods through the letters

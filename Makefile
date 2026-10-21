@@ -53,6 +53,12 @@ DEBUG ?= 1
 ifeq ($(DEBUG),1)
 CFLAGS  += -DDEBUG_MENU
 endif
+# Debug: Play 50 Turns plays this many instead (up to 255), so that a
+# headless test of a long game needs fewer FAKE_KEYS, which take resident
+# space: `make NO_TITLE=1 AUTOPLAY_TURNS=200 FAKE_KEYS=...`.
+ifneq ($(AUTOPLAY_TURNS),)
+CFLAGS  += -DAUTOPLAY_TURNS=$(AUTOPLAY_TURNS)
+endif
 ASFLAGS  = $(TARGET)
 # Raw, one file a memory, since the windows' regions share addresses;
 # tools/packprg.py makes the PRG and the region files from them. --hosted
@@ -149,7 +155,14 @@ TEXTS    = $(RES)/text/help.txt \
            $(RES)/text/list_levels.txt \
            $(RES)/text/list_level_notes.txt \
            $(RES)/text/list_cities.txt \
-           $(RES)/text/list_resources.txt
+           $(RES)/text/list_resources.txt \
+           $(RES)/text/letter_greet.txt \
+           $(RES)/text/letter_war.txt \
+           $(RES)/text/letter_ceasefire.txt \
+           $(RES)/text/letter_peace.txt \
+           $(RES)/text/letter_truce_over.txt \
+           $(RES)/text/letter_yes.txt \
+           $(RES)/text/letter_no.txt
 TEXT_PAK = $(BUILD)/text.pak
 TEXT_IDS = $(BUILD)/textid.h
 

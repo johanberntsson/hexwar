@@ -29,12 +29,6 @@ byte at_war(byte a, byte b)
     return combat_war[a] & (byte)(1 << b);
 }
 
-void declare_war(byte a, byte b)
-{
-    combat_war[a] |= (byte)(1 << b);
-    combat_war[b] |= (byte)(1 << a);
-}
-
 void combat_reset(void)
 {
     byte p;

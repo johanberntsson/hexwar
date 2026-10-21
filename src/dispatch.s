@@ -204,6 +204,9 @@ stub:       .macro  name, target, region
             stub    improve_turn, improve_turn_r2, 2
 
 ; Region 3, slot 2: diplomacy.
+            stub    diplomacy_reset, diplomacy_reset_r3, 3
+            stub    diplomacy_turn, diplomacy_turn_r3, 3
+            stub    declare_war, declare_war_r3, 3
             stub    diplomacy_contact, diplomacy_contact_r3, 3
             stub    diplomacy_greet, diplomacy_greet_r3, 3
             stub    diplomacy_screen, diplomacy_screen_r3, 3

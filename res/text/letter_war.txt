@@ -1,0 +1,7 @@
+# A computer player declares war on the player (arguments as in
+# letter_greet.txt).
+Say to {arg 0}, {arg 1}: thus says {arg 2}, {arg 3}. My messengers come \
+back to me with nothing, and you have done evil to my land. Now my \
+chariots will come against you.
+
+The {arg 4} have declared war on you.

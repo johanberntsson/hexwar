@@ -205,12 +205,12 @@ buffers at the default `$FF80000` and corrupts the display.
 
 | Address | Size | Contents |
 |---|---|---|
-| `$2001-$5FFF`, `$8000-$9FFF` | 24 KB | the resident program: code, data, BSS, C stack. 365 bytes free, nearly all at `$5E94-$5FFF` |
+| `$2001-$5FFF`, `$8000-$9FFF` | 24 KB | the resident program: code, data, BSS, C stack. 332 bytes free, nearly all at `$5EBF-$5FFF` |
 | `$6000-$7FFF` | 8 KB | the code window (`src/region.h`); as loaded, region 0 — the title, setup and help screens, the menus, save and load, the sheet's and the map's loaders, the owners' flags. 2.3 KB free |
 | `$13000-$14FFF` | 8 KB | code slot 1: region 1, from `SEVENSHIPS.R1` by way of attic: the computer players, the cities' yields and growth, bronze. 1.3 KB free |
-| `$15000-$16FFF` | 8 KB | code slot 2, shared: region 2 (the city screen, Top Five Cities, the builders' improvements; 2.7 KB free) or region 3 (diplomacy; 6.6 KB free), whichever was called last |
+| `$15000-$16FFF` | 8 KB | code slot 2, shared: region 2 (the city screen, Top Five Cities, the builders' improvements; 2.7 KB free) or region 3 (diplomacy; 3 KB free), whichever was called last |
 | `$17000-$1EFFF` | 32 KB | the tile sheet's tiles 18-33, where regions 3 to 6 would have been: the resources, the improved resources, the spearman; one tile free |
-| `$A000-$BFFF` | 8 KB | `highram`, under the BASIC ROM, banked out by `src/bank.s`: `map_tile`, the unit and city arrays, the sprite blocks, the AI's headings, the staging buffers of the texts and the regions, the texts' line buffers, the sheet loader's buffers, the saved VIC registers, the AI's exploration memory, the resource list; about 2.8 KB free — `HIGH_BSS` in `src/mega65.h` moves a variable there, and **the startup does not clear it** |
+| `$A000-$BFFF` | 8 KB | `highram`, under the BASIC ROM, banked out by `src/bank.s`: `map_tile`, the unit and city arrays, the sprite blocks, the AI's headings, the staging buffers of the texts and the regions, the texts' line buffers, the sheet loader's buffers, the saved VIC registers, the AI's exploration memory, the resource list, the peoples' relations and attitudes and the letters' names; about 2.6 KB free — `HIGH_BSS` in `src/mega65.h` moves a variable there, and **the startup does not clear it** |
 | `$1600-$1EFF` | 2304 | `zpsave` (56 bytes, BASIC's zero page during the run), then `lowfree`: the popup's 400-byte text and the scratch buffers of the view and the minimap, 1.6 KB free — `LOW_FREE` in `src/mega65.h` moves a variable there |
 | `$12000` | 4000 | screen RAM, 80x25 cells of 2 bytes |
 | `$40000-$56FFF` | 94208 | the view's tile store, 23 rows of 4096: 3840 for the window, then 256 holding four of the minimap's characters (all 80 of them, rows 0-19) or, in rows 20-22, two of the owners' flags (92 slots) |
@@ -501,9 +501,11 @@ entry in each of `dispatch.s`'s per-region tables (`slot_of`,
 `region_stamp[]`'s initialiser in `src/region.c`, and its file in the
 Makefile's `REGION_FILES`; `packprg.py` needs nothing. Attic's bank 1
 holds eight regions as the tables stand. **Resident space is what to
-watch now**: 365 bytes (21 Oct 2026; the slot copying cost 140), against
-2.3 KB in region 0, 1.3 KB in region 1, 2.7 KB in region 2 and 6.6 KB in
-region 3. Code that is not hot can move out of the resident program into
+watch now**: 332 bytes (21 Oct 2026, after milestone 8; the slot
+copying cost 140), against 2.3 KB in region 0, 1.3 KB in region 1, 2.7
+KB in region 2 and 3 KB in region 3. **Confirmed on a real MEGA65** (21
+Oct 2026): the slot copying, through long autoplays, the city screen and
+the Diplomacy screen in turn, and save and load. Code that is not hot can move out of the resident program into
 a region. So new subsystems go into a region from the start, per-turn
 ones especially.
 `--no-cross-call --no-interprocedural-cross-jump` are on for the banked
@@ -755,21 +757,20 @@ done but for roads** (20 Oct 2026), which need tiles and a map bit:
 improvements, yields, city size and growth, worked tiles by hand,
 Civilization's production rules for the computer players and its
 grassland shields. **7, resources, and 7b, bronze, are done** (20 Oct
-2026; see **Resources** and **Bronze**). Ahead of milestone 8 there is
-contact between the peoples and an Advisors → Diplomacy screen (see
-**Contact**), the exploring that makes contact happen (see
-**Exploring**), and the owners' flags that say whose a unit is.
+2026; see **Resources** and **Bronze**), and **8, diplomacy** (21 Oct
+2026; see **Diplomacy**), with the exploring that makes contact happen
+(see **Exploring**) and the owners' flags that say whose a unit is.
 **Confirmed on a real MEGA65** (21 Oct 2026): all of 20 Oct 2026's
 later work — the resources and the improved resources drawn from bank 1
 at `$17000` up, the map loader in region 0, the owners' flags, contact by
 adjacency with the view moved to the newcomer, bronze and the spearman,
 and the info line following the active unit. **Not yet tried on one**:
-the code regions kept in attic RAM and copied into slots (see **Growing
-past 32 KB**).
+milestone 8's diplomacy.
 
-**Where to start next time**: milestone 8, diplomacy, in region 3 (6.6 KB
-free; see TODO.txt). The resident program has 365 bytes and the tile
-sheet one tile, so roads still need tile room.
+**Where to start next time**: TODO.txt. Milestone 9, trade, will want
+a region of its own (region 4; see **Growing past 32 KB** for what a new
+region takes). The resident program has 332 bytes and the tile sheet one
+tile, so roads still need tile room.
 
 **The title screen comes first** (`src/title.c`): `title_show()` puts the
 title up once the texts are read and before the sheet and the map are,
@@ -886,7 +887,8 @@ adjective lists. `player_civ[]` says which
 people each player is — **every people plays**, `PLAYERS` = `CIVS` = 4,
 the human first and the computer players the others in list order — and
 `city_name_of()` goes through it. The five difficulty levels (Scribe to
-Great King) are there too, in `game_level`, which nothing reads yet.
+Great King) are there too, in `game_level`, which only diplomacy reads
+yet: each level makes the computer players 5 points colder to the human.
 `NO_TITLE` builds play the Mycenaeans.
 
 **The computer players are `src/ai.c`** (milestone 3). `ai_place()`, from
@@ -1000,10 +1002,12 @@ barbarians (`city_destroy()`, which moves the last city into the hole).
 `unit_can_enter()` still says `ENTER_FOREIGN` for another player's
 hexagon, and the caller decides that it is an attack: `attack()` in
 `src/game.c` for the human, `attack_near()` in `src/ai.c` otherwise.
-**War** is a bitmask per player in `combat.c`; everyone is at war with the
-barbarians, the peoples start at peace, and only the human declares war,
-by attacking ("Declare war on the Hittites?", `popup_ask_shown()`). The
-computer players never do yet. **A player is out** (`player_alive()`) once
+**War** is a bitmask per player in `combat.c` (`at_war()`, hot, stays
+resident); everyone is at war with the barbarians and the peoples start
+at peace. The human declares war by attacking ("Declare war on the
+Hittites?", `popup_ask_shown()`) or on the Diplomacy screen, and the
+computer players by milestone 8's rules; `declare_war()` is in
+`src/diplomacy.c` (see **Diplomacy**). **A player is out** (`player_alive()`) once
 the last city is gone if it ever founded one (`city_founded`, a bitmask),
 or when its units are gone if not: a computer player's remaining units
 are removed with it, and for the human the game is over. A city keeps its
@@ -1203,26 +1207,71 @@ spearman when the player loses bronze still finishes it, since
 `city_produce()` is resident and has no room for the test.
 
 **Contact** (`src/diplomacy.c`, region 3): **a people is met when one of
-its units or cities is next to one of the player's**, as in
+its units or cities is next to one of another's**, as in
 Civilization. Until 20 Oct 2026 it was anywhere on a hexagon the player
 had explored, and that greeted peoples whose warrior was four hexagons
 from anything of the player's — confusing, and not how any Civ game
 does it. `diplomacy_contact()` looks at the six neighbours of each of the
 player's units and cities, only those with `MAP_OCCUPIED` set, after
 each of the player's moves and at the end of every turn (a `contact`
-flag in `game.c`; during Play 50 Turns only at the end of it). It returns
-the peoples newly met as a bitmask and leaves in `diplomacy_ax/ay` where
+flag in `game.c`), and `diplomacy_turn()` at everybody's once a turn,
+so the computer players meet each other too (`diplomacy_known[p]`, a
+bit a player; the human's newly met in it wait for the next
+`diplomacy_contact()`). It returns the peoples newly met as a bitmask and leaves in `diplomacy_ax/ay` where
 one is; `show_met()` in `game.c` moves the view to put that hexagon in
 window row 1, above the popup, so that the player's own unit next to it
 is in view as well (or row 17, below the popup, near the bottom of the
 map), and after the next redraw `diplomacy_greet()` greets each new
-people with a popup: "You have met the Hittites. Their ruler is Suppiluliuma,
-Great King of Hatti." `diplomacy_met`, a bit per player, is saved
-(`SAVE_VERSION` 5) and never cleared during a game. **Advisors →
-Diplomacy** lists every people — the player's own first, then for each
-met one its ruler and title, at war or at peace (or "no more"), and its
-cities, citizens and units; the rest "not yet met". It is milestone 8's
-starting point.
+people with a letter: "You have met the Hittites. Say to Agamemnon,
+Wanax of Mycenae, my brother: thus says Suppiluliuma, Great King of
+Hatti, your brother. …" Met stays met.
+
+**Diplomacy** (`src/diplomacy.c`, region 3, milestone 8) is
+Civilization's, from OpenCivOne's `Diplomacy.cs`. **Three relations**:
+war (`combat_war`), ceasefire and peace, told apart by
+`diplomacy_truce[p][q]`, which counts the turns of a war, the turns left
+of a ceasefire (16, Civilization II's, then war again) or is 0 at peace
+(`diplomacy_relation()`). **An attitude per pair**, `diplomacy_mood[p][q]`,
+a byte round 100 (no signed bytes, for Calypsi's sake): each people's
+temper is its base (Hittites 85, Mycenaeans 90, Egyptians 100,
+Canaanites 110; 5 less to the human a level), drifting back a point
+every other turn, 15 lower at war and 5 higher at peace; a declaration
+of war costs 40 with the victim and 10 with everyone else who knows the
+declarer, units next to someone's city 2 a turn, a refused offer 10,
+and **every pair of cities of two peoples within 7 hexagons 1 a turn
+both ways** — crowding, without which nobody ever went to war in 300
+turns of autoplay. **`diplomacy_turn()`**, from `end_turn()` after the
+computer players, thinks about each pair one turn in four, staggered as
+Civilization does: from turn 40 a player that dislikes another (below
+60) and is at least as strong (Civilization's military power: the attack
+and defence of all its units) declares war; one ten turns into a war it
+is losing, or thirty into any, asks for a ceasefire, which is refused
+only by a side that would declare war itself; one in a ceasefire with a
+mood of 90 offers peace, accepted at 75. Between computer players it is
+settled at once and not announced (Civilization tells only with an
+embassy). **The human hears by letter**, in the Amarna formulas
+(vision.md §3; `res/text/letter_*.txt`, `{arg 0}`-`{arg 4}` the
+recipient's ruler and title, the writer's and the writer's people):
+`say()` leaves one in `letter[p]` and sets `diplomacy_waiting`, and
+`game_run()` shows them after the greetings and a redraw, through
+`diplomacy_greet()` — a declaration of war, a ceasefire running out,
+and offers of a ceasefire or peace answered Yes or No. During Play 50
+Turns (`diplomacy_auto`) the computer answers for the human by the same
+rules. In 300 turns of autoplay on seed 1 the Egyptians and Canaanites
+went to war, made a ceasefire and went to war again; the rest stayed at
+peace. **Advisors → Diplomacy** lists every people: the player's own
+first, then for each met one the relation (and a ceasefire's turns), its
+ruler and title, its cities, citizens and units, its attitude to the
+player in a word (hostile, cold, wary, cordial, friendly) and its wars
+with the others the player has met; the rest "not yet met". **The human
+proposes there**, which Civilization I left to the computer's audiences
+and later Civilizations allow: up and down or a click picks a people,
+C proposes a ceasefire, P peace, W declares war (Y to confirm); the
+screen closes and the answer comes as a letter, LETTER_YES or LETTER_NO.
+`diplomacy_known`, `diplomacy_truce` and `diplomacy_mood` are saved
+(`SAVE_VERSION` 9); the letters are not. Not in yet: tribute and gifts
+(nothing to give before trade, milestone 9), the vassals' formula,
+alliances.
 
 **Popups** (`src/popup.c`) are a box of word-wrapped text over the middle
 of the map window, closed by a click anywhere, fire, Return, space or Esc.
@@ -1534,7 +1583,12 @@ for milestone 4. **A long game is Debug → Play 50 Turns**:
 `{60,0,0,196},{65,0,0,17},{70,0,0,13}` (MEGA+D, down, Return) after the
 four opening Returns, and again for 100. `autoplay()` calls
 `input_poll()` once a turn to see Esc, so **each turn played uses up one
-`FAKE_KEYS` frame**: put the next key at least 50 frames later. Before
+`FAKE_KEYS` frame**: put the next key at least 50 frames later. **`make
+AUTOPLAY_TURNS=100`** (up to 255) makes the menu item play that many,
+since a long script is initialised data in the resident program and
+runs out of room: since milestone 8 a 300-turn test is `make NO_TITLE=1
+AUTOPLAY_TURNS=100` with three rounds of MEGA+D, down, Return and a few
+spaces after each for the greetings. Before
 it, a long game was a script of `{f, 0,0,'f'},{f+3,0,0,13}` pairs,
 generated by a shell loop. What happened is then read out of
 `-dumpmem`: the unit and city arrays are in `highram`, and their

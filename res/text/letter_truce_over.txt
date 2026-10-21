@@ -1,0 +1,7 @@
+# A ceasefire with the player has run out without peace (arguments as in
+# letter_greet.txt).
+Say to {arg 0}, {arg 1}: thus says {arg 2}, {arg 3}. The days of our \
+truce are ended, and my brother has sent no word of peace. Look to your \
+cities.
+
+The ceasefire with the {arg 4} is over.

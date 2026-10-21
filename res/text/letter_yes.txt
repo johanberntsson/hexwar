@@ -1,0 +1,6 @@
+# A computer player agrees to what the player proposed on the Diplomacy
+# screen (arguments as in letter_greet.txt).
+Say to {arg 0}, {arg 1}, my brother: thus says {arg 2}, {arg 3}. My \
+brother's words are good. Let it be as my brother has written.
+
+The {arg 4} agree.

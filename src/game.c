@@ -361,6 +361,7 @@ static void end_turn(void)
     news = NEWS_NONE;
     for (c = PLAYER_FIRST_AI; c < PLAYERS; ++c) ai_turn(c);
     ai_barbarians(game_turn);
+    diplomacy_turn();
     kind = improve_turn();
     if (kind != ORDERS_NONE)
         message(kind == ORDERS_IRRIGATE ? "Irrigation" : "Mine", "finished");
@@ -412,15 +413,19 @@ static void end_turn(void)
 // same ai_turn() as everybody else, or until Esc or the game is over. The
 // panel's turn and the minimap keep up as it goes; the view is redrawn
 // once, at the end, by the caller.
-#define AUTOPLAY_TURNS 50
+#ifndef AUTOPLAY_TURNS
+#define AUTOPLAY_TURNS 50       // `make AUTOPLAY_TURNS=250` for long tests
+#endif
 
 static void autoplay(byte n)
 {
+    diplomacy_auto = 1;
     while (n-- && !game_over) {
         ai_turn(PLAYER_HUMAN);
         end_turn();
         if (input_poll() == KEY_ESC) break;
     }
+    diplomacy_auto = 0;
 }
 #endif
 
@@ -881,7 +886,7 @@ void game_init(void)
     city_reset();
     combat_reset();
     game_over = quit = retired = loaded = 0;
-    diplomacy_met = 0;
+    diplomacy_reset();
     contact = 1;
     greet = 0;
     hover_unit = 0;
@@ -986,13 +991,14 @@ byte game_run(void)
         // greeted after the redraw, so that they are on the map behind the
         // greeting -- the popup that said so used to leave the player to
         // find them.
-        if (greet) {
+        // The letters wait for the greetings, which come first.
+        if (contact) {
+            contact = 0;
+            greet |= diplomacy_contact();
+            if (greet) show_met();
+        } else if (greet || diplomacy_waiting) {
             diplomacy_greet(greet);
             greet = 0;
-        } else if (contact) {
-            contact = 0;
-            greet = diplomacy_contact();
-            if (greet) show_met();
         }
 
         key = input_poll();

@@ -15,10 +15,9 @@
 #include "unit.h"
 
 // Every player is at war with the barbarians and they with everyone. Between
-// the peoples it is peace until somebody declares war, which for now only
-// the human does, by attacking.
+// the peoples it is peace until somebody declares war: declare_war() and
+// the rest of diplomacy are in diplomacy.h.
 byte at_war(byte a, byte b);
-void declare_war(byte a, byte b);
 
 // Peace all round, for a new game.
 void combat_reset(void);

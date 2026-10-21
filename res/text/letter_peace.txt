@@ -1,0 +1,7 @@
+# A computer player in a ceasefire with the player offers peace, as a
+# question (arguments as in letter_greet.txt).
+Say to {arg 0}, {arg 1}, my brother: thus says {arg 2}, {arg 3}, your \
+brother. As our fathers were at peace, so let us be at peace, and let \
+our messengers go between us.
+
+Make peace with the {arg 4}?

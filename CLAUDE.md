@@ -205,17 +205,18 @@ buffers at the default `$FF80000` and corrupts the display.
 
 | Address | Size | Contents |
 |---|---|---|
-| `$2001-$5FFF`, `$8000-$9FFF` | 24 KB | the resident program: code, data, BSS, C stack. 500 bytes free, nearly all at `$5E0D-$5FFF` |
+| `$2001-$5FFF`, `$8000-$9FFF` | 24 KB | the resident program: code, data, BSS, C stack. 365 bytes free, nearly all at `$5E94-$5FFF` |
 | `$6000-$7FFF` | 8 KB | the code window (`src/region.h`); as loaded, region 0 — the title, setup and help screens, the menus, save and load, the sheet's and the map's loaders, the owners' flags. 2.3 KB free |
-| `$13000-$14FFF` | 8 KB | region 1, from `SEVENSHIPS.R1`: the computer players, the builders' improvements, the cities' yields and growth, bronze. 360 bytes free |
-| `$15000-$16FFF` | 8 KB | region 2, from `SEVENSHIPS.R2`: the city screen, Top Five Cities and diplomacy. 2.2 KB free; the last code region |
+| `$13000-$14FFF` | 8 KB | code slot 1: region 1, from `SEVENSHIPS.R1` by way of attic: the computer players, the cities' yields and growth, bronze. 1.3 KB free |
+| `$15000-$16FFF` | 8 KB | code slot 2, shared: region 2 (the city screen, Top Five Cities, the builders' improvements; 2.7 KB free) or region 3 (diplomacy; 6.6 KB free), whichever was called last |
 | `$17000-$1EFFF` | 32 KB | the tile sheet's tiles 18-33, where regions 3 to 6 would have been: the resources, the improved resources, the spearman; one tile free |
 | `$A000-$BFFF` | 8 KB | `highram`, under the BASIC ROM, banked out by `src/bank.s`: `map_tile`, the unit and city arrays, the sprite blocks, the AI's headings, the staging buffers of the texts and the regions, the texts' line buffers, the sheet loader's buffers, the saved VIC registers, the AI's exploration memory, the resource list; about 2.8 KB free — `HIGH_BSS` in `src/mega65.h` moves a variable there, and **the startup does not clear it** |
 | `$1600-$1EFF` | 2304 | `zpsave` (56 bytes, BASIC's zero page during the run), then `lowfree`: the popup's 400-byte text and the scratch buffers of the view and the minimap, 1.6 KB free — `LOW_FREE` in `src/mega65.h` moves a variable there |
 | `$12000` | 4000 | screen RAM, 80x25 cells of 2 bytes |
 | `$40000-$56FFF` | 94208 | the view's tile store, 23 rows of 4096: 3840 for the window, then 256 holding four of the minimap's characters (all 80 of them, rows 0-19) or, in rows 20-22, two of the owners' flags (92 slots) |
 | `$57000-$5FFFF` | 36864 | the x-expanded tile sheet's tiles 0-17, 2 KB each: all the room there is |
-| `$8000000` | ~1 KB | attic RAM: the texts, `TEXT.PAK`'s body (`src/text.h`); the rest of the 8 MB free |
+| `$8000000` | ~3 KB | attic RAM: the texts, `TEXT.PAK`'s body (`src/text.h`) |
+| `$8010000` | 8 KB a region | attic RAM: code regions 1 and up as read from the disk, region r at `REGION_ATTIC(r)` (`src/region.h`); the rest of the 8 MB free |
 | `$FF81000` | 4000 | colour RAM |
 
 **The store's rows are padded to 4096 bytes, and the padding is load bearing.**
@@ -257,13 +258,16 @@ tile or another full-colour surface needs room:
    region 3 for the improved resources). `$17000-$1EFFF` holds the tiles
    after bank 5's, sixteen of them (`SHEET_HIGH` in `src/sheet.h`; 16-23
    at first in `$1B000-$1EFFF`, 18-25 since the map shrank, 18-29 since
-   the resources, 18-33 since the improved resources), so two code
-   regions are left, both in use (`REGION_LIMIT` in `src/region.h` has an `#error`). The sheet is stored a tile at a time
+   the resources, 18-33 since the improved resources), so two 8 KB code
+   slots are left, `$13000-$16FFF` (`REGION_LIMIT` in `src/region.h` has
+   an `#error`); since 21 Oct 2026 the regions are kept in attic and
+   copied into them when called, so there can be any number. The sheet is stored a tile at a time
    (2 KB each, 512 bytes a row), so a tile's address is its base plus
    `row * 512` in either bank, and `view_draw_tile()` changes the DMA's
    source bank (`blit_source_bank()`) only when a tile is in the other one.
-   More of bank 1 can go the same way, a region (four tiles) at a time,
-   against room for code. **Confirmed on a real MEGA65** (20 Oct 2026): the
+   Slot 2 could go the same way (four tiles), leaving every region to
+   share slot 1 and copy more often; the AI's region 1 calls the
+   others in loops, so that wants care. **Confirmed on a real MEGA65** (20 Oct 2026): the
    overlays drew from bank 1 and scrolling was still fast (they are back in
    bank 5 since it grew to 18 tiles; the resources are bank 1's now); and
    region 2, at `$15000`, with city growth.
@@ -469,18 +473,39 @@ help, the menus, save, 100 turns, retire and load left every unit and
 city array and the map identical, and `DIM` still works at READY after
 quitting. **Confirmed on a real MEGA65** the same day: title and setup,
 the city screen, the menus by mouse and MEGA+letter, HELP, Play 50 Turns,
-save, retire and load, and `DIM` after quitting. **Resident space is what to watch now**: 500 bytes of it (20 Oct 2026,
-after city growth, the AI pass, diplomacy and exploring, the fixes after
-them, the resources, the owners' flags and bronze), against 2.3 KB
-in region 0, 360 bytes in region 1 (nearly full) and 2.2 KB in region 2, and **no empty region left** (3 to 6 are the tile sheet's
-now): more code means moving code between regions, more room (CLAUDE.md
-**When bank 5 fills up**, steps 2 and 3, apply to code as much as tiles),
-or a region that is loaded from the disk when it is wanted. **Region 2** came with city growth, when the city screen's new box
-left region 0 with 217 bytes: it took a `win2` memory in
-`sevenships.scm`, a third entry in `dispatch.s`'s map tables (offset
-`$0F000`), `REGIONS` 2 and the second file in the Makefile's
-`REGION_FILES`; `packprg.py` and `region.c` needed nothing. So new
-subsystems go into a region from the start, per-turn ones especially.
+save, retire and load, and `DIM` after quitting. **Region 2** came with
+city growth, when the city screen's new box left region 0 with 217 bytes.
+
+**The regions are kept in attic RAM and copied into slots** (21 Oct
+2026), since the tile sheet took bank 1 from `$17000` and left room for
+only two regions there. `region_load()` reads every region file into
+attic at `REGION_ATTIC(r)`, `$8010000` up, and `set_region` in
+`src/dispatch.s` copies region r by DMA into its slot when it is called
+and the slot holds another — on the way in through a stub, and on the way
+back out if the call displaced the caller's region, so a region in slot 2
+may call another region in slot 2 and still be returned into. **Slot 1**
+(`$13000`) is region 1's alone, the AI, which calls into the others in
+loops; **slot 2** (`$15000`) is shared by regions 2 and up. A copy is the
+region's length (from its file) at 16.1 cycles a byte attic to chip on a
+real MEGA65, **3.3 ms for a full 8 KB**, nothing for per-turn or per-click
+code, but **two regions of one slot must never call each other in a
+loop** — each call would be two copies. Improvements went from region 1
+to region 2 (called by the AI in slot 1 and by resident code), and
+diplomacy from region 2 to its own region 3, where milestone 8 has 6.6
+KB. Checked headlessly against the build before it: 150 turns of Play 50
+Turns, the Diplomacy screen and a save left the map, the unit and city
+arrays and every other game variable byte-identical, and the screenshot
+the same. **A new region** takes a `winN` memory in `sevenships.scm`, an
+entry in each of `dispatch.s`'s per-region tables (`slot_of`,
+`attic_bank`, `attic_hi`, `region_length_lo/hi`), `REGIONS` and
+`region_stamp[]`'s initialiser in `src/region.c`, and its file in the
+Makefile's `REGION_FILES`; `packprg.py` needs nothing. Attic's bank 1
+holds eight regions as the tables stand. **Resident space is what to
+watch now**: 365 bytes (21 Oct 2026; the slot copying cost 140), against
+2.3 KB in region 0, 1.3 KB in region 1, 2.7 KB in region 2 and 6.6 KB in
+region 3. Code that is not hot can move out of the resident program into
+a region. So new subsystems go into a region from the start, per-turn
+ones especially.
 `--no-cross-call --no-interprocedural-cross-jump` are on for the banked
 files only (the Makefile's `BANKED`).
 
@@ -734,16 +759,17 @@ grassland shields. **7, resources, and 7b, bronze, are done** (20 Oct
 contact between the peoples and an Advisors → Diplomacy screen (see
 **Contact**), the exploring that makes contact happen (see
 **Exploring**), and the owners' flags that say whose a unit is.
-**Not yet tried on a real MEGA65** (all of 20 Oct 2026's later work,
-which ran in xemu): the resources and the improved resources drawn from
-bank 1 at `$17000` up, the map loader in region 0, the owners' flags,
-contact by adjacency with the view moved to the newcomer, bronze and the
-spearman, and the info line following the active unit.
+**Confirmed on a real MEGA65** (21 Oct 2026): all of 20 Oct 2026's
+later work — the resources and the improved resources drawn from bank 1
+at `$17000` up, the map loader in region 0, the owners' flags, contact by
+adjacency with the view moved to the newcomer, bronze and the spearman,
+and the info line following the active unit. **Not yet tried on one**:
+the code regions kept in attic RAM and copied into slots (see **Growing
+past 32 KB**).
 
-**Where to start next time**: there is no free code region (regions 3-6
-are tile sheet), region 1 has 360 bytes and the resident program about
-500, and the tile sheet one tile. Milestone 8 (diplomacy) and roads both
-need room first; see TODO.txt.
+**Where to start next time**: milestone 8, diplomacy, in region 3 (6.6 KB
+free; see TODO.txt). The resident program has 365 bytes and the tile
+sheet one tile, so roads still need tile room.
 
 **The title screen comes first** (`src/title.c`): `title_show()` puts the
 title up once the texts are read and before the sheet and the map are,
@@ -1076,7 +1102,7 @@ carries over. The panel says "Mycenae / built Warrior" (the last city, if
 several finish at once). With the unit list full the shields wait at the
 cost.
 
-**Improvements** (`src/improve.c`, milestone 6, in region 1) are bits 4
+**Improvements** (`src/improve.c`, milestone 6, in region 2) are bits 4
 and 5 of the map byte: `MAP_IRRIGATED` or `MAP_MINED`, never both, drawn
 as an overlay tile over the terrain (`MAP_OVERLAY_TILE`). A builder makes
 one with `i` or `m`, or Orders → Irrigate or Mine: `improve_start()` gives
@@ -1176,7 +1202,7 @@ did. Not checked: a city building a
 spearman when the player loses bronze still finishes it, since
 `city_produce()` is resident and has no room for the test.
 
-**Contact** (`src/diplomacy.c`, region 2): **a people is met when one of
+**Contact** (`src/diplomacy.c`, region 3): **a people is met when one of
 its units or cities is next to one of the player's**, as in
 Civilization. Until 20 Oct 2026 it was anywhere on a hexagon the player
 had explored, and that greeted peoples whose warrior was four hexagons
@@ -1676,6 +1702,8 @@ A new tile needs all of these, and nothing checks that they agree:
    bank 5 and 16 more in bank 1** (`SHEET_LOW_TILES`, `SHEET_HIGH`), 33
    used, so one is left. The tile store's own `#error` in `src/view.c` keeps the store
    and the sheet apart, and `src/sheet.h` has one for the total. Past 34:
-   see **When bank 5 fills up**, where the code regions are gone now.
+   see **When bank 5 fills up**; code regions no longer need bank 1's
+   room beyond the two slots, so more of it could be tiles at a slot's
+   cost.
 6. for an overlay: art inside pixel lines 8-23, or it costs the redraw
    twice as much (see **Drawing**).

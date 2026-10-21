@@ -12,7 +12,11 @@
 // listing, computes it from the region's bytes and puts the same stamp in
 // the file's header -- so a disk with region files from another build is
 // refused rather than run. Initialised, so that it is in the PRG at all.
-word region_stamp[REGIONS] = { 0xffff, 0xffff };
+word region_stamp[REGIONS] = { 0xffff, 0xffff, 0xffff };
+
+// Each region's length, for set_region's copy into its slot; by region
+// from 0, in src/dispatch.s.
+extern byte region_length_lo[], region_length_hi[];
 
 // In pieces under 256 for _Stub_read (map_load() in map.c), and in
 // HIGH_BSS since the disk reads go through it, as text_load() does.
@@ -23,7 +27,7 @@ static byte load_one(byte r)
 {
     static char name[] = REGION_FILE_NAME;
     byte header[HEADER_SIZE];
-    dword to = REGION_BASE(r);
+    dword to = REGION_ATTIC(r);
     word left, stamp;
     byte n, ok = 0;
     int fd;
@@ -39,6 +43,8 @@ static byte load_one(byte r)
         left = header[7];
         left = (left << 8) | header[6];
         ok = stamp == region_stamp[r - 1] && left <= REGION_SIZE;
+        region_length_lo[r] = header[6];
+        region_length_hi[r] = header[7];
         while (left && ok) {
             n = left > PIECE ? PIECE : (byte)left;
             ok = _Stub_read(fd, piece, n) == n;
@@ -57,5 +63,7 @@ byte region_load(void)
 
     for (r = 1; r <= REGIONS; ++r)
         if (!load_one(r)) return 0;
+    // Nothing is in the slots yet: the first call copies each region in.
+    region_init();
     return 1;
 }

@@ -1,16 +1,16 @@
-// In region 1 (src/region.h): called through the stubs in src/dispatch.s,
+// In region 2 (src/region.h): called through the stubs in src/dispatch.s,
 // under these names here.
-#define improve_can improve_can_r1
-#define improve_best improve_best_r1
-#define improve_start improve_start_r1
-#define improve_turn improve_turn_r1
+#define improve_can improve_can_r2
+#define improve_best improve_best_r2
+#define improve_start improve_start_r2
+#define improve_turn improve_turn_r2
 
 #include "improve.h"
 #include "map.h"
 #include "sheet.h"
 #include "unit.h"
 
-#pragma clang section text="r1text" rodata="r1rodata"
+#pragma clang section text="r2text" rodata="r2rodata"
 
 // Copper or tin on (ax, ay): bronze, mined.
 #define STRATEGIC(AX, AY)                                                   \

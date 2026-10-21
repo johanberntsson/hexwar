@@ -1,10 +1,8 @@
 --- OPEN ---
 
-NEXT: make room before milestone 8. No free code region (1 and 2 in use, 3-6 are tiles),
-region 1 has 360 bytes, resident ~500, the tile sheet 1 tile. Options: move code between
-regions 0-2 (region 0 has 2.3 KB, region 2 2.2 KB); load a region from disk when wanted;
-or CLAUDE.md's "When bank 5 fills up" steps 2-3 (C64 ROM area, banking the ROM out).
-Roads also need tiles (and a map bit or a 320-byte bitmap)
+NEXT: milestone 8 (diplomacy) in code region 3, which has 6.6 KB free. Code that calls
+diplomacy in a loop must not be in region 2 (same slot; see src/region.h). Roads still need
+tiles (one left; and a map bit or a 320-byte bitmap)
 
 Peoples on separate landmasses never meet before there are boats (map seeds 3 and 7).
 Place them two to a continent, more land (MAP_LAND), or leave it for milestone 9's ships
@@ -12,6 +10,8 @@ Place them two to a continent, more land (MAP_LAND), or leave it for milestone 9
 --- IDEAS, not yet decided implement or not --
 
 You can irrigate and mine etc outside the city area
+
+Civ 1 and 2 didn't have the concept of borders and allowed city spamming to starve AI
 
 --- MILESTONES ---
 
@@ -60,8 +60,6 @@ Milestone 7: resources -- DONE (20 Oct 2026)
 - DONE: improved resources have their own tiles in code region 3's room (now the
   sheet's): irrigated cattle (pasture), olives and wine (orchard recoloured). One tile
   left. Fish's improved tile (boats) waits for a work boat
-- No code region is left: regions 1 and 2 are in use, 3-6 are tiles. Region 1 has 360
-  bytes. The next code needs room (move code between regions, or load one from disk)
 
 Milestone 8: basic diplomacy
 - Contact between peoples; peace, war, ceasefire; an attitude value per pair
@@ -76,6 +74,11 @@ Milestone 9: trade
 - Later: merchant ships (need cedar), physical trade fleets, emporia
 
 --- DONE ---
+
+Made room before milestone 8 (21 Oct 2026): the code regions are kept in attic RAM and
+copied by DMA into one of two slots in bank 1 when called (slot 1 region 1, slot 2 regions
+2 and up), so there can be any number of them. Improvements moved to region 2, diplomacy to
+a new region 3. Free: resident 365 bytes, region 0 2.3 KB, 1 1.3 KB, 2 2.7 KB, 3 6.6 KB
 
 Meeting the other peoples took 60-150 turns, or never happened (map seed 7, 150 turns).
 - Map 128x32 -> 128x20 (2560 hexagons; Civ 1's 4000 squares are for 7 peoples)

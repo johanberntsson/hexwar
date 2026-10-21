@@ -4,10 +4,22 @@
 //
 // **Region 0 is the PRG's own $6000-$7FFF**, and it is what the window
 // shows whenever nothing else is called: the map is the KERNAL's own then.
-// **Regions 1 and up are in bank 1**, region r at REGION_BASE(r), linked
-// to run at $6000 but loaded there from SEVENSHIPS.Rr at start-up by
-// region_load(). Bank 1 from $13000 is BASIC 65's variable area, which BASIC
-// clears for itself (DIM, RUN), so they are loaded afresh on every run.
+// **Regions 1 and up are kept in attic RAM and run from a slot in bank 1**
+// (21 Oct 2026). Each is linked to run at $6000, read from SEVENSHIPS.Rr at
+// start-up by region_load() into attic at REGION_ATTIC(r), and copied by DMA
+// into its slot, SLOT_BASE(REGION_SLOT(r)), when it is called and the slot
+// holds another region -- by set_region in src/dispatch.s, which the window
+// is then mapped onto. **Attic RAM cannot be run from** (far too slow for
+// MAP), which is why there are slots at all. Two slots fit between screen
+// RAM and the tile sheet in bank 1: slot 1 is region 1's alone, and slot 2
+// is shared by regions 2 and up, so **there can be as many regions as
+// attic and the tables in dispatch.s allow** (eight in attic's bank 1 as
+// they stand). A copy is about 8 KB at 16 cycles a byte on a real MEGA65,
+// 3.3 ms at most, so it is nothing for per-turn code and per-click
+// screens, and **two regions in one slot must not call each other in a
+// loop**, or every call is two copies. Bank 1 from $13000 is BASIC 65's
+// variable area, which BASIC clears for itself (DIM, RUN), and the slots
+// are filled afresh on every run anyway.
 //
 // A file goes into region N with
 //
@@ -42,16 +54,23 @@
 #define REGION_WINDOW 0x6000u
 #define REGION_SIZE 0x2000u
 
-// The regions in bank 1: region r of them is at REGION_BASE(r). Six would
-// fit below $1F600, where BASIC 65 keeps something of its own, but **regions
-// 3 to 6 are the tile sheet's** -- 5 and 6 since milestone 6, 4 since the
-// resources of milestone 7 and 3 since the improved resources (SHEET_HIGH
-// in src/sheet.h) -- so two, both in use.
-#define REGIONS 2
-#define REGION_BASE(R) (0x13000UL + ((dword)(R) - 1) * REGION_SIZE)
+// The regions from 1, and where each is kept. **slot_of, attic_bank and
+// attic_hi in src/dispatch.s are per region and have to agree**, as do
+// REGION_FILES in the Makefile and the winN memories in sevenships.scm.
+#define REGIONS 3
+#define REGION_ATTIC(R) (0x8010000UL + ((dword)(R) - 1) * REGION_SIZE)
+#if REGIONS > 3
+#error "add the new region to the tables in src/dispatch.s"
+#endif
+
+// The slots in bank 1. Six 8 KB ones would fit below $1F600, where BASIC 65
+// keeps something of its own, but **$17000 up is the tile sheet's**
+// (SHEET_HIGH in src/sheet.h), so two: slot s is at SLOT_BASE(s).
+#define SLOTS 2
+#define SLOT_BASE(S) (0x13000UL + ((dword)(S) - 1) * REGION_SIZE)
 #define REGION_LIMIT 0x17000UL
-#if 0x13000UL + REGIONS * 0x2000UL > REGION_LIMIT
-#error "the code regions run into the tile sheet in bank 1"
+#if 0x13000UL + SLOTS * 0x2000UL > REGION_LIMIT
+#error "the code slots run into the tile sheet in bank 1"
 #endif
 
 // "SEVENSHIPS.R1" and so on; the digit is the last character.
@@ -60,7 +79,7 @@
 // Take the KERNAL's map as region 0's. First thing in main().
 void region_init(void);
 
-// Read regions 1 to REGIONS into bank 1. 0 if a file is missing, or not
+// Read regions 1 to REGIONS into attic RAM, leaving the slots empty. 0 if a file is missing, or not
 // the one this build was made with (tools/packprg.py stamps both).
 byte region_load(void);
 

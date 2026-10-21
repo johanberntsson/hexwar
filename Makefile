@@ -119,8 +119,10 @@ OBJS     = $(patsubst src/%.c,$(BUILD)/%.o,$(SRCS)) \
 
 ELF      = $(BUILD)/sevenships.elf
 PRG      = $(BUILD)/sevenships.prg
-# The code regions loaded into bank 1, one file each (src/region.h).
-REGION_FILES = $(BUILD)/sevenships.r1 $(BUILD)/sevenships.r2
+# The code regions, read into attic RAM and run from bank 1, one file each
+# (src/region.h).
+REGION_FILES = $(BUILD)/sevenships.r1 $(BUILD)/sevenships.r2 \
+               $(BUILD)/sevenships.r3
 
 # The map, made by tools/mapgen.py and read off the disk at start-up. Same seed,
 # same map: `make MAP_SEED=7` is how to look at another one, and MAP_LAND is the

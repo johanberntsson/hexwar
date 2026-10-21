@@ -1,8 +1,8 @@
-// In region 2 (src/region.h): called through the stubs in src/dispatch.s,
+// In region 3 (src/region.h): called through the stubs in src/dispatch.s,
 // under these names here.
-#define diplomacy_contact diplomacy_contact_r2
-#define diplomacy_greet diplomacy_greet_r2
-#define diplomacy_screen diplomacy_screen_r2
+#define diplomacy_contact diplomacy_contact_r3
+#define diplomacy_greet diplomacy_greet_r3
+#define diplomacy_screen diplomacy_screen_r3
 
 #include "diplomacy.h"
 #include "city.h"
@@ -14,7 +14,7 @@
 #include "screen.h"
 #include "unit.h"
 
-#pragma clang section text="r2text" rodata="r2rodata"
+#pragma clang section text="r3text" rodata="r3rodata"
 
 byte diplomacy_met;
 byte diplomacy_ax, diplomacy_ay;

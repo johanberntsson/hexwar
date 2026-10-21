@@ -97,6 +97,7 @@ SRCS     = src/sevenships.c \
            src/help.c \
            src/topcities.c \
            src/diplomacy.c \
+           src/trade.c \
            src/save.c \
            src/text.c \
            src/game.c \
@@ -114,7 +115,7 @@ SRCS     = src/sevenships.c \
 # without the shared instruction fragments that could be called across one.
 BANKED   = src/title.c src/cityscreen.c src/topcities.c src/diplomacy.c \
            src/save.c src/sheet.c src/mapload.c src/help.c src/menu.c src/ai.c \
-           src/improve.c src/growth.c
+           src/improve.c src/growth.c src/trade.c
 
 # Assembly: src/bank.s, which banks BASIC out before main(), and
 # src/dispatch.s, the MAP window and the calls into it.
@@ -128,7 +129,7 @@ PRG      = $(BUILD)/sevenships.prg
 # The code regions, read into attic RAM and run from bank 1, one file each
 # (src/region.h).
 REGION_FILES = $(BUILD)/sevenships.r1 $(BUILD)/sevenships.r2 \
-               $(BUILD)/sevenships.r3
+               $(BUILD)/sevenships.r3 $(BUILD)/sevenships.r4
 
 # The map, made by tools/mapgen.py and read off the disk at start-up. Same seed,
 # same map: `make MAP_SEED=7` is how to look at another one, and MAP_LAND is the
@@ -162,7 +163,9 @@ TEXTS    = $(RES)/text/help.txt \
            $(RES)/text/letter_peace.txt \
            $(RES)/text/letter_truce_over.txt \
            $(RES)/text/letter_yes.txt \
-           $(RES)/text/letter_no.txt
+           $(RES)/text/letter_no.txt \
+           $(RES)/text/letter_trade.txt \
+           $(RES)/text/letter_tribute.txt
 TEXT_PAK = $(BUILD)/text.pak
 TEXT_IDS = $(BUILD)/textid.h
 

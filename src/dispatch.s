@@ -17,25 +17,25 @@ map_a:      .byte   0, 0xd0, 0xf0
 map_x:      .byte   0, 0x80, 0x80
 cur_region: .byte   0
 
-; Region r's slot (REGION_SLOT() in src/region.h, which has to agree), and
+; Region r's slot (src/region.h has the scheme), and
 ; the region each slot holds, 0 for none yet: region_load() leaves them all
 ; empty, so a region is first copied in when it is first called.
-slot_of:    .byte   0, 1, 2, 2
+slot_of:    .byte   0, 1, 2, 2, 2
 slot_held:  .byte   0, 0, 0
 
 ; Where each region is in attic RAM, REGION_ATTIC(r): bank bits 16-19 and
 ; bits 8-15, for r from 0 (unused) up. And where each slot is in bank 1,
 ; bits 8-15.
-attic_bank: .byte   0, 1, 1, 1
-attic_hi:   .byte   0, 0x00, 0x20, 0x40
+attic_bank: .byte   0, 1, 1, 1, 1
+attic_hi:   .byte   0, 0x00, 0x20, 0x40, 0x60
 slot_hi:    .byte   0, 0x30, 0x50
 
 ; Each region's length, set by region_load() from its file.
             .public region_length_lo, region_length_hi
 region_length_lo:
-            .byte   0, 0, 0, 0
+            .byte   0, 0, 0, 0, 0
 region_length_hi:
-            .byte   0, 0, 0, 0
+            .byte   0, 0, 0, 0, 0
 
 ; The copy from attic RAM into a slot: an enhanced job with the source in
 ; megabyte $80, the destination in $00, then F018B as in src/mega65.c.
@@ -188,6 +188,7 @@ stub:       .macro  name, target, region
             stub    ai_place, ai_place_r1, 1
             stub    ai_turn, ai_turn_r1, 1
             stub    ai_barbarians, ai_barbarians_r1, 1
+            stub    player_owns, player_owns_r1, 1
             stub    city_work, city_work_r1, 1
             stub    city_grow, city_grow_r1, 1
             stub    city_toggle, city_toggle_r1, 1
@@ -210,3 +211,9 @@ stub:       .macro  name, target, region
             stub    diplomacy_contact, diplomacy_contact_r3, 3
             stub    diplomacy_greet, diplomacy_greet_r3, 3
             stub    diplomacy_screen, diplomacy_screen_r3, 3
+
+; Region 4, slot 2: trade.
+            stub    trade_reset, trade_reset_r4, 4
+            stub    trade_turn, trade_turn_r4, 4
+            stub    trade_agree, trade_agree_r4, 4
+            stub    trade_propose, trade_propose_r4, 4

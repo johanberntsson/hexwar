@@ -13,6 +13,7 @@
 #include "civ.h"
 #include "combat.h"
 #include "diplomacy.h"
+#include "trade.h"
 #include "game.h"
 #include "map.h"
 #include "unit.h"
@@ -60,6 +61,12 @@ static const struct block blocks[] = {
     { diplomacy_known, sizeof diplomacy_known },
     { diplomacy_truce, sizeof diplomacy_truce },
     { diplomacy_mood, sizeof diplomacy_mood },
+    { deal_from, sizeof deal_from },
+    { deal_to, sizeof deal_to },
+    { deal_give, sizeof deal_give },
+    { deal_back, sizeof deal_back },
+    { trade_got, sizeof trade_got },
+    { trade_partners, sizeof trade_partners },
     { &combat_seed, sizeof combat_seed },
     { &game_level, sizeof game_level },
     { player_civ, sizeof player_civ },

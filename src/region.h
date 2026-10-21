@@ -7,7 +7,7 @@
 // **Regions 1 and up are kept in attic RAM and run from a slot in bank 1**
 // (21 Oct 2026). Each is linked to run at $6000, read from SEVENSHIPS.Rr at
 // start-up by region_load() into attic at REGION_ATTIC(r), and copied by DMA
-// into its slot, SLOT_BASE(REGION_SLOT(r)), when it is called and the slot
+// into its slot (slot_of in src/dispatch.s) at SLOT_BASE(), when it is called and the slot
 // holds another region -- by set_region in src/dispatch.s, which the window
 // is then mapped onto. **Attic RAM cannot be run from** (far too slow for
 // MAP), which is why there are slots at all. Two slots fit between screen
@@ -57,9 +57,9 @@
 // The regions from 1, and where each is kept. **slot_of, attic_bank and
 // attic_hi in src/dispatch.s are per region and have to agree**, as do
 // REGION_FILES in the Makefile and the winN memories in sevenships.scm.
-#define REGIONS 3
+#define REGIONS 4
 #define REGION_ATTIC(R) (0x8010000UL + ((dword)(R) - 1) * REGION_SIZE)
-#if REGIONS > 3
+#if REGIONS > 4
 #error "add the new region to the tables in src/dispatch.s"
 #endif
 

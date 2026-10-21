@@ -12,7 +12,7 @@
 // listing, computes it from the region's bytes and puts the same stamp in
 // the file's header -- so a disk with region files from another build is
 // refused rather than run. Initialised, so that it is in the PRG at all.
-word region_stamp[REGIONS] = { 0xffff, 0xffff, 0xffff };
+word region_stamp[REGIONS] = { 0xffff, 0xffff, 0xffff, 0xffff };
 
 // Each region's length, for set_region's copy into its slot; by region
 // from 0, in src/dispatch.s.

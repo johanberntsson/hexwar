@@ -1,9 +1,11 @@
 --- OPEN ---
 
-NEXT: milestone 9 (trade), in a region of its own (region 4; CLAUDE.md "Growing past
-32 KB" has what a new region takes). Gifts would give diplomacy something to offer:
-tribute, and the letters' gift exchange. Roads still need tiles (one left; and a map bit
-or a 320-byte bitmap)
+NEXT: the rest of milestone 9 -- merchant ships (need cedar; tiles, one left, and units on
+water), then fleets and emporia. Resident space is 234 bytes. Roads still need tiles (and a
+map bit or a 320-byte bitmap)
+
+Trade to tune once played: AIs only ask one turn in eight; goods are few (most peoples
+own one or two), so deals are rare -- two in 300 turns of autoplay on seed 1.
 
 Diplomacy to tune once it has been played: wars come from crowding (cities of two
 peoples within 7 hexagons), and in 300 turns of autoplay on seed 1 only the Egyptians
@@ -81,7 +83,11 @@ Milestone 8: basic diplomacy -- DONE (21 Oct 2026)
   between the others
 
 Milestone 9: trade
-- Start with gift exchange of goods through the letters
+- DONE (21 Oct 2026): gift exchange of goods by letter. Olives, wine, cedar, copper, tin
+  and dye; a deal is a good for a good, or a gift, for as long as the two are at peace; a
+  good received counts for bronze; partners like each other more; AIs ask for what they
+  lack (copper/tin first) and demand tribute when strong and cold; the human answers by
+  letter and proposes (or ends a trade) with T on Advisors/Diplomacy (src/trade.c, region 4)
 - Later: merchant ships (need cedar), physical trade fleets, emporia
 
 --- DONE ---

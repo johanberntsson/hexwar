@@ -1,0 +1,8 @@
+# A computer player stronger than the player, and cold to them, demands a
+# good for nothing (src/trade.c): {arg 5} is the good; the rest as in
+# letter_greet.txt.
+Say to {arg 0}, {arg 1}: thus says {arg 2}, {arg 3}. In your land there \
+is {arg 5}, and you have not sent it to me. Send it now, or my chariots \
+will come to fetch it.
+
+Send {arg 5} to the {arg 4} as tribute?

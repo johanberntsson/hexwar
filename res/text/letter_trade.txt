@@ -1,0 +1,9 @@
+# A computer player asks the player for a good, offering another for it
+# (src/trade.c): {arg 5} is what the player is asked to send, {arg 6} what
+# comes back; the rest as in letter_greet.txt. "As plentiful as dust" is
+# the Amarna letters' own phrase, said of Egypt's gold.
+Say to {arg 0}, {arg 1}, my brother: thus says {arg 2}, {arg 3}, your \
+brother. In my brother's land {arg 5} is as plentiful as dust. Let my \
+brother send me {arg 5}, and I will send my brother {arg 6}.
+
+Send {arg 5} to the {arg 4} for their {arg 6}?

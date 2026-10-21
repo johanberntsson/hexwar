@@ -205,12 +205,12 @@ buffers at the default `$FF80000` and corrupts the display.
 
 | Address | Size | Contents |
 |---|---|---|
-| `$2001-$5FFF`, `$8000-$9FFF` | 24 KB | the resident program: code, data, BSS, C stack. 332 bytes free, nearly all at `$5EBF-$5FFF` |
+| `$2001-$5FFF`, `$8000-$9FFF` | 24 KB | the resident program: code, data, BSS, C stack. 234 bytes free, nearly all at `$5F1F-$5FFF` |
 | `$6000-$7FFF` | 8 KB | the code window (`src/region.h`); as loaded, region 0 — the title, setup and help screens, the menus, save and load, the sheet's and the map's loaders, the owners' flags. 2.3 KB free |
 | `$13000-$14FFF` | 8 KB | code slot 1: region 1, from `SEVENSHIPS.R1` by way of attic: the computer players, the cities' yields and growth, bronze. 1.3 KB free |
-| `$15000-$16FFF` | 8 KB | code slot 2, shared: region 2 (the city screen, Top Five Cities, the builders' improvements; 2.7 KB free) or region 3 (diplomacy; 3 KB free), whichever was called last |
+| `$15000-$16FFF` | 8 KB | code slot 2, shared: region 2 (the city screen, Top Five Cities, the builders' improvements; 2.7 KB free) region 3 (diplomacy; 2.3 KB free) or region 4 (trade; 5.9 KB free), whichever was called last |
 | `$17000-$1EFFF` | 32 KB | the tile sheet's tiles 18-33, where regions 3 to 6 would have been: the resources, the improved resources, the spearman; one tile free |
-| `$A000-$BFFF` | 8 KB | `highram`, under the BASIC ROM, banked out by `src/bank.s`: `map_tile`, the unit and city arrays, the sprite blocks, the AI's headings, the staging buffers of the texts and the regions, the texts' line buffers, the sheet loader's buffers, the saved VIC registers, the AI's exploration memory, the resource list, the peoples' relations and attitudes and the letters' names; about 2.6 KB free — `HIGH_BSS` in `src/mega65.h` moves a variable there, and **the startup does not clear it** |
+| `$A000-$BFFF` | 8 KB | `highram`, under the BASIC ROM, banked out by `src/bank.s`: `map_tile`, the unit and city arrays, the sprite blocks, the AI's headings, the staging buffers of the texts and the regions, the texts' line buffers, the sheet loader's buffers, the saved VIC registers, the AI's exploration memory, the resource list, the peoples' relations and attitudes and the letters' names, the trade deals; about 2.5 KB free — `HIGH_BSS` in `src/mega65.h` moves a variable there, and **the startup does not clear it** |
 | `$1600-$1EFF` | 2304 | `zpsave` (56 bytes, BASIC's zero page during the run), then `lowfree`: the popup's 400-byte text and the scratch buffers of the view and the minimap, 1.6 KB free — `LOW_FREE` in `src/mega65.h` moves a variable there |
 | `$12000` | 4000 | screen RAM, 80x25 cells of 2 bytes |
 | `$40000-$56FFF` | 94208 | the view's tile store, 23 rows of 4096: 3840 for the window, then 256 holding four of the minimap's characters (all 80 of them, rows 0-19) or, in rows 20-22, two of the owners' flags (92 slots) |
@@ -501,9 +501,10 @@ entry in each of `dispatch.s`'s per-region tables (`slot_of`,
 `region_stamp[]`'s initialiser in `src/region.c`, and its file in the
 Makefile's `REGION_FILES`; `packprg.py` needs nothing. Attic's bank 1
 holds eight regions as the tables stand. **Resident space is what to
-watch now**: 332 bytes (21 Oct 2026, after milestone 8; the slot
-copying cost 140), against 2.3 KB in region 0, 1.3 KB in region 1, 2.7
-KB in region 2 and 3 KB in region 3. **Confirmed on a real MEGA65** (21
+watch now**: 234 bytes (21 Oct 2026, after milestone 9's trade; the
+slot copying cost 140, and each stub is 13), against 2.3 KB in region 0,
+1.2 KB in region 1, 2.7 KB in region 2, 2.3 KB in region 3 and 5.9 KB
+in region 4. **Confirmed on a real MEGA65** (21
 Oct 2026): the slot copying, through long autoplays, the city screen and
 the Diplomacy screen in turn, and save and load. Code that is not hot can move out of the resident program into
 a region. So new subsystems go into a region from the start, per-turn
@@ -757,20 +758,22 @@ done but for roads** (20 Oct 2026), which need tiles and a map bit:
 improvements, yields, city size and growth, worked tiles by hand,
 Civilization's production rules for the computer players and its
 grassland shields. **7, resources, and 7b, bronze, are done** (20 Oct
-2026; see **Resources** and **Bronze**), and **8, diplomacy** (21 Oct
-2026; see **Diplomacy**), with the exploring that makes contact happen
+2026; see **Resources** and **Bronze**), **8, diplomacy** (21 Oct
+2026; see **Diplomacy**), and the first part of **9, trade** (see
+**Trade**), with the exploring that makes contact happen
 (see **Exploring**) and the owners' flags that say whose a unit is.
 **Confirmed on a real MEGA65** (21 Oct 2026): all of 20 Oct 2026's
 later work — the resources and the improved resources drawn from bank 1
 at `$17000` up, the map loader in region 0, the owners' flags, contact by
 adjacency with the view moved to the newcomer, bronze and the spearman,
-and the info line following the active unit. **Not yet tried on one**:
-milestone 8's diplomacy.
+and the info line following the active unit; and (the same day)
+milestone 8's diplomacy, "well enough", so its tuning is still open
+(TODO.txt). **Not yet tried on one**: trade.
 
-**Where to start next time**: TODO.txt. Milestone 9, trade, will want
-a region of its own (region 4; see **Growing past 32 KB** for what a new
-region takes). The resident program has 332 bytes and the tile sheet one
-tile, so roads still need tile room.
+**Where to start next time**: TODO.txt. The rest of milestone 9 is
+ships, which need tiles (one left) and a map that lets units onto water.
+The resident program has 234 bytes: the next stubs or resident code may
+need something moved out into a region first.
 
 **The title screen comes first** (`src/title.c`): `title_show()` puts the
 title up once the texts are read and before the sheet and the map are,
@@ -1167,9 +1170,13 @@ the terrain to keep within 40 columns ("Canaanite Builder  Cattle+irr").
 The names are a text, `list_resources.txt`. The map loader moved to
 region 0 with the list (`src/mapload.c`), which more than paid for it.
 
-**Bronze** (milestone 7b): **a player has a resource when it is on one of
-its cities, or mined and next to one** (`player_has()` in
-`src/growth.c`, region 1, worked out when asked and not stored), and
+**Bronze** (milestone 7b): **a player owns a resource when it is on one
+of its cities, or next to one and improved as that resource is** —
+mined copper and tin, irrigated cattle, olives and wine
+(`map_res_improved_by[]`), nothing needed for grain, fish, cedar and dye
+— (`player_owns()` in `src/growth.c`, region 1, worked out when asked
+and not stored), **and has it if it owns it or receives it in trade**
+(`player_has()`, which adds `trade_got[]`; see **Trade**); and
 copper and tin together are bronze (`player_bronze()`), which the
 **spearman** needs: `KIND_SPEARMAN`, Civilization's phalanx, attack 1,
 defence 2, cost 20, `unit_spearman.png` from `alltiles/`. A builder may
@@ -1269,9 +1276,40 @@ and later Civilizations allow: up and down or a click picks a people,
 C proposes a ceasefire, P peace, W declares war (Y to confirm); the
 screen closes and the answer comes as a letter, LETTER_YES or LETTER_NO.
 `diplomacy_known`, `diplomacy_truce` and `diplomacy_mood` are saved
-(`SAVE_VERSION` 9); the letters are not. Not in yet: tribute and gifts
-(nothing to give before trade, milestone 9), the vassals' formula,
-alliances.
+(`SAVE_VERSION` 9, 10 with trade); the letters are not. Not in yet: the
+vassals' formula, alliances.
+
+**Trade** (`src/trade.c`, region 4, milestone 9's first part) is the
+Amarna gift exchange as Civilization IV's resource trades. **The goods**
+are vision.md's luxury and strategic ones — olives, wine, cedar, copper,
+tin, purple dye; the staples feed the city that has them. **A deal**
+(`deal_from/to/give/back[]`, `MAX_DEALS` 8, one a pair) is one player
+sending a good it owns, and usually another coming back; with nothing
+back it is a gift (15 to the receiver's attitude at once). A good is not
+used up by sending it, and only what a player owns can be sent on. **A
+good received counts as had** (`trade_got[p]`, a bit a resource, read
+by `player_has()`), so traded tin makes bronze with copper of one's own.
+Partners think 10 better of each other (`trade_partners[]`, read by
+`diplomacy_turn()`'s drift), and **a deal ends when the two are no
+longer at peace**, at the next `trade_turn()`. `trade_turn()`, called at
+the end of `diplomacy_turn()` (one stub call a turn, so the two regions
+in slot 2 do not thrash), has each computer player, one turn in eight
+for each player at peace with it that it does not trade with yet, ask
+for the good it wants most that the other owns — copper or tin first,
+the one that makes bronze above all — offering the good the other wants
+most; with nothing to offer, one stronger than the other and colder
+than 70 demands it as tribute, Civilization's. A computer player gives
+tribute to the stronger, trades with those it likes at 75, and sends
+copper or tin only for copper or tin, or to a friend (90). **The human**
+is asked by letter (`letter_trade.txt`, `letter_tribute.txt`, with the
+goods as `{arg 5}` and `{arg 6}` in small letters; a refused tribute
+costs 20), and proposes on the Diplomacy screen: T, the good to send by
+number, then the good wanted or 0 for a gift, `trade_propose()`; T on a
+people already traded with ends the deal (20 off its attitude). Each
+people's block shows the trade on its fifth row. In 300 turns of
+autoplay on seed 1: the human's side sent dye to the Canaanites for
+copper, and the Canaanites copper to the Hittites for wine. Saved
+(`SAVE_VERSION` 10). Still to come: ships, fleets, emporia.
 
 **Popups** (`src/popup.c`) are a box of word-wrapped text over the middle
 of the map window, closed by a click anywhere, fire, Return, space or Esc.

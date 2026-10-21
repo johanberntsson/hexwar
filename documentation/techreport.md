@@ -32,7 +32,8 @@ Units, cities, their production and the turn loop: each of the player's
 units is asked for orders in turn, then the three computer players move,
 then the peoples' diplomacy is settled, then every city produces, then the
 year advances. War, ceasefire and peace come and go by letter, in the
-formulas of the Amarna letters. A city screen and a menu
+formulas of the Amarna letters, and so do the goods the peoples
+exchange. A city screen and a menu
 bar run their own loops over the same screen.
 
 The design document, `vision.md`, describes the game the program is aiming
@@ -101,6 +102,10 @@ most important routines included in each source file.
 | &nbsp;&nbsp;&nbsp;_diplomacy\_turn_ | once a turn: who has met whom, the attitudes, and the computer players' declarations and offers |
 | &nbsp;&nbsp;&nbsp;_diplomacy\_greet_ | the letters to the player, in popups, the offers answered Yes or No |
 |  |  |
+| trade.c | goods exchanged between the peoples, as gifts or for other goods |
+| &nbsp;&nbsp;&nbsp;_trade\_turn_ | once a turn: deals end with the peace, and the computer players ask for goods or tribute |
+| &nbsp;&nbsp;&nbsp;_trade\_propose_ | the player's proposal on the Diplomacy screen |
+|  |  |
 | combat.c | combat, and whether a player is still in the game |
 | &nbsp;&nbsp;&nbsp;_combat\_attack_ | one unit attacks a neighbouring hexagon |
 |  |  |
@@ -152,6 +157,7 @@ to `release/`), holding five files:
 | SEVENSHIPS.R1 | code region 1, the computer players and the cities' growth: a header and the code, kept in Attic RAM and run at \$6000 from bank 1 |
 | SEVENSHIPS.R2 | code region 2, the city screen, Top Five Cities and the builders' improvements, the same way |
 | SEVENSHIPS.R3 | code region 3, diplomacy, the same way |
+| SEVENSHIPS.R4 | code region 4, trade, the same way |
 
 The C65 ROM boots AUTOBOOT.C65 automatically. `main()` then:
 
@@ -210,15 +216,15 @@ window shows one region of code at a time. The figures below are from the linker
 | \$1600-\$1637 | 0.05 | `zpsave`: BASIC's zero page \$02-\$39, saved at start-up and put back on exit |
 | \$1638-\$18e0 | 0.7 | the `lowfree` section (`LOW_FREE`): the popup's text and the scratch buffers of the view and the minimap |
 | \$18e1-\$1eff | 1.5 | free |
-| \$2001-\$5bf6 | 15.0 | BASIC stub, startup and resident code |
-| \$5bf7-\$5c43 | 0.1 | initialised data: the DMA lists |
-| \$5c44-\$5d43 | 0.25 | C stack |
-| \$5d44-\$5ebe | 0.4 | BSS: small state |
-| \$5ebf-\$5fff | 0.3 | free |
+| \$2001-\$5c55 | 15.1 | BASIC stub, startup and resident code |
+| \$5c56-\$5ca2 | 0.1 | initialised data: the DMA lists |
+| \$5ca3-\$5da2 | 0.25 | C stack |
+| \$5da3-\$5f1e | 0.4 | BSS: small state |
+| \$5f1f-\$5fff | 0.2 | free |
 | \$6000-\$7fff | 8 | the code window; region 0 as loaded (5.7 KB used) |
 | \$8000-\$9ffe | 8 | resident constant data and code |
-| \$a000-\$b588 | 5.4 | `highbss` (`HIGH_BSS`): the map `map_tile` (terrain, improvements, explored and occupied bits), the unit and city arrays (the cities' size and food box among them), the peoples' relations and attitudes, the sprite blocks, the AI's headings, the staging buffers of the texts and the regions, the texts' line buffers, the sheet loader's buffers and row extents, the saved VIC registers, and the resources, a list by hexagon row |
-| \$b589-\$bfff | 2.6 | free |
+| \$a000-\$b5ec | 5.5 | `highbss` (`HIGH_BSS`): the map `map_tile` (terrain, improvements, explored and occupied bits), the unit and city arrays (the cities' size and food box among them), the peoples' relations and attitudes, the trade deals, the sprite blocks, the AI's headings, the staging buffers of the texts and the regions, the texts' line buffers, the sheet loader's buffers and row extents, the saved VIC registers, and the resources, a list by hexagon row |
+| \$b5ed-\$bfff | 2.5 | free |
 
 The long texts and the names are not in this table at all: they are in
 TEXT.PAK, read into Attic RAM at start-up, which is most of why the
@@ -271,7 +277,7 @@ holds the screens that are not the map -- title, setup, help -- with the
 menus, save and load and the loaders of the tile sheet and the map;
 region 1 holds the computer players and the cities' yields and growth;
 region 2 the city screen, Top Five Cities and the builders'
-improvements; region 3 diplomacy.
+improvements; region 3 diplomacy; region 4 trade.
 
 Resident code calls a function in a region through a stub of the same
 name (`src/dispatch.s`), which maps the region in (copying it into its
@@ -432,7 +438,7 @@ terrain is drawn, and their overlays are drawn after the next row's terrain.
 | End of turn | with no unit left, the panel shows "End of turn"; Return, or a click on the panel, goes on |
 | Computer players | `ai_turn` for each of the three: what each city builds, and every unit's move. A player with two warriors, one fortified, and a builder has a city build a settler, which founds a new city on the nearest good site within six hexagons, at least four from any other city, up to four cities |
 | Barbarians | `ai_barbarians`: perhaps a new band, then every barbarian's move |
-| Diplomacy | `diplomacy_turn`: contact between all the peoples, the attitudes, ceasefires running out, and each computer player's war, ceasefire or peace with each other player one turn in four; what concerns the player waits as letters, shown over the map once it is redrawn |
+| Diplomacy | `diplomacy_turn`, and `trade_turn` at its end: contact between all the peoples, deals ended by war, goods asked for, the attitudes, ceasefires running out, and each computer player's war, ceasefire or peace with each other player one turn in four; what concerns the player waits as letters, shown over the map once it is redrawn |
 | Production | every city adds its shields (its own hexagon's, at least 1, plus its best neighbour's); one that reaches the cost of what it is building puts the unit on its hexagon and keeps the surplus |
 | New turn | the turn number goes up, the year moves on ten years from 1600 BC, and every unit gets its moves back |
 

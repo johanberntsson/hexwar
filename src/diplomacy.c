@@ -12,11 +12,13 @@
 #include "civ.h"
 #include "combat.h"
 #include "game.h"
+#include "growth.h"
 #include "input.h"
 #include "map.h"
 #include "popup.h"
 #include "screen.h"
 #include "text.h"
+#include "trade.h"
 #include "unit.h"
 
 #pragma clang section text="r3text" rodata="r3rodata"
@@ -31,17 +33,11 @@ byte diplomacy_auto;
 #endif
 
 // What each computer player has to say to the human when the map is next
-// up, LETTER_*: one letter each, the latest. Not saved: a game is saved
-// from the map, after they have been read.
-HIGH_BSS static byte letter[PLAYERS];
-#define LETTER_NONE 0
-#define LETTER_WAR 1
-#define LETTER_CEASEFIRE 2      // an offer, answered Yes or No
-#define LETTER_PEACE 3          // the same
-#define LETTER_TRUCE_OVER 4
-#define LETTER_YES 5
-#define LETTER_NO 6
-// The texts are TEXT_LETTER_GREET and the six after it, in this order.
+// up, LETTER_* (diplomacy.h). Not saved: a game is saved from the map,
+// after they have been read.
+HIGH_BSS byte diplomacy_letter[PLAYERS];
+#define letter diplomacy_letter
+// The texts are TEXT_LETTER_GREET and the ones after it, in this order.
 #define LETTER_TEXT(K) (TEXT_LETTER_GREET + (K))
 
 // **The attitudes**, after Civilization's: how player p feels about q, a
@@ -57,19 +53,17 @@ HIGH_BSS static byte letter[PLAYERS];
 // point every other turn, so one pair of rival cities wins over it. **The higher levels make everybody colder to the human**
 // (game_level, which nothing read until now), as Civilization's levels
 // make the computer more aggressive.
-#define MOOD_NEUTRAL 100
-#define MOOD_MAX 200
-#define MOOD_WAR 60             // below it, and stronger, a player attacks
-#define MOOD_PEACE 90           // at it, a player in a ceasefire offers peace
-#define MOOD_ACCEPT 75          // at it, a player accepts peace
+// MOOD_NEUTRAL, MOOD_MAX, MOOD_WAR, MOOD_PEACE, MOOD_ACCEPT and
+// MOOD_REFUSED are in diplomacy.h, for trade.c.
 #define MOOD_PEACE_BONUS 5
+#define MOOD_TRADE_BONUS 10     // partners in a trade (trade.h)
 #define RIVAL_RANGE 7
 #define MOOD_WAR_MALUS 15
 #define MOOD_VICTIM 40
 #define MOOD_WITNESS 10
 #define MOOD_BORDER 2
-#define MOOD_REFUSED 10
 #define MOOD_LEVEL 5            // colder to the human, a level
+#define MOOD_TRIBUTE_REFUSED 20
 
 // Mycenaean raiders and the Hittite great king are quick to quarrel, the
 // Canaanite merchants slow (vision.md section 3), by CIV_*.
@@ -113,6 +107,7 @@ void diplomacy_reset(void)
         }
     }
     diplomacy_waiting = 0;
+    trade_reset();
 }
 
 // ---------------------------------------------------------------- relations
@@ -142,13 +137,6 @@ static void say(byte p, byte kind)
     diplomacy_waiting = 1;
 }
 
-// Whether the human's side is played by the computer (Debug: Play 50
-// Turns), which answers for it.
-#ifdef DEBUG_MENU
-#define HUMAN_ASKED(Q) ((Q) == PLAYER_HUMAN && !diplomacy_auto)
-#else
-#define HUMAN_ASKED(Q) ((Q) == PLAYER_HUMAN)
-#endif
 
 void declare_war(byte a, byte b)
 {
@@ -168,7 +156,8 @@ void declare_war(byte a, byte b)
 
 // Each player's strength, Civilization's military power: the attack and
 // defence of all its units. Worked out once a turn by diplomacy_turn().
-HIGH_BSS static word power[PLAYERS];
+HIGH_BSS word diplomacy_power[PLAYERS];
+#define power diplomacy_power
 
 static void count_power(void)
 {
@@ -351,6 +340,7 @@ void diplomacy_turn(void)
             aim = base(p, q);
             if (rel == RELATION_WAR) aim -= MOOD_WAR_MALUS;
             if (rel == RELATION_PEACE) aim += MOOD_PEACE_BONUS;
+            if ((trade_partners[p] >> q) & 1) aim += MOOD_TRADE_BONUS;
             if (game_turn & 1) {
                 if (diplomacy_mood[p][q] < aim) mood_up(p, q, 1);
                 else if (diplomacy_mood[p][q] > aim) mood_down(p, q, 1);
@@ -386,27 +376,33 @@ void diplomacy_turn(void)
             }
         }
     }
+    trade_turn();
 }
 
 // ------------------------------------------------------------- the letters
 
 // The names a letter from p to the human is written with, copied out of
-// text_line()'s two buffers, which would not hold them all.
+// text_line()'s two buffers, which would not hold them all: the two
+// rulers, their titles, p's people, and for a trade the goods asked of the
+// human and offered for it (trade.h), small in the middle of a sentence.
 #define NAME_MAX 24
-HIGH_BSS static char names[5][NAME_MAX];
+#define NAMES 7
+HIGH_BSS static char names[NAMES][NAME_MAX];
 
 static void copy_name(byte i, const char *s)
 {
     byte n = 0;
     while (*s && n < NAME_MAX - 1) names[i][n++] = *s++;
     names[i][n] = 0;
+    if (i >= 5 && names[i][0] >= 'A' && names[i][0] <= 'Z')
+        names[i][0] += 'a' - 'A';
 }
 
 // Letter text `id` from p to the human, in a popup; for an offer, Yes or
 // No, and otherwise 0.
 static byte write_letter(byte p, byte id, byte ask)
 {
-    const char *args[5];
+    const char *args[NAMES];
     byte i, me = player_civ[PLAYER_HUMAN], civ = player_civ[p];
 
     copy_name(0, civ_leader(me));
@@ -414,7 +410,9 @@ static byte write_letter(byte p, byte id, byte ask)
     copy_name(2, civ_leader(civ));
     copy_name(3, civ_title(civ));
     copy_name(4, player_people(p));
-    for (i = 0; i < 5; ++i) args[i] = names[i];
+    copy_name(5, text_line(TEXT_LIST_RESOURCES, trade_ask_get[p]));
+    copy_name(6, text_line(TEXT_LIST_RESOURCES, trade_ask_give[p]));
+    for (i = 0; i < NAMES; ++i) args[i] = names[i];
     popup_begin();
     popup_add_text(id, args);
     if (ask) return popup_ask_shown();
@@ -438,7 +436,21 @@ void diplomacy_greet(byte met)
         if ((kind == LETTER_CEASEFIRE && rel != RELATION_WAR)
             || (kind == LETTER_PEACE && rel != RELATION_CEASEFIRE))
             continue;
-        if (kind == LETTER_CEASEFIRE || kind == LETTER_PEACE) {
+        if (kind == LETTER_TRADE || kind == LETTER_TRIBUTE) {
+            // Not if the peace or the good has gone since, or a trade has
+            // been made.
+            if (rel != RELATION_PEACE
+                || ((trade_partners[p] >> PLAYER_HUMAN) & 1)
+                || !player_owns(PLAYER_HUMAN, trade_ask_get[p]))
+                continue;
+            if (write_letter(p, LETTER_TEXT(kind), 1))
+                trade_agree(PLAYER_HUMAN, p, trade_ask_get[p],
+                            trade_ask_give[p]);
+            else
+                mood_down(p, PLAYER_HUMAN, kind == LETTER_TRIBUTE
+                                               ? MOOD_TRIBUTE_REFUSED
+                                               : MOOD_REFUSED);
+        } else if (kind == LETTER_CEASEFIRE || kind == LETTER_PEACE) {
             if (write_letter(p, LETTER_TEXT(kind), 1))
                 agreed(p, PLAYER_HUMAN, kind);
             else
@@ -458,8 +470,8 @@ void diplomacy_greet(byte met)
 #define EXIT_TEXT " EXIT "
 #define EXIT_LEFT (SCREEN_COLUMNS - 2 - (sizeof EXIT_TEXT - 1))
 #define LIST_LEFT 8
-#define LIST_TOP 4
-#define BLOCK_ROWS 5            // rows a people takes, with a blank one
+#define LIST_TOP 3
+#define BLOCK_ROWS 5            // rows a people takes
 #define STATE_LEFT 56           // "at war", "at peace", "not yet met"
 
 static char digits[4];
@@ -518,6 +530,33 @@ static const char *attitude(byte p)
     return mood_word[i];
 }
 
+// What the human and p send each other, on row y.
+static void draw_trade(byte p, byte y)
+{
+    byte i, x = LIST_LEFT + 2, from, give, back;
+
+    for (i = 0; i < MAX_DEALS; ++i) {
+        from = deal_from[i];
+        if (from == DEAL_FREE) continue;
+        if (from == PLAYER_HUMAN && deal_to[i] == p) {
+            give = deal_give[i];
+            back = deal_back[i];
+        } else if (from == p && deal_to[i] == PLAYER_HUMAN) {
+            give = deal_back[i];
+            back = deal_give[i];
+        } else {
+            continue;
+        }
+        put(&x, y, "Trade: you send ", COLOR_LIGHTGREY);
+        put(&x, y, give == RES_NONE ? "nothing"
+                   : text_line(TEXT_LIST_RESOURCES, give), COLOR_LIGHTGREEN);
+        put(&x, y, ", they send ", COLOR_LIGHTGREY);
+        put(&x, y, back == RES_NONE ? "nothing"
+                   : text_line(TEXT_LIST_RESOURCES, back), COLOR_LIGHTGREEN);
+        return;
+    }
+}
+
 // Player p's block: the people and how things stand, the ruler, the
 // counts, p's attitude and its wars with the others the human knows.
 static void draw_player(byte p, byte y, byte selected)
@@ -563,6 +602,7 @@ static void draw_player(byte p, byte y, byte selected)
         put(&x, y + 3, "at war with ", COLOR_LIGHTGREY);
         put(&x, y + 3, player_people(q), COLOR_RED);
     }
+    draw_trade(p, y + 4);
 }
 
 // Whether the human can write to p: met, and still in the game.
@@ -590,7 +630,10 @@ static void draw_actions(byte p)
     if (rel == RELATION_CEASEFIRE)
         put(&x, ACTION_ROW, "P propose peace   ", COLOR_WHITE);
     if (rel != RELATION_WAR)
-        put(&x, ACTION_ROW, "W declare war", COLOR_WHITE);
+        put(&x, ACTION_ROW, "W declare war   ", COLOR_WHITE);
+    if (rel == RELATION_PEACE)
+        put(&x, ACTION_ROW, (trade_partners[p] >> PLAYER_HUMAN) & 1
+                            ? "T end the trade" : "T trade", COLOR_WHITE);
 }
 
 static void draw_list(byte selected)
@@ -674,6 +717,11 @@ void diplomacy_screen(void)
         if (key == 'p' && rel == RELATION_CEASEFIRE) {
             propose(sel, LETTER_PEACE);
             return;
+        }
+        if (key == 't' && rel == RELATION_PEACE) {
+            if (trade_propose(sel, ACTION_ROW)) return;
+            draw_actions(sel);
+            continue;
         }
         if (key == 'w' && rel != RELATION_WAR) {
             y = 0;

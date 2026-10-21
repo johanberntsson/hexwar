@@ -76,6 +76,35 @@ void diplomacy_screen(void);
 // Set while the computer plays the human's side (Play 50 Turns): offers to
 // the human are answered for it, and nothing is written to it.
 extern byte diplomacy_auto;
+#define HUMAN_ASKED(Q) ((Q) == PLAYER_HUMAN && !diplomacy_auto)
+#else
+#define HUMAN_ASKED(Q) ((Q) == PLAYER_HUMAN)
 #endif
+
+// **Shared with trade.c**, which writes letters and weighs attitudes too.
+// What each computer player has to write to the human when the map is
+// next up, one each; diplomacy_greet() reads them. A trade or a tribute
+// asked for is in trade_ask_give/get (trade.h).
+extern byte diplomacy_letter[PLAYERS];
+#define LETTER_NONE 0
+#define LETTER_WAR 1
+#define LETTER_CEASEFIRE 2      // an offer, answered Yes or No
+#define LETTER_PEACE 3          // the same
+#define LETTER_TRUCE_OVER 4
+#define LETTER_YES 5            // to what the human proposed
+#define LETTER_NO 6
+#define LETTER_TRADE 7          // a trade asked for, Yes or No
+#define LETTER_TRIBUTE 8        // a good demanded for nothing, Yes or No
+
+// Attitudes, round MOOD_NEUTRAL: diplomacy.c has the rules.
+#define MOOD_NEUTRAL 100
+#define MOOD_MAX 200
+#define MOOD_WAR 60             // below it, and stronger, a player attacks
+#define MOOD_PEACE 90           // at it, a player in a ceasefire offers peace
+#define MOOD_ACCEPT 75          // at it, a player accepts peace, or a trade
+#define MOOD_REFUSED 10         // what a refused offer costs
+
+// Each player's military power, worked out by diplomacy_turn().
+extern word diplomacy_power[PLAYERS];
 
 #endif // SEVENSHIPS_DIPLOMACY_H

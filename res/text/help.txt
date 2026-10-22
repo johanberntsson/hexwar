@@ -11,7 +11,7 @@
 {head}Orders
 {key}b{tab 10}{text}found a city (settler)
 {key}f{tab 10}{text}fortify
-{key}i{tab 10}{text}irrigate (builder)
+{key}i{tab 10}{text}irrigate; boat: fish
 {key}m{tab 10}{text}build a mine (builder)
 {key}w{tab 10}{text}wait: ask again later
 {key}space{tab 10}{text}skip this unit's turn

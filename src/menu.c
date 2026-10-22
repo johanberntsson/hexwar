@@ -131,6 +131,7 @@ static const char *order_name(byte command)
     case MENU_FOUND_CITY: return "Found City";
     case MENU_IRRIGATE: return "Irrigate";
     case MENU_MINE: return "Mine";
+    case MENU_FISH: return "Fish";
     }
     return "Fortify";
 }

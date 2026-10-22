@@ -223,15 +223,15 @@ window shows one region of code at a time. The figures below are from the linker
 | \$1600-\$1637 | 0.05 | `zpsave`: BASIC's zero page \$02-\$39, saved at start-up and put back on exit |
 | \$1638-\$1b20 | 1.2 | the `lowfree` section (`LOW_FREE`): the popup's text, the scratch buffers of the view and the minimap, and the galleys' route search |
 | \$1b21-\$1eff | 1.0 | free |
-| \$2001-\$5c05 | 15.0 | BASIC stub, startup and resident code |
-| \$5c06-\$5c64 | 0.1 | initialised data: the DMA lists |
-| \$5c65-\$5d64 | 0.25 | C stack |
-| \$5d65-\$5ef8 | 0.4 | BSS: small state |
-| \$5ef9-\$5fff | 0.25 | free |
-| \$6000-\$7fff | 8 | the code window; region 0 as loaded (6.4 KB used) |
+| \$2001-\$5a25 | 14.5 | BASIC stub, startup and resident code |
+| \$5a26-\$5a60 | 0.1 | initialised data: the DMA lists |
+| \$5a61-\$5b60 | 0.25 | C stack |
+| \$5b61-\$5cf4 | 0.4 | BSS: small state |
+| \$5cf5-\$5fff | 0.8 | free |
+| \$6000-\$7fff | 8 | the code window; region 0 as loaded (7.1 KB used) |
 | \$8000-\$9ffe | 8 | resident constant data and code |
-| \$a000-\$b7b0 | 5.9 | `highbss` (`HIGH_BSS`): the map `map_tile` (terrain, improvements, explored and occupied bits), the unit and city arrays (the cities' size and food box among them), the peoples' relations and attitudes, the trade deals, the sprite blocks, the AI's headings, the staging buffers of the texts and the regions, the texts' line buffers, the sheet loader's buffers and its rows' extents and addresses, the saved VIC registers, and the resources, a list by hexagon row |
-| \$b7b1-\$bfff | 2.1 | free |
+| \$a000-\$b7c4 | 5.9 | `highbss` (`HIGH_BSS`): the map `map_tile` (terrain, improvements, explored and occupied bits), the unit and city arrays (the cities' size and food box among them), the peoples' relations and attitudes, the trade deals, the sprite blocks, the AI's headings, the staging buffers of the texts and the regions, the texts' line buffers, the sheet loader's buffers and its rows' extents and addresses, the saved VIC registers, and the resources, a list by hexagon row |
+| \$b7c5-\$bfff | 2.1 | free |
 
 The long texts and the names are not in this table at all: they are in
 TEXT.PAK, read into Attic RAM at start-up, which is most of why the
@@ -280,12 +280,13 @@ of a whole region takes about 3.3 ms on the real machine, which is
 nothing for code that runs once a turn or once a click, so the number of
 regions is limited only by the tables in `src/dispatch.s`; what must not
 happen is two regions of one slot calling each other in a loop. Region 0
-holds the screens that are not the map -- title, setup, help -- with the
-menus, save and load and the loaders of the tile sheet and the map;
+holds the screens that are not the map -- title, setup, help -- with
+save and load, the loaders of the tile sheet and the map, the end of a
+turn and the readout of what is under the arrow;
 region 1 holds the computer players and the cities' yields and growth;
 region 2 the city screen, Top Five Cities and the builders'
-improvements; region 3 diplomacy; region 4 trade, the ships' routes and
-exploring, and the menus.
+improvements; region 3 diplomacy; region 4 trade, the ships' routes,
+exploring and fishing, and the menus.
 
 Resident code calls a function in a region through a stub of the same
 name (`src/dispatch.s`), which maps the region in (copying it into its

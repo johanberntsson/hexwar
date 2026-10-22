@@ -205,10 +205,10 @@ buffers at the default `$FF80000` and corrupts the display.
 
 | Address | Size | Contents |
 |---|---|---|
-| `$2001-$5FFF`, `$8000-$9FFF` | 24 KB | the resident program: code, data, BSS, C stack. 278 bytes free, nearly all at `$5EF9-$5FFF` |
-| `$6000-$7FFF` | 8 KB | the code window (`src/region.h`); as loaded, region 0 — the title, setup and help screens (and the Civilopedia's pages), save and load, the sheet's and the map's loaders, the owners' flags, the end of a turn and a game's start (`src/turn.c`), the computer players' starts (`src/aiplace.c`). 1.6 KB free |
-| `$13000-$14FFF` | 8 KB | code slot 1: region 1, from `SEVENSHIPS.R1` by way of attic: the computer players and their ferrying, the cities' yields and growth, bronze. 273 bytes free |
-| `$15000-$16FFF` | 8 KB | code slot 2, shared: region 2 (the city screen, Top Five Cities, the builders' improvements; 2.7 KB free) region 3 (diplomacy; 2.3 KB free) or region 4 (trade, the ships' routes and exploring, the menus; 2.8 KB free), whichever was called last |
+| `$2001-$5FFF`, `$8000-$9FFF` | 24 KB | the resident program: code, data, BSS, C stack. 792 bytes free, nearly all at `$5CF5-$5FFF` |
+| `$6000-$7FFF` | 8 KB | the code window (`src/region.h`); as loaded, region 0 — the title, setup and help screens (and the Civilopedia's pages), save and load, the sheet's and the map's loaders, the owners' flags, the end of a turn and a game's start (`src/turn.c`), the computer players' starts (`src/aiplace.c`), the hover readout (`src/hover.c`). 0.9 KB free |
+| `$13000-$14FFF` | 8 KB | code slot 1: region 1, from `SEVENSHIPS.R1` by way of attic: the computer players and their ferrying, the cities' yields and growth, bronze. 123 bytes free |
+| `$15000-$16FFF` | 8 KB | code slot 2, shared: region 2 (the city screen, Top Five Cities, the builders' improvements; 2.7 KB free) region 3 (diplomacy; 2.3 KB free) or region 4 (trade, the ships' routes, exploring and fishing, the menus; 2.0 KB free), whichever was called last |
 | `$17000-$1EFFF` | 32 KB | the packed tile sheet's second area, where regions 3 to 6 would have been: whatever rows did not fit bank 5's; with bank 5's, 18 KB free (`tools/mktiles.py` says) |
 | `$A000-$BFFF` | 8 KB | `highram`, under the BASIC ROM, banked out by `src/bank.s`: `map_tile`, the unit and city arrays, the sprite blocks, the AI's headings, the staging buffers of the texts and the regions, the texts' line buffers, the sheet loader's buffers, the saved VIC registers, the AI's exploration memory, the resource list, the sheet's row tables, the peoples' relations and attitudes and the letters' names, the trade deals; about 2.1 KB free — `HIGH_BSS` in `src/mega65.h` moves a variable there, and **the startup does not clear it** |
 | `$1600-$1EFF` | 2304 | `zpsave` (56 bytes, BASIC's zero page during the run), then `lowfree`: the popup's 400-byte text and the scratch buffers of the view and the minimap, and the sea routes' search (`src/path.c`), 990 bytes free — `LOW_FREE` in `src/mega65.h` moves a variable there |
@@ -527,10 +527,10 @@ entry in each of `dispatch.s`'s per-region tables (`slot_of`,
 `region_stamp[]`'s initialiser in `src/region.c`, and its file in the
 Makefile's `REGION_FILES`; `packprg.py` needs nothing. Attic's bank 1
 holds eight regions as the tables stand. **Resident space is what to
-watch now**: 278 bytes (22 Oct 2026, after the fishing boat; Help →
-Terrain Types took the terrain names out of `game.c`; the slot
-copying cost 140, and each stub is 13), against 1.6 KB in region 0, 273 in
-region 1, 2.6 KB in region 2, 2.3 KB in region 3 and 2.8 KB in region 4.
+watch now**: 792 bytes (22 Oct 2026, after the fishing boat's work and
+the hover readout's move to region 0; the slot
+copying cost 140, and each stub is 13), against 0.9 KB in region 0, 123 in
+region 1, 2.6 KB in region 2, 2.3 KB in region 3 and 2.0 KB in region 4.
 `src/menu.c` moved from region 0 to region 4 the same day, when region 0
 was down to 188 bytes. **Region 1 is nearly full too**: its next room
 is more of `ai.c` moving out (as `ai_place()` went to `src/aiplace.c`
@@ -542,8 +542,12 @@ functions are most of the resident code (the listing shows them all as
 now `game_end_turn()`), Play 50 Turns and `game_init()` moved into
 `src/turn.c` in region 0, which needs no copying, sharing `game.c`'s
 state through `src/gameint.h` (game.c's names `#define`d to `game_`
-ones) — 915 bytes, and a 300-turn autoplay byte-identical. Menu
-commands, `attack()`, `draw_hover()` and `found_city()` could follow. **Confirmed on a real MEGA65** (21
+ones) — 915 bytes, and a 300-turn autoplay byte-identical. **The hover
+readout went the same way** (22 Oct 2026, when the fishing boat's work
+left 167 bytes): `draw_hover()` is `game_draw_hover()` in `src/hover.c`,
+region 0, called through a stub when the arrow or the view has moved,
+never in the redraw — 625 bytes. Menu
+commands, `attack()` and `found_city()` could follow. **Confirmed on a real MEGA65** (21
 Oct 2026): the slot copying, through long autoplays, the city screen and
 the Diplomacy screen in turn, and save and load. Code that is not hot can move out of the resident program into
 a region. So new subsystems go into a region from the start, per-turn
@@ -615,7 +619,7 @@ the peoples took 60 to 150 turns to meet, or never did. The width stays a
 power of two, which `& (MAP_COLUMNS - 1)` in the wrap relies on; the rows
 are free, but the minimap is a line a hexagon row (an `#error`), and its
 characters must fit the tile store's padding (another). The
-readout at the top right of the screen (`draw_hover()` in `src/game.c`, via
+readout at the top right of the screen (`game_draw_hover()` in `src/hover.c`, via
 `map_cell_at()`) names the terrain, its yield and the `ax,ay` of the hexagon under the
 arrow — or, from when the orders pass to a unit or a unit moves until the
 arrow next moves, of that unit's hexagon (`hover_on()`), and of tile
@@ -1254,9 +1258,9 @@ as `res_olives` and `res_wine` are. The improvement's own overlay is
 still drawn under it, and shows through a little (the blue of the
 irrigation in the middle of a pasture). They are lines 2-30, all four
 character rows, which costs the redraw two more jobs than lines 8-23, on
-the few hexagons that have one. Fish's improved tile is fishing boats,
-which wants a work boat, so it is not in; grain, cedar and dye have no
-improved art. The city screen's CHANGE lists Spearman only with bronze, and
+the few hexagons that have one. Fish's is fishing boats, `alltiles/`'
+`tile_fish_improved`, which a fishing boat makes (**Galleys**); grain,
+cedar and dye have no improved art. The city screen's CHANGE lists Spearman only with bronze, and
 otherwise says which is missing ("Spearman needs bronze: tin"). **The
 computer players**: any builder goes first for unmined copper or tin next
 to any of its people's cities, the nearest (`strategic_site()`; before
@@ -1443,8 +1447,24 @@ its guards and explorers — usually the first city's second build — and
 it explores (`boat_explore()`, `src/boat.c`, region 4): to the nearest
 8x4 block with shallows that its people has not seen (`ai_seen`, and
 `ai_sea`, set by `ai_place()` beside `ai_land`), by `sea_route()`; a
-block out of reach, or reached, counts as seen. Its work on fish is
-still to come (TODO.txt). Measured (a throwaway record of the turn each
+block out of reach, or reached, counts as seen. **A boat works fish**,
+Civilization IV's way: on a fish not worked yet, `i` or Orders → Fish
+(`boat_order()`, `src/boat.c`) uses it up and makes the fish fishing
+boats — `MAP_IRRIGATED` on the shallows, so `yield()` gives the 1 food
+irrigation does (4/0/2 for worked fish), `RES_TILE()` draws
+`TILE_FISH_BOATS` through `map_res_improved_by[]`, and the readout says
+"+boats". **The irrigation overlay is not drawn on the shallows**: the
+test is in `view_redraw()` and `view_draw_patch()` behind the
+`MAP_IMPROVEMENT` test, so it costs only improved hexagons anything.
+The computer players' first boat explores while there is anything left
+to; any other boat, and the first once everything is seen, makes for the
+nearest unworked fish next to one of its people's cities and works it
+(`boat_explore()`); and a coastal city with unworked fish next to it
+(`fish_to_work()` in `src/ai.c`) and of size 2 or more builds a second
+boat, over the unit cap since it is gone once it gets there (under the
+cap, almost none was built: 0 of 14 fish worked on seed 1). In 300 turns
+of autoplay every fish next to a city was worked — 1, 2 and 2 on seeds
+1, 3 and 7 — of 14-26 a map: few cities are founded by fish. Measured (a throwaway record of the turn each
 pair first met, 300 turns of autoplay, the human's side played by the
 AI): seed 1 went from three pairs of six met (turns 43-54) to all six
 (23-109), seed 3 from one (58) to all six (34-131), seed 7 from one to
@@ -1452,7 +1472,9 @@ three (53-93) — the Hittites there are on land the shallows do not
 reach. Checked headlessly with a throwaway start (a boat on the shallows
 by the settler): drawn with its flag, "Ships keep to the shallows" for
 a step onto land, "Cannot swim" for the warrior stepping onto it; and
-the city screen's CHANGE list.
+the city screen's CHANGE list; and with a boat on the fish at (21,4) on
+seed 1, `i`: "Fishing boats at work", the boat gone, the fishing boats
+drawn with no overlay, and "Shallows+Fish+boats 4/0/2".
 
 **Popups** (`src/popup.c`) are a box of word-wrapped text over the middle
 of the map window, closed by a click anywhere, fire, Return, space or Esc.
@@ -1872,7 +1894,8 @@ land, the overlays, irrigation and mine, the nine resources (see
 **Resources**), mined copper and tin, the spearman, irrigated
 cattle, olives and wine (see **Bronze**), and the galley and the
 fishing boat (see **Galleys**, `alltiles/`' `unit_galley.png` and
-`unit_work_boat.png` as they are);
+`unit_work_boat.png` as they are), and fish worked by one
+(`tile_fish_improved.png`, as `res_fish_boats`);
 `TILE_*` in `src/sheet.h`. Where each tile goes is the loader's business
 (**When bank 5 fills up**, step 1c). `res_cattle`, `res_copper` and `res_tin` are `alltiles/`'
 cattle, copper and iron cut to lines 8-23, `res_olives` and `res_wine` its

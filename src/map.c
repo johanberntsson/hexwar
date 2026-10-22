@@ -11,14 +11,16 @@ HIGH_BSS byte map_res_kind[MAP_RES_MAX];
 byte map_show;
 #endif
 
-// RES_* order. Grain, fish, cedar and dye have no improved picture yet.
+// RES_* order. Grain, cedar and dye have no improved picture yet. Fish is
+// "irrigated" by a fishing boat (boat_fish(), src/boat.h): the bit means
+// fishing boats on the shallows.
 const byte map_res_improved_by[RES_COUNT] = {
-    0, 0, 0, MAP_IRRIGATED, MAP_IRRIGATED, MAP_IRRIGATED, 0, MAP_MINED,
-    MAP_MINED, 0
+    0, 0, MAP_IRRIGATED, MAP_IRRIGATED, MAP_IRRIGATED, MAP_IRRIGATED, 0,
+    MAP_MINED, MAP_MINED, 0
 };
 const byte map_res_improved[RES_COUNT] = {
-    0, 0, 0, TILE_CATTLE_PASTURE, TILE_OLIVES_GROVE, TILE_WINE_VINEYARD, 0,
-    TILE_COPPER_MINE, TILE_TIN_MINE, 0
+    0, 0, TILE_FISH_BOATS, TILE_CATTLE_PASTURE, TILE_OLIVES_GROVE,
+    TILE_WINE_VINEYARD, 0, TILE_COPPER_MINE, TILE_TIN_MINE, 0
 };
 
 // One step in each direction, in doubled coordinates; DIR_* order. File scope

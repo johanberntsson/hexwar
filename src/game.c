@@ -14,6 +14,7 @@
 #include "help.h"
 #include "improve.h"
 #include "ai.h"
+#include "boat.h"
 #include "city.h"
 #include "cityscreen.h"
 #include "topcities.h"
@@ -45,8 +46,8 @@ byte dirty;              // the view wants redrawing
 byte contact;            // see whether a people has come in sight
 byte greet;              // peoples just met, greeted after a redraw
 byte hover_dirty;        // the readout of what is under the arrow
-byte hover_unit;         // ... or on hover_ax/ay; see draw_hover()
-static byte hover_ax, hover_ay;
+byte hover_unit;         // ... or on hover_ax/ay; see hover.c
+byte hover_ax, hover_ay;
 byte game_over;
 byte quit;
 byte retired;            // quit by Game/Retire, for the title screen
@@ -61,7 +62,7 @@ word game_year;
 // Return does what a click on it would, and Tab or Esc puts it away. While
 // it is up the ring blinks rather than the active unit.
 byte selecting;
-static byte sel_ax, sel_ay;
+byte sel_ax, sel_ay;
 static byte sel_hidden;         // the ring's half of the blink
 
 // The active unit blinks: BLINK_FRAMES drawn, BLINK_FRAMES not, half a
@@ -76,7 +77,7 @@ static byte blink;
 
 // A line of text built up a piece at a time, so that no printf is linked.
 char line[41];
-static byte line_len;
+byte line_len;
 
 void line_clear(void)
 {
@@ -91,7 +92,7 @@ void line_add(const char *s)
 }
 
 // "Hittite Warrior".
-static void line_add_unit(byte owner, byte kind)
+void line_add_unit(byte owner, byte kind)
 {
     line_add(player_adjective(owner));
     line_add(" ");
@@ -189,7 +190,7 @@ static void draw_orders(void)
 // Which hexagon is under the tip of the arrow. 0 if the arrow is not over
 // the map window. A sprite unit is two H640 pixels, so a character is four
 // units across and eight down.
-static byte pointer_hex(byte *ax, byte *ay)
+byte pointer_hex(byte *ax, byte *ay)
 {
     byte col = (byte)(input_x >> 2);
     byte row = (byte)(input_y >> 3);
@@ -201,76 +202,6 @@ static byte pointer_hex(byte *ax, byte *ay)
     if (cx >= MAP_WIDTH_CHARS) cx -= MAP_WIDTH_CHARS;
     map_cell_at(cx, off_y + (row - VIEW_TOP), ax, ay);
     return 1;
-}
-
-// What is under the arrow, right-aligned at the end of the top row: a city's
-// name or whose unit it is, the terrain (or "Unexplored", which hides both), and the cell -- on
-// the map window or on the minimap. Blank when the arrow is on neither.
-static void draw_hover(void)
-{
-    byte ax, ay, c, u, x;
-
-    line_clear();
-    // While tile select is up the readout follows the ring, not the arrow;
-    // and when the orders pass to a unit, or it moves, it shows the unit's
-    // hexagon (hover_on()) until the arrow moves.
-    if (selecting) {
-        ax = sel_ax;
-        ay = sel_ay;
-    } else if (hover_unit) {
-        ax = hover_ax;
-        ay = hover_ay;
-    }
-    if (selecting || hover_unit || pointer_hex(&ax, &ay)
-        || minimap_hex(input_x, input_y, &ax, &ay)) {
-        if (!MAP_IS_EXPLORED(ax, ay)) {
-            line_add("Unexplored");
-        } else {
-            // A city's name says whose it is; a unit needs telling.
-            c = city_at(ax, ay);
-            u = unit_at(ax, ay);
-            if (c != CITY_NONE) {
-                line_add(city_name_of(c));
-                line_add("  ");
-            } else if (u != UNIT_NONE) {
-                line_add_unit(unit_owner[u], unit_kind[u]);
-                line_add("  ");
-            }
-            // The terrain and its resource, "Hills+Copper"; with a city or
-            // a unit, the resource instead of the terrain, which is what
-            // there is room for -- "Canaanite Builder  Cattle+irr 127,19".
-            x = map_resource_at(ax, ay);
-            if (x == RES_NONE || (c == CITY_NONE && u == UNIT_NONE)) {
-                line_add(text_line(TEXT_LIST_TERRAINS, MAP_TERRAIN(ax, ay)));
-                if (x != RES_NONE) line_add("+");
-            }
-            if (x != RES_NONE) line_add(text_line(TEXT_LIST_RESOURCES, x));
-            x = map_tile[ay][ax] & MAP_IMPROVEMENT;
-            // Short, so that "Canaanite Builder  Mountains+mine 127,31"
-            // still fits in the 40 columns.
-            if (x) line_add(x == MAP_IRRIGATED ? "+irr" : "+mine");
-            // What it yields, food/shields/trade, where there is room:
-            // with nothing on it.
-            if (c == CITY_NONE && u == UNIT_NONE) {
-                hex_yield(ax, ay);
-                line_add(" ");
-                line_add_num(hex_food);
-                line_add("/");
-                line_add_num(hex_shields);
-                line_add("/");
-                line_add_num(hex_trade);
-            }
-        }
-        line_add(" ");
-        line_add_num(ax);
-        line_add(",");
-        line_add_num(ay);
-    }
-    // Padded on the left to a fixed field, so a shorter text overwrites a
-    // longer one. The menu line ends at column 38.
-    for (x = 40; x < SCREEN_COLUMNS - line_len; ++x)
-        screen_putcxy(x, 0, ' ', COLOR_WHITE);
-    screen_putsxy(SCREEN_COLUMNS - line_len, 0, line, COLOR_WHITE);
 }
 
 // Whether all of (ax, ay)'s tile is inside the window.
@@ -514,7 +445,11 @@ static void unit_key(byte key)
         unit_orders[u] = ORDERS_FORTIFY;
         select_unit(u);
         break;
-    case 'i': improve(ORDERS_IRRIGATE); break;
+    case 'i':
+        // A fishing boat works the fish it is on.
+        if (unit_kind[u] == KIND_BOAT) boat_order(u);
+        else improve(ORDERS_IRRIGATE);
+        break;
     case 'm': improve(ORDERS_MINE); break;
     }
 }
@@ -569,6 +504,8 @@ static void set_orders_menu(void)
         else if (kind == KIND_BUILDER) {
             command = MENU_IRRIGATE;
             second = MENU_MINE;
+        } else if (kind == KIND_BOAT) {
+            command = MENU_FISH;
         }
     }
     menu_orders(command, second);
@@ -618,6 +555,9 @@ static void menu_command(byte command)
         break;
     case MENU_MINE:
         unit_key('m');
+        break;
+    case MENU_FISH:
+        unit_key('i');
         break;
     case MENU_TOP_CITIES:
         open_top_cities();
@@ -880,7 +820,7 @@ byte game_run(void)
             hover_unit = 0;
         }
         if (hover_dirty) {
-            draw_hover();
+            game_draw_hover();
             hover_dirty = 0;
         }
         if (!key) continue;

@@ -1,11 +1,11 @@
 --- OPEN ---
 
 NEXT: what is left of milestone 9 -- ferrying armies (an AI at war with a people over the
-water), merchant fleets and emporia, the fishing boat's work on fish -- or milestone 10,
+water), merchant fleets and emporia -- or milestone 10,
 the end game (drafted below). The tile sheet is packed and has about 18 KB free, a dozen
-units (make in tiles/ says). Room is short in the resident program and region 1: resident
-278 bytes, region 0 1.6 KB, region 1 273 (more of ai.c can move out, as ai_place() did),
-region 2 2.6 KB, region 3 2.3 KB, region 4 2.8 KB
+units (make in tiles/ says). Room: resident 792 bytes (the hover readout moved to region
+0), region 0 0.9 KB, region 1 123 bytes -- full: more of ai.c has to move out, as
+ai_place() did, before the AI grows -- region 2 2.6 KB, region 3 2.3 KB, region 4 2.0 KB
 
 The AI ferries settlers now, but rarely: most peoples reach AI_CITY_CAP (6) on their own land
 before they have a galley. Raise the cap (7-8, MAX_CITIES is 32 shared) if overseas cities
@@ -85,8 +85,7 @@ Milestone 7: resources -- DONE (20 Oct 2026)
   autoplays one people of four had bronze on seed 1, none on seeds 3 and 7
 - DONE: improved resources have their own tiles in code region 3's room (now the
   sheet's): irrigated cattle (pasture), olives and wine (orchard recoloured). One tile
-  left. Fish's improved tile (alltiles' tile_fish_improved) waits for the fishing boat's
-  work (milestone 9)
+  left. Fish's improved tile is fishing boats, made by a fishing boat (milestone 9)
 
 Milestone 8: basic diplomacy -- DONE (21 Oct 2026)
 - DONE: contact between all the peoples (adjacency); war, ceasefire (16 turns, then war)
@@ -117,9 +116,12 @@ Milestone 9: trade
   block with shallows, by sea_route()); galleys with nobody to ferry explore the same way.
   First contact, 300 turns of autoplay, pairs of six met: seed 1 3 -> 6 (turns 23-109),
   seed 3 1 -> 6 (34-131), seed 7 1 -> 3 (53-93)
-- Next: the fishing boat works fish (Civ 4: used up, fish becomes fishing boats, more food;
-  alltiles' tile_fish_improved; MAP_IRRIGATED on the shallows could mean it, but the
-  irrigation overlay must not be drawn on water). The AI builds more boats for its fish
+- DONE (22 Oct 2026): the fishing boat works fish (i, Orders/Fish): it is used up and the
+  fish becomes fishing boats, MAP_IRRIGATED on the shallows (+1 food, 4/0/2), drawn with
+  alltiles' tile_fish_improved and no irrigation overlay. AI: the first boat explores, then
+  fishes; a coastal city of size 2+ with unworked fish builds another, over the cap. In
+  300 turns every fish next to a city was worked (1-2 a map: few cities are by fish)
+- Maybe: find_site() could value fish more, so that more cities are founded by it
 - Later: ferrying armies, physical trade fleets, emporia
 
 Milestone 10: the end game -- the Bronze Age Collapse (DRAFT, vision.md sections 4 and 5)

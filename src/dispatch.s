@@ -181,6 +181,7 @@ stub:       .macro  name, target, region
             stub    game_init, game_init_r0, 0
             stub    game_end_turn, game_end_turn_r0, 0
             stub    game_autoplay, game_autoplay_r0, 0
+            stub    game_draw_hover, game_draw_hover_r0, 0
 
 ; Region 1, slot 1: the computer players and the cities' yields and
 ; growth.
@@ -218,6 +219,7 @@ stub:       .macro  name, target, region
             stub    trade_propose, trade_propose_r4, 4
             stub    sea_route, sea_route_r4, 4
             stub    boat_explore, boat_explore_r4, 4
+            stub    boat_order, boat_order_r4, 4
             stub    menu_orders, menu_orders_r4, 4
             stub    menu_draw, menu_draw_r4, 4
             stub    menu_click, menu_click_r4, 4

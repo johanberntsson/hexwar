@@ -364,6 +364,18 @@ static byte home(byte u)
     return best;
 }
 
+// Whether city c has fish next to it that no fishing boat works yet.
+static byte fish_to_work(byte c)
+{
+    byte dir, nx, ny;
+    for (dir = 0; dir < 6; ++dir)
+        if (map_neighbour(city_ax[c], city_ay[c], dir, &nx, &ny)
+            && map_resource_at(nx, ny) == RES_FISH
+            && !(map_tile[ny][nx] & MAP_IRRIGATED))
+            return 1;
+    return 0;
+}
+
 // A player builds a galley once it has this many cities, and cedar.
 #define GALLEY_CITIES 3
 
@@ -880,6 +892,12 @@ void ai_turn(byte p)
             // One galley, to explore the coasts, over the cap if need be.
             kind = KIND_GALLEY;
             ++galleys;
+        } else if (boats < 2 && city_size[c] >= 2 && fish_to_work(c)) {
+            // A second boat, to work the fish (boat_explore()): over the
+            // cap, since it is used up once it gets there. Not from a city
+            // of size 1, which would rather grow and send a settler.
+            kind = KIND_BOAT;
+            ++boats;
         } else if (units >= cap) {
             kind = KIND_NONE;
         } else if (builders < cities && work_site(c)) {

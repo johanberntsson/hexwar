@@ -251,7 +251,8 @@ void view_draw_patch(byte col, byte row, byte ax, byte ay, byte rings)
         if (!(t & MAP_EXPLORED)) t = TILE_UNDISCOVERED;
         view_draw_tile(col + patch_x[i], row + patch_y[i],
                        t & MAP_TERRAIN_MASK);
-        if (t & MAP_IMPROVEMENT)
+        if ((t & MAP_IMPROVEMENT)
+            && (t & MAP_TERRAIN_MASK) != TILE_SHALLOW_OCEAN)
             view_draw_tile(col + patch_x[i], row + patch_y[i],
                            MAP_OVERLAY_TILE(t));
         if ((t & MAP_EXPLORED) && (n = map_resource_at(nx, ny)) != RES_NONE)
@@ -347,8 +348,11 @@ void view_redraw(word off_x, word off_y)
             // An improvement goes straight over its own terrain: it is
             // inside its hexagon, which nothing drawn later covers. An
             // unexplored hexagon's t is TILE_UNDISCOVERED, with these bits
-            // clear.
-            if (t & MAP_IMPROVEMENT)
+            // clear. Fish worked by a fishing boat has the bits too, but no
+            // overlay: its resource tile is the picture. The test costs
+            // nothing on the hexagons with no improvement.
+            if ((t & MAP_IMPROVEMENT)
+                && (t & MAP_TERRAIN_MASK) != TILE_SHALLOW_OCEAN)
                 view_draw_tile(tx, ty, MAP_OVERLAY_TILE(t));
             ax += 2;
             if (ax >= MAP_COLUMNS) ax -= MAP_COLUMNS;

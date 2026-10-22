@@ -25,6 +25,13 @@
 #define message game_message
 #define draw_status game_draw_status
 #define select_unit game_select_unit
+#define hover_ax game_hover_ax
+#define hover_ay game_hover_ay
+#define sel_ax game_sel_ax
+#define sel_ay game_sel_ay
+#define line_len game_line_len
+#define line_add_unit game_line_add_unit
+#define pointer_hex game_pointer_hex
 
 extern word off_x, off_y;       // the view, in map characters
 extern byte dirty;              // the view wants redrawing
@@ -37,16 +44,28 @@ extern byte quit;
 extern byte retired;
 extern byte loaded;
 extern byte selecting;          // tile select is up
+extern byte sel_ax, sel_ay;     // ... and where its ring is
+extern byte hover_ax, hover_ay; // the readout's hexagon, while hover_unit
+extern byte line_len;
 extern char line[41];           // the panel's line being built
 
 void line_clear(void);
 void line_add(const char *s);
 void line_add_num(word v);
+// "Hittite Warrior": a unit's people and kind.
+void line_add_unit(byte owner, byte kind);
+// The hexagon under the arrow's tip into (ax, ay); 0 if the arrow is not
+// over the map window.
+byte pointer_hex(byte *ax, byte *ay);
 // Two lines of message in the panel. `second` may be `line`.
 void message(const char *first, const char *second);
 void draw_status(void);
 // Hand the orders to the next unit after `after` that wants some.
 void select_unit(byte after);
+
+// In hover.c, region 0: the readout of what is under the arrow, or the
+// ring, or hover_ax/ay, at the end of the top row.
+void game_draw_hover(void);
 
 // In turn.c, region 0.
 void game_end_turn(void);

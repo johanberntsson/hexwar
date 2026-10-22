@@ -6,8 +6,8 @@
 {text}  Food: 1
   Shields: 0
   Trade: 2
-  Improvements: none
+  Improvements: fishing boats on fish +1 food
   Resources: fish, purple dye
 {at 6 16}{red}Movement cost: 1
 Defence bonus: none
-{at 6 20}{text}The coastal waters the galleys sail.
+{at 6 20}{text}The coastal waters the galleys and the fishing boats sail.

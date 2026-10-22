@@ -87,7 +87,9 @@ extern byte map_tile[MAP_ROWS][MAP_COLUMNS];
 #define MAP_IRRIGATED 0x10
 #define MAP_MINED 0x20
 #define MAP_TERRAIN_MASK 0x0f
-// The overlay for a map byte whose MAP_IMPROVEMENT bits are not 0.
+// The overlay for a map byte whose MAP_IMPROVEMENT bits are not 0. **Not
+// on the shallows**, where MAP_IRRIGATED is fish worked by a fishing boat
+// (boat.h), drawn by its resource tile alone.
 #define MAP_OVERLAY_TILE(T) (TILE_OVERLAY_FIRST - 1 + (((T) >> 4) & 3))
 #define MAP_TERRAIN(AX, AY) (map_tile[AY][AX] & MAP_TERRAIN_MASK)
 #define MAP_IS_EXPLORED(AX, AY) ((map_tile[AY][AX] | map_show) & MAP_EXPLORED)

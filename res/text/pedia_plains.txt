@@ -1,0 +1,13 @@
+# The Civilopedia's page on Plains: Help/Terrain Types. A placeholder.
+# The markup is described in tools/mktext.py.
+{centre 3}{head}PLAINS
+{centre 5}{grey}Terrain Type
+{at 6 9}{head}Plains
+{text}  Food: 1
+  Shields: 1
+  Trade: 0
+  Improvements: irrigation +1 food
+  Resources: cattle, wine
+{at 6 16}{red}Movement cost: 1
+Defence bonus: none
+{at 6 20}{text}Open country, food and shields both.

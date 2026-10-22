@@ -21,6 +21,8 @@
 #define MENU_DIPLOMACY 11
 #define MENU_OPTIONS 12         // opens Options; menu_click() never returns it
 #define MENU_END_OF_TURN 13
+#define MENU_TERRAINS 14        // opens Terrain Types; never returned either
+#define MENU_TERRAIN 15         // + a terrain, TILE_HILLS to TILE_FLOODPLAIN
 
 // What the Orders menu offers, for the unit that has the orders: up to two
 // of MENU_FOUND_CITY, MENU_FORTIFY, MENU_IRRIGATE and MENU_MINE, MENU_NONE

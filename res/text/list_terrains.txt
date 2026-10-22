@@ -1,0 +1,12 @@
+# The terrains, by TILE_* in src/sheet.h: the hover readout and the
+# Help/Terrain Types menu.
+Hills
+Grassland
+Mountains
+Ocean
+Shallows
+Tundra
+Plains
+Forest
+Desert
+Floodplain

@@ -1,0 +1,13 @@
+# The Civilopedia's page on Shallows: Help/Terrain Types. A placeholder.
+# The markup is described in tools/mktext.py.
+{centre 3}{head}SHALLOWS
+{centre 5}{grey}Terrain Type
+{at 6 9}{head}Shallows
+{text}  Food: 1
+  Shields: 0
+  Trade: 2
+  Improvements: none
+  Resources: fish, purple dye
+{at 6 16}{red}Movement cost: 1
+Defence bonus: none
+{at 6 20}{text}The coastal waters the galleys sail.

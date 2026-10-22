@@ -1,0 +1,13 @@
+# The Civilopedia's page on Desert: Help/Terrain Types. A placeholder.
+# The markup is described in tools/mktext.py.
+{centre 3}{head}DESERT
+{centre 5}{grey}Terrain Type
+{at 6 9}{head}Desert
+{text}  Food: 0
+  Shields: 1
+  Trade: 0
+  Improvements: irrigation +1 food, mine +1 shield
+  Resources: none
+{at 6 16}{red}Movement cost: 1
+Defence bonus: none
+{at 6 20}{text}Dry and empty.

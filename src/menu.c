@@ -1,9 +1,10 @@
-// In region 0 (src/region.h): called through the stubs in src/dispatch.s,
-// under these names here.
-#define menu_orders menu_orders_r0
-#define menu_draw menu_draw_r0
-#define menu_click menu_click_r0
-#define menu_key menu_key_r0
+// In region 4 (src/region.h): called through the stubs in src/dispatch.s,
+// under these names here. It was in region 0 until that filled up (22 Oct
+// 2026); opening a menu may now copy region 4 into its slot, 3 ms at most.
+#define menu_orders menu_orders_r4
+#define menu_draw menu_draw_r4
+#define menu_click menu_click_r4
+#define menu_key menu_key_r4
 
 #include "menu.h"
 #include "game.h"
@@ -11,9 +12,11 @@
 #include "map.h"
 #include "minimap.h"
 #include "screen.h"
+#include "sheet.h"
+#include "text.h"
 #include "view.h"
 
-#pragma clang section text="r0text" rodata="r0rodata"
+#pragma clang section text="r4text" rodata="r4rodata"
 
 #define BAR_COLOUR COLOR_LIGHTGREEN
 #define ITEM_COLOUR COLOR_WHITE
@@ -22,11 +25,12 @@
 
 #define DROP_TOP 1              // the dropdown's frame; items start a row below
 
-// Game -> Options is a box of its own over the Game dropdown, as in
-// Civilization (civ1-reference/civ1-game-options.png): a heading, then the
-// options, each with a tick when it is on.
-#define OPTIONS_LEFT 4
-#define OPTIONS_TOP 3
+// The submenus, Game -> Options and Help -> Terrain Types, are boxes of
+// their own over their menu's dropdown, which stays up, as in Civilization
+// (civ1-reference/civ1-game-options.png): a heading, then the items. They
+// are not on the bar; their indexes in the tables below are MENUS and up.
+#define SUB_DX 4                // from their menu's title
+#define SUB_TOP 3
 #define TICK 0x7a               // a tick in the lower case character set
 
 #ifdef DEBUG_MENU
@@ -47,9 +51,16 @@ static const byte menu_x[MENUS] = { 0, 5, 12, 21, 27 };
 static const char *const game_items[] = { "Save Game", "Options", "Retire" };
 static const byte game_commands[] = { MENU_SAVE, MENU_OPTIONS, MENU_RETIRE };
 
-// Game -> Options, which is not on the bar: its index is MENUS.
+// The submenus. Options' items are ticked when on. Terrain Types' are
+// the names in res/text/list_terrains.txt, in alphabetical order, as
+// Civilization's Civilopedia lists them: item_name() and item_command().
 static const char *const options_items[] = { "End of Turn" };
 static const byte options_commands[] = { MENU_END_OF_TURN };
+static const byte terrain_order[] = {
+    TILE_DESERT, TILE_FLOODPLAIN, TILE_FOREST, TILE_GRASS, TILE_HILLS,
+    TILE_MOUNTAIN, TILE_OCEAN, TILE_PLAINS, TILE_SHALLOW_OCEAN, TILE_TUNDRA
+};
+static const char *const sub_heading[] = { "Options:", "Terrain Types:" };
 
 // Orders depends on the unit that has them, and menu_orders() fills it in.
 static const char *orders_items[2];
@@ -68,34 +79,51 @@ static const byte advisors_commands[] = { MENU_DIPLOMACY };
 static const char *const world_items[] = { "Top Five Cities" };
 static const byte world_commands[] = { MENU_TOP_CITIES };
 
-static const char *const help_items[] = { "Keyboard Control" };
-static const byte help_commands[] = { MENU_KEYS };
+static const char *const help_items[] = { "Keyboard Control", "Terrain Types" };
+static const byte help_commands[] = { MENU_KEYS, MENU_TERRAINS };
 
 #ifdef DEBUG_MENU
-static const char *const *const menu_items[MENUS + 1] = {
+static const char *const *const menu_items[MENUS + 2] = {
     game_items, orders_items, advisors_items, world_items, debug_items,
-    help_items, options_items
+    help_items, options_items, 0
 };
-static const byte *const menu_commands[MENUS + 1] = {
+static const byte *const menu_commands[MENUS + 2] = {
     game_commands, orders_commands, advisors_commands, world_commands,
-    debug_commands, help_commands, options_commands
+    debug_commands, help_commands, options_commands, 0
 };
-static byte menu_count[MENUS + 1] = { 3, 0, 1, 1, 2, 1, 1 };
+static byte menu_count[MENUS + 2] = { 3, 0, 1, 1, 2, 2, 1, TERRAIN_COUNT };
 #else
-static const char *const *const menu_items[MENUS + 1] = {
+static const char *const *const menu_items[MENUS + 2] = {
     game_items, orders_items, advisors_items, world_items, help_items,
-    options_items
+    options_items, 0
 };
-static const byte *const menu_commands[MENUS + 1] = {
+static const byte *const menu_commands[MENUS + 2] = {
     game_commands, orders_commands, advisors_commands, world_commands,
-    help_commands, options_commands
+    help_commands, options_commands, 0
 };
-static byte menu_count[MENUS + 1] = { 3, 0, 1, 1, 1, 1 };
+static byte menu_count[MENUS + 2] = { 3, 0, 1, 1, 2, 1, TERRAIN_COUNT };
 #endif
 
 #define ORDERS 1                // Orders' index in the tables above
-#define OPTIONS MENUS           // and Options'
 #define DEBUG 4                 // and Debug's, without DEBUG_MENU none
+#define HELP (MENUS - 1)
+#define OPTIONS MENUS           // the submenus
+#define TERRAINS (MENUS + 1)
+
+// The menu each submenu opens from.
+static const byte sub_parent[] = { 0, HELP };
+
+static const char *item_name(byte m, byte i)
+{
+    if (m == TERRAINS) return text_line(TEXT_LIST_TERRAINS, terrain_order[i]);
+    return menu_items[m][i];
+}
+
+static byte item_command(byte m, byte i)
+{
+    if (m == TERRAINS) return MENU_TERRAIN + terrain_order[i];
+    return menu_commands[m][i];
+}
 
 static const char *order_name(byte command)
 {
@@ -135,15 +163,17 @@ void menu_draw(void)
         screen_putsxy(menu_x[m], 0, menu_title[m], BAR_COLOUR);
 }
 
-// The open dropdown: its frame's top row and the first item's.
+// The open dropdown: its frame's top row and the first item's. With a
+// submenu open, its menu's dropdown is still up as well, at parent_*.
 static byte drop_menu, drop_left, drop_width, drop_top, drop_first;
+static byte parent_menu, parent_left, parent_width, parent_rows;
 
 static void draw_item(byte i, byte selected)
 {
     byte colour = (i == selected) ? SELECTED(ITEM_COLOUR) : ITEM_COLOUR;
     byte y = drop_first + i;
     screen_fill(drop_left + 1, y, drop_width - 2, colour);
-    screen_putsxy(drop_left + 2, y, menu_items[drop_menu][i], colour);
+    screen_putsxy(drop_left + 2, y, item_name(drop_menu, i), colour);
     // The toggles are ticked when on: End of Turn, the only option, when
     // the game waits, and Debug's Show Map.
     if ((drop_menu == OPTIONS && game_end_wait)
@@ -164,20 +194,29 @@ static byte item_under_pointer(void)
     return row - drop_first;
 }
 
-// Put back what the open dropdown was over: the minimap and its frame (the
-// pixels were never touched) and, if it reached that far, the top of the map
-// window, whose store was not touched either.
+// Put back the part of the map window, if any, that a box of WIDTH
+// columns and ROWS rows was over. The store was not touched.
+static void restore(byte left, byte top, byte width, byte rows)
+{
+    byte right = left + width;
+
+    if (right > VIEW_LEFT) {
+        if (left < VIEW_LEFT) left = VIEW_LEFT;
+        view_restore(left - VIEW_LEFT, top - VIEW_TOP, right - left, rows);
+    }
+}
+
+// Put back what the open dropdown was over, and a submenu's menu's too:
+// the minimap and its frame (the pixels were never touched) and the map
+// window.
 static void close_drop(void)
 {
-    byte right = drop_left + drop_width;
-
     menu_draw();
     minimap_show();
-    if (right > VIEW_LEFT) {
-        byte left = drop_left > VIEW_LEFT ? drop_left : VIEW_LEFT;
-        view_restore(left - VIEW_LEFT, drop_top - VIEW_TOP, right - left,
-                     drop_first - drop_top + menu_count[drop_menu] + 1);
-    }
+    restore(drop_left, drop_top, drop_width,
+            drop_first - drop_top + menu_count[drop_menu] + 1);
+    if (drop_menu >= MENUS)
+        restore(parent_left, DROP_TOP, parent_width, parent_rows);
 }
 
 // The KEY_MEGA code that opens menu M.
@@ -197,10 +236,9 @@ static byte neighbour(byte m, byte step)
 
 // Open menu M, which has items, with item SEL selected (0xff for none), and
 // run it until something is picked or it is closed. Cursor left and right,
-// or MEGA and another title's letter, move to that menu instead. Options,
-// picked from Game, opens over Game's dropdown and leaves it showing; its
-// own close_drop() puts back what both were over, since Game's lies within
-// the minimap's frame.
+// or MEGA and another title's letter, move to that menu instead. A
+// submenu opens over its menu's dropdown and leaves it showing, and its
+// close_drop() puts back what both were over.
 static byte run(byte m, byte sel)
 {
     byte i, n, key, was, next;
@@ -208,11 +246,12 @@ static byte run(byte m, byte sel)
     for (;;) {
         n = menu_count[m];
         drop_menu = m;
-        if (m == OPTIONS) {
-            drop_left = OPTIONS_LEFT;
-            drop_top = OPTIONS_TOP;
-            drop_first = OPTIONS_TOP + 2;
-            drop_width = 0;
+        if (m >= MENUS) {
+            parent_menu = sub_parent[m - MENUS];
+            drop_left = menu_x[parent_menu] + SUB_DX;
+            drop_top = SUB_TOP;
+            drop_first = SUB_TOP + 2;
+            drop_width = length(sub_heading[m - MENUS]);
         } else {
             drop_left = menu_x[m];
             drop_top = DROP_TOP;
@@ -220,20 +259,20 @@ static byte run(byte m, byte sel)
             drop_width = length(menu_title[m]);
         }
         for (i = 0; i < n; ++i)
-            if (length(menu_items[m][i]) > drop_width)
-                drop_width = length(menu_items[m][i]);
+            if (length(item_name(m, i)) > drop_width)
+                drop_width = length(item_name(m, i));
         drop_width += 4;
 
         sprite_hide(2);         // the minimap's outline would show through
         sprite_hide(3);
-        if (m != OPTIONS)
+        if (m < MENUS)
             screen_putsxy(menu_x[m], 0, menu_title[m], SELECTED(BAR_COLOUR));
         screen_box(drop_left, drop_top, drop_left + drop_width - 1,
                    drop_first + n, BORDER_COLOUR);
-        if (m == OPTIONS) {
+        if (m >= MENUS) {
             screen_fill(drop_left + 1, drop_top + 1, drop_width - 2,
                         ITEM_COLOUR);
-            screen_putsxy(drop_left + 1, drop_top + 1, "Options:",
+            screen_putsxy(drop_left + 1, drop_top + 1, sub_heading[m - MENUS],
                           ITEM_COLOUR);
         }
         for (i = 0; i < n; ++i) draw_item(i, sel);
@@ -262,28 +301,32 @@ static byte run(byte m, byte sel)
             }
             if (key == KEY_RETURN || key == KEY_SPACE) i = sel;
             if (i != 0xff) {
-                key = menu_commands[m][i];
-                if (key != MENU_OPTIONS) {
+                key = item_command(m, i);
+                if (key != MENU_OPTIONS && key != MENU_TERRAINS) {
                     close_drop();
                     return key;
                 }
-                next = OPTIONS;
+                next = key == MENU_OPTIONS ? OPTIONS : TERRAINS;
+                parent_left = drop_left;
+                parent_width = drop_width;
+                parent_rows = n + 2;
                 continue;
             }
             if (key == KEY_ESC || key == KEY_RUNSTOP) {
                 close_drop();
                 return MENU_NONE;
             }
-            // From Options, on from Game.
-            if (key == KEY_RIGHT) next = neighbour(m % MENUS, 1);
-            if (key == KEY_LEFT) next = neighbour(m % MENUS, MENUS - 1);
+            // From a submenu, on from its menu.
+            was = m < MENUS ? m : parent_menu;
+            if (key == KEY_RIGHT) next = neighbour(was, 1);
+            if (key == KEY_LEFT) next = neighbour(was, MENUS - 1);
             if (KEY_IS_MEGA(key)) {
                 for (i = 0; i < MENUS; ++i)
                     if (key == menu_hotkey(i) && menu_count[i])
                         next = i;
             }
         }
-        if (next != OPTIONS) close_drop();
+        if (next < MENUS) close_drop();
         m = next;
         sel = 0;
     }

@@ -205,10 +205,10 @@ buffers at the default `$FF80000` and corrupts the display.
 
 | Address | Size | Contents |
 |---|---|---|
-| `$2001-$5FFF`, `$8000-$9FFF` | 24 KB | the resident program: code, data, BSS, C stack. 230 bytes free, nearly all at `$5F2A-$5FFF` |
-| `$6000-$7FFF` | 8 KB | the code window (`src/region.h`); as loaded, region 0 — the title, setup and help screens, the menus, save and load, the sheet's and the map's loaders, the owners' flags, the end of a turn and a game's start (`src/turn.c`), the computer players' starts (`src/aiplace.c`). 188 bytes free |
+| `$2001-$5FFF`, `$8000-$9FFF` | 24 KB | the resident program: code, data, BSS, C stack. 304 bytes free, nearly all at `$5EE1-$5FFF` |
+| `$6000-$7FFF` | 8 KB | the code window (`src/region.h`); as loaded, region 0 — the title, setup and help screens (and the Civilopedia's pages), save and load, the sheet's and the map's loaders, the owners' flags, the end of a turn and a game's start (`src/turn.c`), the computer players' starts (`src/aiplace.c`). 2 KB free |
 | `$13000-$14FFF` | 8 KB | code slot 1: region 1, from `SEVENSHIPS.R1` by way of attic: the computer players and their ferrying, the cities' yields and growth, bronze. 312 bytes free |
-| `$15000-$16FFF` | 8 KB | code slot 2, shared: region 2 (the city screen, Top Five Cities, the builders' improvements; 2.7 KB free) region 3 (diplomacy; 2.3 KB free) or region 4 (trade and the galleys' routes; 5.5 KB free), whichever was called last |
+| `$15000-$16FFF` | 8 KB | code slot 2, shared: region 2 (the city screen, Top Five Cities, the builders' improvements; 2.7 KB free) region 3 (diplomacy; 2.3 KB free) or region 4 (trade, the galleys' routes and the menus; 3.5 KB free), whichever was called last |
 | `$17000-$1EFFF` | 32 KB | the tile sheet's tiles 18-33, where regions 3 to 6 would have been: the resources, the improved resources, the spearman, the galley; **full** |
 | `$A000-$BFFF` | 8 KB | `highram`, under the BASIC ROM, banked out by `src/bank.s`: `map_tile`, the unit and city arrays, the sprite blocks, the AI's headings, the staging buffers of the texts and the regions, the texts' line buffers, the sheet loader's buffers, the saved VIC registers, the AI's exploration memory, the resource list, the peoples' relations and attitudes and the letters' names, the trade deals; about 2.5 KB free — `HIGH_BSS` in `src/mega65.h` moves a variable there, and **the startup does not clear it** |
 | `$1600-$1EFF` | 2304 | `zpsave` (56 bytes, BASIC's zero page during the run), then `lowfree`: the popup's 400-byte text and the scratch buffers of the view and the minimap, and the sea routes' search (`src/path.c`), 990 bytes free — `LOW_FREE` in `src/mega65.h` moves a variable there |
@@ -501,10 +501,12 @@ entry in each of `dispatch.s`'s per-region tables (`slot_of`,
 `region_stamp[]`'s initialiser in `src/region.c`, and its file in the
 Makefile's `REGION_FILES`; `packprg.py` needs nothing. Attic's bank 1
 holds eight regions as the tables stand. **Resident space is what to
-watch now**: 230 bytes (22 Oct 2026, after Game → Options, which cost
-146; the slot copying cost 140, and each stub is 13), against 188 bytes in region
-0, 312 in region 1, 2.6 KB in region 2, 2.3 KB in region 3 and 5.5 KB in
-region 4. **Regions 0 and 1 are nearly full too**: region 1's next room
+watch now**: 304 bytes (22 Oct 2026, after Game → Options and Help →
+Terrain Types, which took the terrain names out of `game.c`; the slot
+copying cost 140, and each stub is 13), against 2 KB in region 0, 312 in
+region 1, 2.6 KB in region 2, 2.3 KB in region 3 and 3.5 KB in region 4.
+`src/menu.c` moved from region 0 to region 4 the same day, when region 0
+was down to 188 bytes. **Region 1 is nearly full too**: its next room
 is more of `ai.c` moving out (as `ai_place()` went to `src/aiplace.c`
 in region 0, called directly from `game_init()` there, no stub), and new
 code goes to regions 2-4 or a new region 5 where it does not run in a
@@ -811,7 +813,7 @@ explored and occupied bits; the terrain is as loaded), `unit_reset()`,
 state has to be reset there too. The map is the same one each time.
 `NO_TITLE` builds go straight into a new game after a retire.
 
-**The menu bar** (`src/menu.c`) is row 0: Game, Orders, Advisors, World,
+**The menu bar** (`src/menu.c`, region 4) is row 0: Game, Orders, Advisors, World,
 Debug, Help. A click on a title opens its dropdown, picked by hover and
 click or the cursor keys and Return; a click elsewhere or Esc closes it.
 **MEGA and a title's first letter opens it from the keyboard**, as Alt
@@ -845,7 +847,13 @@ open; its items do what `b` and `f` do. World has **Top Five Cities**
 (`src/topcities.c`, region 2): the five largest cities the player has
 seen, whoever's, with their people and size. Advisors has **Diplomacy**
 (see **Contact** below). Help
-has **Keyboard Control**, the help screen; all three take over the screen and
+has **Keyboard Control**, the help screen, and **Terrain Types**, a
+submenu like Options (`TERRAINS` in `src/menu.c`) of the ten terrains in
+alphabetical order, named by `list_terrains.txt`, which opens the
+Civilopedia's page on one: a text a terrain, `res/text/pedia_*.txt`, in
+terrain order from `TEXT_PEDIA_HILLS`, drawn in a frame by
+`help_screen(id)` (after `civ1-reference/civ1-civilopedia03.png`, without
+the picture yet); all of these take over the screen and
 `draw_screen()` puts the map back, as after HELP. **Debug exists only
 with `DEBUG_MENU`**, which the Makefile defines unless `DEBUG=0`, and
 `make release` defaults to `DEBUG=0` (and refuses `DEBUG=1`). Without it
@@ -1787,8 +1795,10 @@ drawn back out of it.
 
 The machinery cost 661 bytes and moving the help screen saved 1342; the
 title, setup screens and intro saved 515 more, and `civ.c`'s names 1179.
-Each text moved from now on saves its full size. **Next**: the
-Civilopedia, a text an entry. What is left in the program is short
+Each text moved from now on saves its full size. **The Civilopedia** is
+begun the same way, a text an entry: the terrains' pages (Help → Terrain
+Types), placeholders written by hand, so **a change to a terrain's yield
+or defence has to be made in its `pedia_*.txt` as well**. What is left in the program is short
 messages built round numbers and names — the panel's, the city screen's,
 the menus' — where the call costs about as much as the string. If the pack grows
 large enough to slow the boot, the same index allows reading one text
@@ -1880,8 +1890,12 @@ A new tile needs all of these, and nothing checks that they agree:
    this build expects".
 4. for terrain: the matching constants in `tools/mapgen.py`, the generator
    taught to place it, its minimap colour in `TERRAIN_COLOURS` in
-   `tools/mktiles.py`, and a row each in `terrain_name[]` in `src/game.c`
-   and `terrain_shields[]` in `src/city.c`, both indexed by terrain. Terrain
+   `tools/mktiles.py`, a line in `res/text/list_terrains.txt` and a
+   `pedia_*.txt` page (in the Makefile's `TEXTS` straight after
+   `pedia_floodplain.txt`, so
+   `TEXT_PEDIA_HILLS + t` still finds it, and in `terrain_order[]` in
+   `src/menu.c`), and a row each in the tables in `src/growth.c`, all
+   indexed by terrain. Terrain
    values are tile numbers, so a new terrain has to come before the
    non-terrain tiles or the map layer grows a lookup table (see `map_tile`).
 5. room: each tile is 2 KB expanded, and the sheet must stop at the end

@@ -72,11 +72,6 @@ static byte sel_hidden;         // the ring's half of the blink
 #define BLINK_FRAMES 25
 static byte blink;
 
-static const char *const terrain_name[] = {
-    "Hills", "Grassland", "Mountains", "Ocean", "Shallows", "Tundra",
-    "Plains", "Forest", "Desert", "Floodplain",
-};
-
 // ------------------------------------------------------------------- text
 
 // A line of text built up a piece at a time, so that no printf is linked.
@@ -246,7 +241,7 @@ static void draw_hover(void)
             // there is room for -- "Canaanite Builder  Cattle+irr 127,19".
             x = map_resource_at(ax, ay);
             if (x == RES_NONE || (c == CITY_NONE && u == UNIT_NONE)) {
-                line_add(terrain_name[MAP_TERRAIN(ax, ay)]);
+                line_add(text_line(TEXT_LIST_TERRAINS, MAP_TERRAIN(ax, ay)));
                 if (x != RES_NONE) line_add("+");
             }
             if (x != RES_NONE) line_add(text_line(TEXT_LIST_RESOURCES, x));
@@ -550,9 +545,9 @@ static void open_city(byte c)
     draw_screen();
 }
 
-static void open_help(void)
+static void open_help(byte id)
 {
-    help_screen();
+    help_screen(id);
     draw_screen();
 }
 
@@ -635,7 +630,11 @@ static void menu_command(byte command)
         draw_screen();
         break;
     case MENU_KEYS:
-        open_help();
+        open_help(TEXT_HELP);
+        break;
+    default:
+        if (command >= MENU_TERRAIN)
+            open_help(TEXT_PEDIA_HILLS + (command - MENU_TERRAIN));
         break;
     }
     dirty = 1;
@@ -930,7 +929,7 @@ byte game_run(void)
             select_begin();
             break;
         case KEY_HELP:
-            open_help();
+            open_help(TEXT_HELP);
             break;
         default:
             if (KEY_IS_MEGA(key)) {

@@ -1,0 +1,13 @@
+# The Civilopedia's page on Tundra: Help/Terrain Types. A placeholder.
+# The markup is described in tools/mktext.py.
+{centre 3}{head}TUNDRA
+{centre 5}{grey}Terrain Type
+{at 6 9}{head}Tundra
+{text}  Food: 1
+  Shields: 0
+  Trade: 0
+  Improvements: none
+  Resources: tin, at the edges of the world
+{at 6 16}{red}Movement cost: 1
+Defence bonus: none
+{at 6 20}{text}The cold lands at the top and bottom of the map.

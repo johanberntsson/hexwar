@@ -1,0 +1,13 @@
+# The Civilopedia's page on Ocean: Help/Terrain Types. A placeholder.
+# The markup is described in tools/mktext.py.
+{centre 3}{head}OCEAN
+{centre 5}{grey}Terrain Type
+{at 6 9}{head}Ocean
+{text}  Food: 1
+  Shields: 0
+  Trade: 2
+  Improvements: none
+  Resources: none
+{at 6 16}{red}Movement cost: 1
+Defence bonus: none
+{at 6 20}{text}The open sea, beyond the reach of galleys.

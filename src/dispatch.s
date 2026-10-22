@@ -169,15 +169,11 @@ stub:       .macro  name, target, region
             jmp     dispatch
             .endm
 
-; Region 0: the screens, the menus, the save file and the tile sheet's
+; Region 0: the screens, the save file and the tile sheet's
 ; and the map's loaders.
             stub    sheet_load, sheet_load_r0, 0
             stub    map_load, map_load_r0, 0
             stub    help_screen, help_screen_r0, 0
-            stub    menu_orders, menu_orders_r0, 0
-            stub    menu_draw, menu_draw_r0, 0
-            stub    menu_click, menu_click_r0, 0
-            stub    menu_key, menu_key_r0, 0
             stub    title_show, title_show_r0, 0
             stub    title_run, title_run_r0, 0
             stub    save_write, save_write_r0, 0
@@ -214,9 +210,13 @@ stub:       .macro  name, target, region
             stub    diplomacy_greet, diplomacy_greet_r3, 3
             stub    diplomacy_screen, diplomacy_screen_r3, 3
 
-; Region 4, slot 2: trade, and routes over the sea.
+; Region 4, slot 2: trade, routes over the sea, and the menus.
             stub    trade_reset, trade_reset_r4, 4
             stub    trade_turn, trade_turn_r4, 4
             stub    trade_agree, trade_agree_r4, 4
             stub    trade_propose, trade_propose_r4, 4
             stub    sea_route, sea_route_r4, 4
+            stub    menu_orders, menu_orders_r4, 4
+            stub    menu_draw, menu_draw_r4, 4
+            stub    menu_click, menu_click_r4, 4
+            stub    menu_key, menu_key_r4, 4

@@ -1,0 +1,13 @@
+# The Civilopedia's page on Forest: Help/Terrain Types. A placeholder.
+# The markup is described in tools/mktext.py.
+{centre 3}{head}FOREST
+{centre 5}{grey}Terrain Type
+{at 6 9}{head}Forest
+{text}  Food: 1
+  Shields: 2
+  Trade: 0
+  Improvements: none
+  Resources: cedar
+{at 6 16}{red}Movement cost: 1
+Defence bonus: +50%
+{at 6 20}{text}Timber, and cedar for the ships.

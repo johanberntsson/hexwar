@@ -1,0 +1,13 @@
+# The Civilopedia's page on Grassland: Help/Terrain Types. A placeholder.
+# The markup is described in tools/mktext.py.
+{centre 3}{head}GRASSLAND
+{centre 5}{grey}Terrain Type
+{at 6 9}{head}Grassland
+{text}  Food: 2
+  Shields: 0, 1 on half of it
+  Trade: 0
+  Improvements: irrigation +1 food
+  Resources: grain, cattle
+{at 6 16}{red}Movement cost: 1
+Defence bonus: none
+{at 6 20}{text}The best farmland outside the river valleys.

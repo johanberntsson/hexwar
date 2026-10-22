@@ -1,0 +1,13 @@
+# The Civilopedia's page on Mountains: Help/Terrain Types. A placeholder.
+# The markup is described in tools/mktext.py.
+{centre 3}{head}MOUNTAINS
+{centre 5}{grey}Terrain Type
+{at 6 9}{head}Mountains
+{text}  Food: 0
+  Shields: 1
+  Trade: 0
+  Improvements: mine +2 shields
+  Resources: copper, tin
+{at 6 16}{red}Movement cost: 1
+Defence bonus: +100%
+{at 6 20}{text}Hard to farm, harder to take.

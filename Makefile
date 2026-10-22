@@ -168,7 +168,18 @@ TEXTS    = $(RES)/text/help.txt \
            $(RES)/text/letter_yes.txt \
            $(RES)/text/letter_no.txt \
            $(RES)/text/letter_trade.txt \
-           $(RES)/text/letter_tribute.txt
+           $(RES)/text/letter_tribute.txt \
+           $(RES)/text/list_terrains.txt \
+           $(RES)/text/pedia_hills.txt \
+           $(RES)/text/pedia_grassland.txt \
+           $(RES)/text/pedia_mountains.txt \
+           $(RES)/text/pedia_ocean.txt \
+           $(RES)/text/pedia_shallows.txt \
+           $(RES)/text/pedia_tundra.txt \
+           $(RES)/text/pedia_plains.txt \
+           $(RES)/text/pedia_forest.txt \
+           $(RES)/text/pedia_desert.txt \
+           $(RES)/text/pedia_floodplain.txt
 TEXT_PAK = $(BUILD)/text.pak
 TEXT_IDS = $(BUILD)/textid.h
 

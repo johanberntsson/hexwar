@@ -1,0 +1,13 @@
+# The Civilopedia's page on Floodplain: Help/Terrain Types. A placeholder.
+# The markup is described in tools/mktext.py.
+{centre 3}{head}FLOODPLAIN
+{centre 5}{grey}Terrain Type
+{at 6 9}{head}Floodplain
+{text}  Food: 3
+  Shields: 0, 1 on half of it
+  Trade: 1
+  Improvements: irrigation +1 food
+  Resources: grain
+{at 6 16}{red}Movement cost: 1
+Defence bonus: none
+{at 6 20}{text}The river valleys, fed by the yearly flood.

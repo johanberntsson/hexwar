@@ -806,7 +806,10 @@ grassland shields. **7, resources, and 7b, bronze, are done** (20 Oct
 2026; see **Resources** and **Bronze**), **8, diplomacy** (21 Oct
 2026; see **Diplomacy**), and the first part of **9, trade** (see
 **Trade**), with the exploring that makes contact happen
-(see **Exploring**) and the owners' flags that say whose a unit is.
+(see **Exploring**) and the owners' flags that say whose a unit is,
+the galley and the fishing boat (**Galleys**), and **10, the end game**
+but for the computer players' collapse and the pictures (22 Oct 2026;
+see **The end** and **The Crisis**).
 **Confirmed on a real MEGA65** (21 Oct 2026): all of 20 Oct 2026's
 later work — the resources and the improved resources drawn from bank 1
 at `$17000` up, the map loader in region 0, the owners' flags, contact by
@@ -814,16 +817,38 @@ adjacency with the view moved to the newcomer, bronze and the spearman,
 and the info line following the active unit; and (the same day)
 milestone 8's diplomacy, "well enough", so its tuning is still open
 (TODO.txt); and trade, the galley and `src/turn.c` ("looking good").
-**Not yet tried on one**: the computer players' ferrying.
+**Not yet tried on one**: the computer players' ferrying. **Confirmed
+on a real MEGA65** (22 Oct 2026): Game → Options → End of Turn and the
+automatic end of turn, the menu ticks, Help → Terrain Types with its
+pictures, the packed tile sheet, the fishing boat and its fishing, the
+hover readout from region 0, the calendar, the score and the end
+screen, and the Crisis — omens, Sea Peoples, shocks — with the 96-unit
+list.
 
-**Where to start next time**: TODO.txt — milestone 10, the end game:
-its calendar, end and score are in (**The end**), and the Crisis
-(**The Crisis**); still to come are the computer players' collapse (a
-people that loses its capital or half its cities breaking up) and the
-pictures of `screens/`. Region 1 is full (63 bytes): more of `ai.c` has
-to move out before the AI can grow. The merchant fleets and emporia and ferrying
-armies are what is left of milestone 9. The tile sheet is packed and has about a dozen units'
-room left (**When bank 5 fills up**, step 1c).
+**Where to start next time** (agreed with the user, 22 Oct 2026):
+1. **Room in region 1**, the AI's, which has 38 bytes: move a part of
+   `ai.c` that runs once a turn into a region of its own, as
+   `ai_place()` (`src/aiplace.c`) and the hover readout
+   (`src/hover.c`) went. The likely part is what each city builds (the
+   production rules in `ai_turn()`), which runs once a city a turn, but
+   it calls many of `ai.c`'s static helpers and `work_site()` →
+   `improve_best()` in region 2: count the slot copies a turn it costs
+   (a region in slot 2 calling another in slot 2 copies twice), and
+   check with a long autoplay that the game is byte-identical
+   (**Comparing a build against the last one**). Everything left for
+   the AI waits for this.
+2. **The end screens' pictures** (`screens/`, **Assets**): scaled and
+   quantised for the MEGA65, and shown in place of the map view, which
+   is rebuilt afterwards (a 640x200 picture is 125 KB, more than the
+   tile store), or a piece at a time from attic.
+3. **The computer players' collapse** (TODO.txt, milestone 10): a people
+   that loses its capital or half its cities breaks up.
+4. **Tuning the Crisis** from play: it is mild (**The Crisis**).
+5. Milestone 9's rest: ferrying armies, merchant fleets and emporia.
+6. Help → Military Units, as Terrain Types.
+
+The tile sheet is packed and has about a dozen units' room left (**When
+bank 5 fills up**, step 1c).
 
 **The title screen comes first** (`src/title.c`): `title_show()` puts the
 title up once the texts are read and before the sheet and the map are,

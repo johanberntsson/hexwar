@@ -1,11 +1,16 @@
 --- OPEN ---
 
-NEXT: what is left of milestone 9 -- ferrying armies (an AI at war with a people over the
-water), merchant fleets and emporia -- or the rest of milestone 10: tuning the Crisis,
-the computer players' collapse, the pictures (below; calendar, end, score and Crisis in). The tile sheet is packed and has
-about 18 KB free, a dozen units (make in tiles/ says). Room: resident 704 bytes, region 0
-0.8 KB, region 1 38 bytes -- full: more of ai.c has to move out, as ai_place() did,
-before the AI grows -- region 2 2.6 KB, region 3 2.3 KB, region 4 1.9 KB, region 5 4.0 KB
+NEXT (agreed 22 Oct 2026; CLAUDE.md "Where to start next time"):
+1. Room in region 1 (38 bytes free): move part of ai.c that runs once a turn -- probably
+   what each city builds -- into a region of its own, checked byte-identical by autoplay
+2. The end screens' pictures (screens/): converted, and shown in place of the map view
+3. The computer players' collapse (milestone 10, below)
+4. Tune the Crisis from play: it is mild
+5. Milestone 9's rest: ferrying armies, merchant fleets and emporia
+6. Help/Military Units
+Room: resident 704 bytes, region 0 0.8 KB, region 1 38 bytes, region 2 2.6 KB, region 3
+2.3 KB, region 4 1.9 KB, region 5 4.0 KB, highram 1.7 KB; the tile sheet has about 18 KB,
+a dozen units (make in tiles/ says). All of 22 Oct 2026's work runs on a real MEGA65
 
 The AI ferries settlers now, but rarely: most peoples reach AI_CITY_CAP (6) on their own land
 before they have a galley. Raise the cap (7-8, MAX_CITIES is 32 shared) if overseas cities

@@ -4,7 +4,9 @@
 // game.c puts the map screen back on the way out as it does after the city
 // screen. Nothing in the tile store is touched. **What it says is
 // res/text/help.txt**, or a page's res/text/pedia_*.txt, read from attic RAM
-// by text_show().
+// by text_show(). A terrain's page has a picture as well: three hexagons of
+// it in the map window's own cells, as the city screen's patch is, so the
+// map is redrawn afterwards there too -- draw_screen() sees to that.
 
 // In region 0 (src/region.h): called through the stubs in src/dispatch.s,
 // under these names here.
@@ -13,9 +15,38 @@
 #include "help.h"
 #include "input.h"
 #include "screen.h"
+#include "sheet.h"
 #include "text.h"
+#include "view.h"
 
 #pragma clang section text="r0text" rodata="r0rodata"
+
+// The picture, in screen cells: three hexagons, the middle one raised, as
+// in Civilization's (civ1-reference/civ1-civilopedia03.png).
+#define PICTURE_LEFT 20
+#define PICTURE_TOP 2
+#define PICTURE_COLUMNS (2 * TILE_EXPANDED_COLUMNS)         // 16
+#define PICTURE_ROWS 7
+
+#if PICTURE_LEFT < VIEW_LEFT || PICTURE_TOP < VIEW_TOP
+#error "the picture has to be inside the map window, whose cells are the store's"
+#endif
+
+// Terrain t's picture, into the store under the picture's cells.
+static void draw_picture(byte t)
+{
+    byte r;
+    for (r = 0; r < PICTURE_ROWS; ++r)
+        lfill(TILE_STORE + VIEW_ROW_STRIDE * (PICTURE_TOP - VIEW_TOP + r)
+              + 64UL * (PICTURE_LEFT - VIEW_LEFT), 0, 64 * PICTURE_COLUMNS);
+    // view_draw_tile() changes the source bank only for a tile in bank 1,
+    // which no terrain is, and view_redraw() starts with a blit_begin() of
+    // its own.
+    blit_begin(0x00, SHEET_EXPANDED_BANK, 0x00, 0x00);
+    view_draw_tile(PICTURE_LEFT - VIEW_LEFT, PICTURE_TOP - VIEW_TOP + 3, t);
+    view_draw_tile(PICTURE_LEFT - VIEW_LEFT + 4, PICTURE_TOP - VIEW_TOP, t);
+    view_draw_tile(PICTURE_LEFT - VIEW_LEFT + 8, PICTURE_TOP - VIEW_TOP + 3, t);
+}
 
 void help_screen(byte id)
 {
@@ -23,9 +54,14 @@ void help_screen(byte id)
 
     sprite_hide(2);             // the minimap's outline, which is gone
     sprite_hide(3);
+    if (id >= TEXT_PEDIA_HILLS && id < TEXT_PEDIA_HILLS + TERRAIN_COUNT)
+        draw_picture(id - TEXT_PEDIA_HILLS);
     screen_clear();
-    if (id != TEXT_HELP)        // a page, framed as Civilization's are
+    if (id != TEXT_HELP) {      // a page, framed as Civilization's are
         screen_box(0, 0, SCREEN_COLUMNS - 1, SCREEN_ROWS - 1, COLOR_GREEN);
+        view_restore(PICTURE_LEFT - VIEW_LEFT, PICTURE_TOP - VIEW_TOP,
+                     PICTURE_COLUMNS, PICTURE_ROWS);
+    }
     text_show(id);
 
     for (;;) {

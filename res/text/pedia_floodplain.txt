@@ -1,7 +1,7 @@
 # The Civilopedia's page on Floodplain: Help/Terrain Types. A placeholder.
 # The markup is described in tools/mktext.py.
-{centre 3}{head}FLOODPLAIN
-{centre 5}{grey}Terrain Type
+{at 42 4}{head}FLOODPLAIN
+{at 42 6}{grey}Terrain Type
 {at 6 9}{head}Floodplain
 {text}  Food: 3
   Shields: 0, 1 on half of it

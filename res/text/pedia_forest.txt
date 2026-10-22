@@ -1,7 +1,7 @@
 # The Civilopedia's page on Forest: Help/Terrain Types. A placeholder.
 # The markup is described in tools/mktext.py.
-{centre 3}{head}FOREST
-{centre 5}{grey}Terrain Type
+{at 42 4}{head}FOREST
+{at 42 6}{grey}Terrain Type
 {at 6 9}{head}Forest
 {text}  Food: 1
   Shields: 2

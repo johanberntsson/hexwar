@@ -1,7 +1,7 @@
 # The Civilopedia's page on Ocean: Help/Terrain Types. A placeholder.
 # The markup is described in tools/mktext.py.
-{centre 3}{head}OCEAN
-{centre 5}{grey}Terrain Type
+{at 42 4}{head}OCEAN
+{at 42 6}{grey}Terrain Type
 {at 6 9}{head}Ocean
 {text}  Food: 1
   Shields: 0

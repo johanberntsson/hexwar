@@ -1,7 +1,7 @@
 # The Civilopedia's page on Plains: Help/Terrain Types. A placeholder.
 # The markup is described in tools/mktext.py.
-{centre 3}{head}PLAINS
-{centre 5}{grey}Terrain Type
+{at 42 4}{head}PLAINS
+{at 42 6}{grey}Terrain Type
 {at 6 9}{head}Plains
 {text}  Food: 1
   Shields: 1

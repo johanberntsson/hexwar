@@ -1,7 +1,7 @@
 # The Civilopedia's page on Mountains: Help/Terrain Types. A placeholder.
 # The markup is described in tools/mktext.py.
-{centre 3}{head}MOUNTAINS
-{centre 5}{grey}Terrain Type
+{at 42 4}{head}MOUNTAINS
+{at 42 6}{grey}Terrain Type
 {at 6 9}{head}Mountains
 {text}  Food: 0
   Shields: 1

@@ -206,7 +206,7 @@ buffers at the default `$FF80000` and corrupts the display.
 | Address | Size | Contents |
 |---|---|---|
 | `$2001-$5FFF`, `$8000-$9FFF` | 24 KB | the resident program: code, data, BSS, C stack. 304 bytes free, nearly all at `$5EE1-$5FFF` |
-| `$6000-$7FFF` | 8 KB | the code window (`src/region.h`); as loaded, region 0 — the title, setup and help screens (and the Civilopedia's pages), save and load, the sheet's and the map's loaders, the owners' flags, the end of a turn and a game's start (`src/turn.c`), the computer players' starts (`src/aiplace.c`). 2 KB free |
+| `$6000-$7FFF` | 8 KB | the code window (`src/region.h`); as loaded, region 0 — the title, setup and help screens (and the Civilopedia's pages), save and load, the sheet's and the map's loaders, the owners' flags, the end of a turn and a game's start (`src/turn.c`), the computer players' starts (`src/aiplace.c`). 1.8 KB free |
 | `$13000-$14FFF` | 8 KB | code slot 1: region 1, from `SEVENSHIPS.R1` by way of attic: the computer players and their ferrying, the cities' yields and growth, bronze. 312 bytes free |
 | `$15000-$16FFF` | 8 KB | code slot 2, shared: region 2 (the city screen, Top Five Cities, the builders' improvements; 2.7 KB free) region 3 (diplomacy; 2.3 KB free) or region 4 (trade, the galleys' routes and the menus; 3.5 KB free), whichever was called last |
 | `$17000-$1EFFF` | 32 KB | the tile sheet's tiles 18-33, where regions 3 to 6 would have been: the resources, the improved resources, the spearman, the galley; **full** |
@@ -503,7 +503,7 @@ Makefile's `REGION_FILES`; `packprg.py` needs nothing. Attic's bank 1
 holds eight regions as the tables stand. **Resident space is what to
 watch now**: 304 bytes (22 Oct 2026, after Game → Options and Help →
 Terrain Types, which took the terrain names out of `game.c`; the slot
-copying cost 140, and each stub is 13), against 2 KB in region 0, 312 in
+copying cost 140, and each stub is 13), against 1.8 KB in region 0, 312 in
 region 1, 2.6 KB in region 2, 2.3 KB in region 3 and 3.5 KB in region 4.
 `src/menu.c` moved from region 0 to region 4 the same day, when region 0
 was down to 188 bytes. **Region 1 is nearly full too**: its next room
@@ -852,8 +852,11 @@ submenu like Options (`TERRAINS` in `src/menu.c`) of the ten terrains in
 alphabetical order, named by `list_terrains.txt`, which opens the
 Civilopedia's page on one: a text a terrain, `res/text/pedia_*.txt`, in
 terrain order from `TEXT_PEDIA_HILLS`, drawn in a frame by
-`help_screen(id)` (after `civ1-reference/civ1-civilopedia03.png`, without
-the picture yet); all of these take over the screen and
+`help_screen(id)` (after `civ1-reference/civ1-civilopedia03.png`): the
+text, and a picture of three hexagons of the terrain, the middle one
+raised, drawn into the tile store under the window's own cells as the
+city screen's patch is (`draw_picture()` in `src/help.c`; it has to stay
+inside the map window, an `#error`); all of these take over the screen and
 `draw_screen()` puts the map back, as after HELP. **Debug exists only
 with `DEBUG_MENU`**, which the Makefile defines unless `DEBUG=0`, and
 `make release` defaults to `DEBUG=0` (and refuses `DEBUG=1`). Without it

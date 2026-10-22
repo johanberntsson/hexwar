@@ -2,8 +2,10 @@
 
 NEXT (23 Oct 2026, after the temple, the Lion Gate and Advisors/Cities; CLAUDE.md "Where to
 start next time"):
-1. Try on a real MEGA65: Advisors/Cities and a city screen from it, CHANGE's Temple and Lion Gate, a temple's upkeep on Advisors/Finance,
-   the Lion Gate's announcement, Help/Buildings, the Legacy column and the legacy victory
+1. Try on a real MEGA65 (the user's fuller test before the next session): Advisors/Cities
+   and a city screen from it, CHANGE's Temple and Lion Gate, a temple's upkeep on
+   Advisors/Finance, the Lion Gate's announcement, Help/Buildings, the Legacy column and the
+   legacy victory, deals lapsing without ships, the menus from region 6
 2. More culture: more wonders (Pyramids, Palace of Knossos), clay tablets of knowledge
    (Linear B, law codes, the alphabet: a science of sorts), building art
 3. The Crisis may have grown harsher -- play, or compare seeds

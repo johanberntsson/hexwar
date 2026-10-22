@@ -231,7 +231,7 @@ BASIC ROM and is the program's once `src/bank.s` has banked BASIC out, before
 `main()` runs. **\$6000-\$7fff of the 32 KB is a code window** (see
 *Code banking* below): resident code lives on either side of it, and the
 window shows one region of code at a time. The figures below are from the linker's listing,
-`build/sevenships.lst`, for the build of 22 October 2026.
+`build/sevenships.lst`, for the build of 23 October 2026.
 
 | **Address range** | **KB** |  **Usage** |
 | -- |  - | ---- |
@@ -239,15 +239,15 @@ window shows one region of code at a time. The figures below are from the linker
 | \$1600-\$1637 | 0.05 | `zpsave`: BASIC's zero page \$02-\$39, saved at start-up and put back on exit |
 | \$1638-\$1b20 | 1.2 | the `lowfree` section (`LOW_FREE`): the popup's text, the scratch buffers of the view and the minimap, and the galleys' route search |
 | \$1b21-\$1eff | 1.0 | free |
-| \$2001-\$5b7f | 14.8 | BASIC stub, startup and resident code |
-| \$5b80-\$5bde | 0.1 | initialised data: the DMA lists |
-| \$5bdf-\$5cde | 0.25 | C stack |
-| \$5cdf-\$5e88 | 0.4 | BSS: small state |
-| \$5e89-\$5fff | 0.4 | free |
-| \$6000-\$7fff | 8 | the code window; region 0 as loaded (7.6 KB used) |
-| \$8000-\$9fee | 8 | resident constant data and code |
-| \$a000-\$ba40 | 6.6 | `highbss` (`HIGH_BSS`): the map `map_tile` (terrain, improvements, explored and occupied bits), the unit and city arrays (the cities' size and food box among them), the peoples' relations and attitudes, the trade deals, the emporia, the sprite blocks, the AI's headings, the staging buffers of the texts, the regions and the pictures, the texts' line buffers, the sheet loader's buffers and its rows' extents and addresses, the saved VIC registers, and the resources, a list by hexagon row |
-| \$ba41-\$bfff | 1.4 | free |
+| \$2001-\$5a5a | 14.5 | BASIC stub, startup and resident code |
+| \$5a5b-\$5ab9 | 0.1 | initialised data: the DMA lists |
+| \$5aba-\$5bb9 | 0.25 | C stack |
+| \$5bba-\$5d8b | 0.5 | BSS: small state |
+| \$5d8c-\$5fff | 0.6 | free |
+| \$6000-\$7fff | 8 | the code window; region 0 as loaded (7.7 KB used) |
+| \$8000-\$9fff | 8 | resident constant data and code |
+| \$a000-\$ba79 | 6.6 | `highbss` (`HIGH_BSS`): the map `map_tile` (terrain, improvements, explored and occupied bits), the unit and city arrays (the cities' size and food box among them), the peoples' relations and attitudes, the trade deals and their ships' due turns, the emporia, the treasuries, the buildings and the legacy points, the sprite blocks, the AI's headings, the staging buffers of the texts, the regions and the pictures, the texts' line buffers, the sheet loader's buffers and its rows' extents and addresses, the saved VIC registers, and the resources, a list by hexagon row |
+| \$ba7a-\$bfff | 1.4 | free |
 
 The long texts and the names are not in this table at all: they are in
 TEXT.PAK, read into Attic RAM at start-up, which is most of why the
@@ -468,10 +468,10 @@ terrain is drawn, and their overlays are drawn after the next row's terrain.
 | End of turn | with no unit left, the panel shows "End of turn"; Return, or a click on the panel, goes on |
 | Computer players | `ai_turn` for each of the three: what each city builds, and every unit's move. A player with two warriors, one fortified, and a builder has a city build a settler, which founds a new city on the nearest good site within six hexagons, at least four from any other city, up to four cities |
 | Barbarians | `ai_barbarians`: perhaps a new band, then every barbarian's move |
-| Diplomacy | `diplomacy_turn`, and `trade_turn` at its end: contact between all the peoples, deals ended by war, goods asked for, the attitudes, ceasefires running out, and each computer player's war, ceasefire or peace with each other player one turn in four; what concerns the player waits as letters, shown over the map once it is redrawn |
+| Diplomacy | `diplomacy_turn`, and `trade_turn` at its end: contact between all the peoples, the merchant ships' voyages renewing deals, deals ended by war or for want of ships, goods asked for, the attitudes, ceasefires running out, and each computer player's war, ceasefire or peace with each other player one turn in four; what concerns the player waits as letters, shown over the map once it is redrawn |
 | The Crisis | `crisis_turn`: a people that has lost its capital breaks up, its furthest cities going over to the rebels (the barbarians), and from 1200 BC the omens, the Sea Peoples' fleets and the shocks |
-| Treasury | `treasury_turn`: every city's trade, less corruption (more the further it is from the capital), into its owner's gold, two gold a deal, and the computer players' gold turned into shields for soldiers and galleys |
-| Production | every city adds its shields (its own hexagon's, at least 1, plus its best neighbour's); one that reaches the cost of what it is building puts the unit on its hexagon and keeps the surplus |
+| Treasury | `treasury_turn`: every city's trade, less corruption (more the further it is from the capital), into its owner's gold, two gold a deal, a gold a temple paid out (or the temple sold), and the computer players' gold turned into shields for soldiers and galleys |
+| Production | every city adds its shields (its own hexagon's, at least 1, plus its best neighbour's); one that reaches the cost of what it is building puts the unit on its hexagon, or finishes the temple or the wonder, and keeps the surplus |
 | New turn | the turn number goes up, the year moves on ten years from 1600 BC, and every unit gets its moves back |
 
 Anything that happened to the player's units and cities during the other

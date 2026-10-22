@@ -832,7 +832,13 @@ the galley and the fishing boat (**Galleys**), and **10, the end game**
 (22 Oct 2026; see **The end**, **The Crisis**, **The collapse** and
 **Pictures**). Then the same day the rest of 9 in a first form: the
 computer players ferry armies, and merchant ships found emporia
-(**Emporia**); and Help → Military Units.
+(**Emporia**); and Help → Military Units. **After milestones 9 and 10**
+(22-23 Oct 2026, the user's order): the treasury (**The treasury**),
+merchant fleets carrying the trade deals (**Trade**), the temple and the
+Lion Gate with the legacy victory (**Buildings and wonders**), and
+Advisors → Cities. **Confirmed on a real MEGA65** (23 Oct 2026): the
+treasury; the user was to test the rest more fully before the next
+session.
 **Confirmed on a real MEGA65** (21 Oct 2026): all of 20 Oct 2026's
 later work — the resources and the improved resources drawn from bank 1
 at `$17000` up, the map loader in region 0, the owners' flags, contact by

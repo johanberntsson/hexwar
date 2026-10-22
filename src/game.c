@@ -51,6 +51,8 @@ byte game_over;
 byte quit;
 byte retired;            // quit by Game/Retire, for the title screen
 byte loaded;             // from a saved game: no opening popup
+byte game_end_wait;      // see game.h
+static byte end_due;     // the last unit has had its orders: end the turn
 word game_turn;
 word game_year;
 
@@ -340,6 +342,9 @@ void select_unit(byte after)
         u = UNIT_NONE;
     }
     unit_active = u;
+    // Orders to the last unit end the turn, unless End of Turn is on; a
+    // turn with nobody to give orders to still waits for Return.
+    end_due = was != UNIT_NONE && u == UNIT_NONE;
     if (was != u) dirty = 1;   // another unit blinks
     if (u != UNIT_NONE) hover_on(unit_ax[u], unit_ay[u]);
     if (u != UNIT_NONE && !in_view(unit_ax[u], unit_ay[u]))
@@ -599,6 +604,10 @@ static void menu_command(byte command)
         game_autoplay(AUTOPLAY_TURNS);
         break;
 #endif
+    case MENU_END_OF_TURN:
+        game_end_wait ^= 1;
+        message("End of Turn", game_end_wait ? "waits" : "automatic");
+        break;
     case MENU_SAVE:
         message("Saving", "");
         message(save_write() ? "Game saved" : "Could not save", "");
@@ -859,6 +868,11 @@ byte game_run(void)
         } else if (greet || diplomacy_waiting) {
             diplomacy_greet(greet);
             greet = 0;
+        } else if (end_due) {
+            // After the greetings and the letters the last move brought.
+            end_due = 0;
+            if (!game_end_wait && unit_active == UNIT_NONE && !game_over)
+                game_end_turn();
         }
 
         key = input_poll();

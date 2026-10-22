@@ -94,6 +94,7 @@ void game_end_turn(void)
 void game_autoplay(byte n)
 {
     diplomacy_auto = 1;
+    unit_active = UNIT_NONE;    // so that handing back does not end a turn
     while (n-- && !game_over) {
         ai_turn(PLAYER_HUMAN);
         game_end_turn();

@@ -30,6 +30,9 @@ There's no visual feedback who wins or loses when attacking or being attacked
 Add more help texts, like Help/Terrain Types/Grassland, Plain etc. The same for Help/Military Units
 
 If there's space on the disk, try adding some larger pictures for the start screen, and win/fail
+- The pictures are in screens/ (intro, defeat, win_survival, win_legacy, win_hegemony; PNG,
+  1280x800). Not used yet: they need converting for the MEGA65 and a way to show one in
+  place of the map view (CLAUDE.md, Assets). The win/defeat ones are for milestone 10's end
 
 --- IDEAS, not yet decided implement or not --
 
@@ -141,7 +144,8 @@ A game is 400 turns, as Civ 1's: growth and rivalry first, then the Crisis, then
   citizens (1 a citizen), cities, goods held, deals, and a big bonus for having survived the
   Crisis with cities left; later Legacy points for monuments (vision.md 5B, needs wonders,
   a milestone of its own). Victory: survived with the highest score. Retire (Game menu)
-  shows the same screen. A Top Five style "Score" under World during the game
+  shows the same screen, after one of screens/' pictures (defeat, win_survival, win_legacy,
+  win_hegemony). A Top Five style "Score" under World during the game
 - Memory: a region of its own (crisis.c: events, Sea Peoples, scoring; once a turn from
   end_turn(), like diplomacy_turn()); state saved (SAVE_VERSION). The score screen could be
   a text in attic plus numbers, as the help screen

@@ -205,8 +205,8 @@ buffers at the default `$FF80000` and corrupts the display.
 
 | Address | Size | Contents |
 |---|---|---|
-| `$2001-$5FFF`, `$8000-$9FFF` | 24 KB | the resident program: code, data, BSS, C stack. 376 bytes free, nearly all at `$5E88-$5FFF` |
-| `$6000-$7FFF` | 8 KB | the code window (`src/region.h`); as loaded, region 0 — the title, setup and help screens, the menus, save and load, the sheet's and the map's loaders, the owners' flags, the end of a turn and a game's start (`src/turn.c`), the computer players' starts (`src/aiplace.c`). 440 bytes free |
+| `$2001-$5FFF`, `$8000-$9FFF` | 24 KB | the resident program: code, data, BSS, C stack. 230 bytes free, nearly all at `$5F2A-$5FFF` |
+| `$6000-$7FFF` | 8 KB | the code window (`src/region.h`); as loaded, region 0 — the title, setup and help screens, the menus, save and load, the sheet's and the map's loaders, the owners' flags, the end of a turn and a game's start (`src/turn.c`), the computer players' starts (`src/aiplace.c`). 188 bytes free |
 | `$13000-$14FFF` | 8 KB | code slot 1: region 1, from `SEVENSHIPS.R1` by way of attic: the computer players and their ferrying, the cities' yields and growth, bronze. 312 bytes free |
 | `$15000-$16FFF` | 8 KB | code slot 2, shared: region 2 (the city screen, Top Five Cities, the builders' improvements; 2.7 KB free) region 3 (diplomacy; 2.3 KB free) or region 4 (trade and the galleys' routes; 5.5 KB free), whichever was called last |
 | `$17000-$1EFFF` | 32 KB | the tile sheet's tiles 18-33, where regions 3 to 6 would have been: the resources, the improved resources, the spearman, the galley; **full** |
@@ -501,8 +501,8 @@ entry in each of `dispatch.s`'s per-region tables (`slot_of`,
 `region_stamp[]`'s initialiser in `src/region.c`, and its file in the
 Makefile's `REGION_FILES`; `packprg.py` needs nothing. Attic's bank 1
 holds eight regions as the tables stand. **Resident space is what to
-watch now**: 376 bytes (21 Oct 2026, after the AI's ferrying; the
-slot copying cost 140, and each stub is 13), against 440 bytes in region
+watch now**: 230 bytes (22 Oct 2026, after Game → Options, which cost
+146; the slot copying cost 140, and each stub is 13), against 188 bytes in region
 0, 312 in region 1, 2.6 KB in region 2, 2.3 KB in region 3 and 5.5 KB in
 region 4. **Regions 0 and 1 are nearly full too**: region 1's next room
 is more of `ai.c` moving out (as `ai_place()` went to `src/aiplace.c`
@@ -779,8 +779,8 @@ at `$17000` up, the map loader in region 0, the owners' flags, contact by
 adjacency with the view moved to the newcomer, bronze and the spearman,
 and the info line following the active unit; and (the same day)
 milestone 8's diplomacy, "well enough", so its tuning is still open
-(TODO.txt); and trade ("looking good"). **Not yet tried on one**: the
-galley, and `src/turn.c`; the computer players' ferrying.
+(TODO.txt); and trade, the galley and `src/turn.c` ("looking good").
+**Not yet tried on one**: the computer players' ferrying.
 
 **Where to start next time**: TODO.txt — milestone 10's end game is
 drafted there; the merchant fleets and emporia and ferrying armies are
@@ -824,7 +824,18 @@ Alt to MEGA, so there it is Alt+G after all. **Compare a `KEY_MEGA` code
 from a byte variable** (`menu_hotkey()`): they are all above 127, and the
 first version, comparing against `(byte)(c + 0x60)`, met the sign
 extension bug below and opened nothing.
-Game has **Save Game** (see **Saving** below) and **Retire**, which asks "Do you want to quit this game?" with
+Game has **Save Game** (see **Saving** below), **Options** and **Retire**.
+**Options** opens a box of its own over the Game dropdown, as Civilization's
+does (`civ1-reference/civ1-game-options.png`): menu index `OPTIONS` (=
+`MENUS`, not on the bar) in `src/menu.c`'s tables, at `OPTIONS_LEFT`,
+`OPTIONS_TOP`, with a heading and a tick (screen code `$7A`) on an option
+that is on. Its one option is **End of Turn**, Civilization's: ticked
+(`game_end_wait`), the game waits for Return at the end of every turn;
+unticked, the default, `select_unit()` sets `end_due` when the orders to
+the last unit leave nobody wanting any, and `game_run()` ends the turn
+once the greetings and letters are shown — so a turn in which nobody had
+orders to give still waits. A preference, neither saved nor reset by a new
+game. **Retire** asks "Do you want to quit this game?" with
 `popup_ask()` (Yes/No buttons, `y`/`n`, Esc for No, or the cursor keys to move the highlight — No to begin with — and Return) and on Yes goes back
 to the title screen. **Orders is filled in for the active unit** just
 before a menu opens (`set_orders_menu()` in `src/game.c`, through
@@ -849,7 +860,8 @@ back with the next unit asking for orders. The panel's turn and the
 minimap keep up; the view is redrawn once at the end. The AI's rules
 apply to the human's side meanwhile, the unit cap and what the cities
 build included. Debug also has **Show Map**, a debugging toggle that
-lifts the fog of war: `map_show` (`src/map.h`) is `MAP_EXPLORED` or 0, and
+lifts the fog of war, ticked in the dropdown while it is on, as Options
+ticks End of Turn: `map_show` (`src/map.h`) is `MAP_EXPLORED` or 0, and
 everything that draws ORs it into the map byte before testing the bit —
 `view_redraw()` (hoisted into a local outside the loop), the city patch,
 the minimap and the hover readout — so the real explored bits are never
@@ -1675,7 +1687,7 @@ and a screenshot shows the result. Menu item *i* is at sprite y `92 + 16i`
 has hovered over stays selected after it leaves**, so a script that clicks
 somewhere and then comes back to a menu has to select with the cursor keys
 before pressing Return. The Game menu's title is at `{…,4,4,KEY_CLICK}`,
-Save Game at `{…,8,20,KEY_CLICK}` and Retire at `{…,8,28,KEY_CLICK}`, or MEGA+G is `{…,0,0,199}` (O 207, A 193, D 196,
+Save Game at `{…,8,20,KEY_CLICK}` and Options at `{…,8,28,KEY_CLICK}`, Retire at `{…,8,36,KEY_CLICK}`, or MEGA+G is `{…,0,0,199}` (O 207, A 193, D 196,
 W 215, H 200) (the
 script skips `$D611`, so it cannot test the CTRL path); Debug at `{…,112,4,KEY_CLICK}` and
 Show Map at `{…,116,20,KEY_CLICK}` (since 20 Oct 2026, when Advisors went
@@ -1820,6 +1832,20 @@ overlay art (resources, improvements) can be baked the same way, at a tile
 of sheet each.
 **Only what the game uses goes into `tiles/`** — `alltiles/` is the whole
 collection to pick from.
+
+**`screens/` holds full-screen pictures for cut scenes** (21 Oct 2026,
+the user's): `intro.png` (1260x1000) for the start, and `defeat.png`,
+`win_survival.png`, `win_legacy.png` and `win_hegemony.png` (1280x800)
+for the end of milestone 10, one for each of vision.md's three victories
+and the loss. **Nothing uses them yet.** They are source art, RGBA and
+far larger than the screen: shown, they would have to be scaled to the
+display (640x200 at H640/V200, or a mode of their own), quantised, and
+stored on the disk as full-colour characters or a bitmap of their own,
+loaded into memory the view does not need while they are up -- a 640x200
+picture is 125 KB at a byte a pixel, more than banks 4 and 5's tile
+store, so it would replace the map view while it is shown and the view
+be set up again afterwards, or be read a piece at a time from attic.
+The d81 has room (800 KB, under 100 KB used).
 
 **The sheet is read off the disk** (`TILES.FCI`, by `sheet_load()`), a
 character at a time, each widened and sent to bank 5 as it arrives, so none

@@ -25,6 +25,11 @@ byte game_load(void);
 // keypad -- or DIR_NONE. The city screen uses them too.
 byte key_dir(byte key);
 
+// Game -> Options -> End of Turn, Civilization's: ticked, the game waits
+// for Return at the end of every turn; not (the default), it waits only if
+// no unit was given orders during the turn. A preference, not saved.
+extern byte game_end_wait;
+
 // The turn, from 1, and the year, BC; for save.c.
 extern word game_turn;
 extern word game_year;

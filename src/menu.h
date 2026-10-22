@@ -19,6 +19,8 @@
 #define MENU_IRRIGATE 9
 #define MENU_MINE 10
 #define MENU_DIPLOMACY 11
+#define MENU_OPTIONS 12         // opens Options; menu_click() never returns it
+#define MENU_END_OF_TURN 13
 
 // What the Orders menu offers, for the unit that has the orders: up to two
 // of MENU_FOUND_CITY, MENU_FORTIFY, MENU_IRRIGATE and MENU_MINE, MENU_NONE

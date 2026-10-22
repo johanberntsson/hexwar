@@ -1,11 +1,11 @@
 --- OPEN ---
 
 NEXT: what is left of milestone 9 -- ferrying armies (an AI at war with a people over the
-water), merchant fleets and emporia -- or the rest of milestone 10, the Crisis (drafted
-below; the calendar, the end and the score are in). The tile sheet is packed and has
-about 18 KB free, a dozen units (make in tiles/ says). Room: resident 724 bytes, region 0
-0.8 KB, region 1 123 bytes -- full: more of ai.c has to move out, as ai_place() did,
-before the AI grows -- region 2 2.6 KB, region 3 2.3 KB, region 4 2.0 KB, region 5 6.2 KB
+water), merchant fleets and emporia -- or the rest of milestone 10: tuning the Crisis,
+the computer players' collapse, the pictures (below; calendar, end, score and Crisis in). The tile sheet is packed and has
+about 18 KB free, a dozen units (make in tiles/ says). Room: resident 704 bytes, region 0
+0.8 KB, region 1 38 bytes -- full: more of ai.c has to move out, as ai_place() did,
+before the AI grows -- region 2 2.6 KB, region 3 2.3 KB, region 4 1.9 KB, region 5 4.0 KB
 
 The AI ferries settlers now, but rarely: most peoples reach AI_CITY_CAP (6) on their own land
 before they have a galley. Raise the cap (7-8, MAX_CITIES is 32 shared) if overseas cities
@@ -129,24 +129,20 @@ A game is 400 turns, as Civ 1's: growth and rivalry first, then the Crisis, then
 - DONE (22 Oct 2026): calendar, 2 years a turn to turn 176 (1250 BC), then 1; the Crisis
   is due at turn 226 (1200 BC) and the game ends after turn 400 (1026 BC). Turns left on
   World/Score
-- Omens before the Crisis (turns ~200-225): letters from the others in the Amarna voice
-  ("My father, behold, the enemy's ships came; my cities were burned") and rumours, so the
-  player can build guards and galleys before it starts. Civ has no such phase; vision.md
-  does ("Pleas for help that cannot come")
-- The Sea Peoples: a naval barbarian, PLAYER_BARBARIAN or a second raider owner. Fleets
-  of galleys appear on the shallows near the richest coastal cities (size, trade goods,
-  deals) and land 1-2 units each, raid, burn or take cities, and sink galleys. Waves grow
-  through the Crisis. Art: the galley tile with a barbarian flag (no tile room) or a
-  recoloured one once there is room. The AI must guard its coast: more guards in coastal
-  cities, galleys to fight back
-- Network fracture: trade deals break when a partner loses the city with the good, or a
-  raid cuts the sea route (a deal could need the two to be joined by shallows or land);
-  losing copper or tin ends bronze, so no more spearmen (vision.md section 4.2)
-- Systemic shocks, one every N turns of the Crisis, by chance and weighted by region:
-  drought (food -1 on plains, desert and grassland for some turns: cities starve and
-  shrink), earthquake (a city loses size or an improvement), famine/plague (a large city
-  shrinks), rebellion (a city that has starved or lost its guards goes over to the
-  barbarians). Each with a popup and a panel line. Climate stress grows towards the end
+- DONE (22 Oct 2026, src/crisis.c, region 5): omens (a rumour at turn 200, a warning at
+  215, Ammurapi's letter at 226), the Sea Peoples (barbarian galleys with warriors, later
+  spearmen, off the richest coastal cities; the barbarians' AI moves them), shocks
+  (drought, earthquake, plague, revolt), pleas from rulers losing cities, trade deals lost
+  at sea, AI coastal guards. The unit list is 96 now (64 was full by the Crisis)
+- To tune: the Crisis is mild -- in 400-turn autoplays one people of eleven fell (seed 1,
+  the Hittites) and citizens fell a quarter to a half. Knobs: SEA_CAP (20), the raid rate,
+  the fleet size, in src/crisis.c. Fixed on the way: AI cities built spearmen over the cap
+  without end (35 on seed 7), since spearman_in() counted one that only passed through
+- Still open for the Crisis: the computer players' galleys fighting the Sea Peoples; the
+  raiders' own art (now the galley with a barbarian flag); a deal ending when the sender
+  no longer owns the good, or a raid cuts its route; shocks weighted by region and growing
+  towards the end; a revolting city going over to the rebels (barbarians own no cities,
+  so a revolt is rebels by the city for now)
 - Collapse of the computer players: a people that loses its capital or half its cities
   may break up (cities to the barbarians, Civ 1's civil war), so the map ends in a dark age
 - DONE (22 Oct 2026): the end at turn 400, or when the human's people is the last left, or

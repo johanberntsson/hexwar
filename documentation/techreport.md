@@ -163,7 +163,7 @@ to `release/`), holding five files:
 | SEVENSHIPS.R2 | code region 2, the city screen, Top Five Cities and the builders' improvements, the same way |
 | SEVENSHIPS.R3 | code region 3, diplomacy, the same way |
 | SEVENSHIPS.R4 | code region 4, trade, the ships' routes, exploring and fishing, and the menus, the same way |
-| SEVENSHIPS.R5 | code region 5, the score and the end of the game, the same way |
+| SEVENSHIPS.R5 | code region 5, the Crisis, the score and the end of the game, the same way |
 
 The C65 ROM boots AUTOBOOT.C65 automatically. `main()` then:
 
@@ -224,15 +224,15 @@ window shows one region of code at a time. The figures below are from the linker
 | \$1600-\$1637 | 0.05 | `zpsave`: BASIC's zero page \$02-\$39, saved at start-up and put back on exit |
 | \$1638-\$1b20 | 1.2 | the `lowfree` section (`LOW_FREE`): the popup's text, the scratch buffers of the view and the minimap, and the galleys' route search |
 | \$1b21-\$1eff | 1.0 | free |
-| \$2001-\$5a25 | 14.5 | BASIC stub, startup and resident code |
-| \$5a26-\$5a60 | 0.1 | initialised data: the DMA lists |
-| \$5a61-\$5b60 | 0.25 | C stack |
-| \$5b61-\$5cf4 | 0.4 | BSS: small state |
-| \$5cf5-\$5fff | 0.8 | free |
-| \$6000-\$7fff | 8 | the code window; region 0 as loaded (7.1 KB used) |
+| \$2001-\$5a5b | 14.5 | BASIC stub, startup and resident code |
+| \$5a5c-\$5aa8 | 0.1 | initialised data: the DMA lists |
+| \$5aa9-\$5ba8 | 0.25 | C stack |
+| \$5ba9-\$5d4e | 0.4 | BSS: small state |
+| \$5d4f-\$5fff | 0.7 | free |
+| \$6000-\$7fff | 8 | the code window; region 0 as loaded (7.2 KB used) |
 | \$8000-\$9ffe | 8 | resident constant data and code |
-| \$a000-\$b7c4 | 5.9 | `highbss` (`HIGH_BSS`): the map `map_tile` (terrain, improvements, explored and occupied bits), the unit and city arrays (the cities' size and food box among them), the peoples' relations and attitudes, the trade deals, the sprite blocks, the AI's headings, the staging buffers of the texts and the regions, the texts' line buffers, the sheet loader's buffers and its rows' extents and addresses, the saved VIC registers, and the resources, a list by hexagon row |
-| \$b7c5-\$bfff | 2.1 | free |
+| \$a000-\$b941 | 6.3 | `highbss` (`HIGH_BSS`): the map `map_tile` (terrain, improvements, explored and occupied bits), the unit and city arrays (the cities' size and food box among them), the peoples' relations and attitudes, the trade deals, the sprite blocks, the AI's headings, the staging buffers of the texts and the regions, the texts' line buffers, the sheet loader's buffers and its rows' extents and addresses, the saved VIC registers, and the resources, a list by hexagon row |
+| \$b942-\$bfff | 1.7 | free |
 
 The long texts and the names are not in this table at all: they are in
 TEXT.PAK, read into Attic RAM at start-up, which is most of why the
@@ -287,8 +287,8 @@ turn and the readout of what is under the arrow;
 region 1 holds the computer players and the cities' yields and growth;
 region 2 the city screen, Top Five Cities and the builders'
 improvements; region 3 diplomacy; region 4 trade, the ships' routes,
-exploring and fishing, and the menus; region 5 the score and the end
-of the game.
+exploring and fishing, and the menus; region 5 the Crisis, the score
+and the end of the game.
 
 Resident code calls a function in a region through a stub of the same
 name (`src/dispatch.s`), which maps the region in (copying it into its

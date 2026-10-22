@@ -10,6 +10,7 @@
 #include "combat.h"
 #include "diplomacy.h"
 #include "game.h"
+#include "gameint.h"
 #include "growth.h"
 #include "input.h"
 #include "map.h"
@@ -162,16 +163,20 @@ void trade_turn(void)
 {
     byte i, p, q, get, give, ended = 0;
 
-    // A trade lasts as long as the peace.
+    // A trade lasts as long as the peace -- and in the Crisis, one turn in
+    // 32, the ships are lost: vision.md's network fracture.
     for (i = 0; i < MAX_DEALS; ++i) {
         p = deal_from[i];
         if (p == DEAL_FREE) continue;
         q = deal_to[i];
-        if (!at_peace(p, q) || !player_alive(p)
-            || !player_alive(q)) {
-            deal_from[i] = DEAL_FREE;
-            ended = 1;
+        if (game_turn >= GAME_CRISIS_TURN && !(rnd() & 31)) {
+            if (p == PLAYER_HUMAN || q == PLAYER_HUMAN)
+                message("Trade ships", "lost at sea");
+        } else if (at_peace(p, q) && player_alive(p) && player_alive(q)) {
+            continue;
         }
+        deal_from[i] = DEAL_FREE;
+        ended = 1;
     }
     if (ended) recount();
 

@@ -1,0 +1,5 @@
+# Milestone 10, the second omen (turn 215): a computer player the human
+# has met warns of ships (arguments as in letter_greet.txt).
+Say to {arg 0}, {arg 1}, my brother: thus says {arg 2}, {arg 3}, your \
+brother. Ships of the enemy have been seen at sea. Keep your soldiers in \
+your cities by the coast, and send me word of what you see.

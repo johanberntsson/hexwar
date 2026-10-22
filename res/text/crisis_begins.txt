@@ -1,0 +1,10 @@
+# Milestone 10: the Crisis begins (turn 226), in the words of the last
+# letter of Ammurapi of Ugarit (vision.md), from a computer player the
+# human has met (arguments as in letter_greet.txt).
+Say to {arg 0}, {arg 1}, my father: thus says {arg 2}, {arg 3}, your \
+son. My father, behold, the enemy's ships came; my cities were burned, \
+and they did evil things in my country. Does not my father know that all \
+my troops and chariots are far away? Seven ships of the enemy came, and \
+did us great damage.
+
+The Crisis has begun: the Sea Peoples raid the coasts.

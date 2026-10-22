@@ -12,6 +12,7 @@
 #include "city.h"
 #include "civ.h"
 #include "combat.h"
+#include "crisis.h"
 #include "diplomacy.h"
 #include "growth.h"
 #include "improve.h"
@@ -42,6 +43,7 @@ void game_end_turn(void)
     kind = improve_turn();
     if (kind != ORDERS_NONE)
         message(kind == ORDERS_IRRIGATE ? "Irrigation" : "Mine", "finished");
+    crisis_turn();              // before the cities grow, for the drought
     for (c = 0; c < city_count; ++c) {
         // Food before shields, so a city that grows works its new hexagon
         // at once; and a city built up to a settler can let it go.
@@ -181,6 +183,8 @@ void game_init(void)
 
     game_turn = 1;
     game_year = START_YEAR;
+    crisis_drought = 0;
+    for (ax = 0; ax < PLAYERS; ++ax) crisis_cities[ax] = 0;
     dirty = 1;
     hover_dirty = 1;
 }

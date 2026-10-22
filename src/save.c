@@ -12,6 +12,7 @@
 #include "city.h"
 #include "civ.h"
 #include "combat.h"
+#include "crisis.h"
 #include "diplomacy.h"
 #include "trade.h"
 #include "game.h"
@@ -72,6 +73,8 @@ static const struct block blocks[] = {
     { player_civ, sizeof player_civ },
     { &game_turn, sizeof game_turn },
     { &game_year, sizeof game_year },
+    { &crisis_drought, sizeof crisis_drought },
+    { crisis_cities, sizeof crisis_cities },
 };
 #define BLOCKS (sizeof blocks / sizeof blocks[0])
 

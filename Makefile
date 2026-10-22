@@ -102,7 +102,7 @@ SRCS     = src/sevenships.c \
            src/save.c \
            src/text.c \
            src/game.c \
-           src/turn.c src/hover.c src/score.c \
+           src/turn.c src/hover.c src/score.c src/crisis.c \
            src/ai.c \
            src/aiplace.c \
            src/improve.c \
@@ -116,7 +116,7 @@ SRCS     = src/sevenships.c \
 
 # The files whose code is in a MAP window region (src/region.h), compiled
 # without the shared instruction fragments that could be called across one.
-BANKED   = src/title.c src/turn.c src/hover.c src/score.c src/aiplace.c src/cityscreen.c src/topcities.c src/diplomacy.c \
+BANKED   = src/title.c src/turn.c src/hover.c src/score.c src/crisis.c src/aiplace.c src/cityscreen.c src/topcities.c src/diplomacy.c \
            src/save.c src/sheet.c src/mapload.c src/help.c src/menu.c src/ai.c \
            src/improve.c src/growth.c src/trade.c src/path.c src/boat.c
 
@@ -180,7 +180,12 @@ TEXTS    = $(RES)/text/help.txt \
            $(RES)/text/pedia_plains.txt \
            $(RES)/text/pedia_forest.txt \
            $(RES)/text/pedia_desert.txt \
-           $(RES)/text/pedia_floodplain.txt
+           $(RES)/text/pedia_floodplain.txt \
+           $(RES)/text/crisis_rumour.txt \
+           $(RES)/text/crisis_warning.txt \
+           $(RES)/text/crisis_begins.txt \
+           $(RES)/text/crisis_alone.txt \
+           $(RES)/text/crisis_plea.txt
 TEXT_PAK = $(BUILD)/text.pak
 TEXT_IDS = $(BUILD)/textid.h
 

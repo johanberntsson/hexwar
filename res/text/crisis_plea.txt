@@ -1,0 +1,8 @@
+# Milestone 10: during the Crisis a computer player the human has met has
+# lost a city, and pleas for help that cannot come (arguments as in
+# letter_greet.txt).
+Say to {arg 0}, {arg 1}: thus says {arg 2}, {arg 3}. Behold, the enemy's \
+ships came again, and another of my cities is burned. Send me soldiers \
+and ships, if you have any to send.
+
+The {arg 4} are falling.

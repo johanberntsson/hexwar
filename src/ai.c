@@ -20,7 +20,7 @@
 // A computer player stops building units, settlers apart, at AI_UNIT_BASE
 // plus AI_UNITS_A_CITY for each city, up to AI_UNIT_MAX -- a guard and a
 // builder a city and a few to explore -- so that three of them and the
-// barbarians cannot fill the 64 slots every player shares.
+// barbarians cannot fill the MAX_UNITS slots every player shares.
 #define AI_UNIT_BASE 3
 #define AI_UNITS_A_CITY 2
 #define AI_UNIT_MAX 12
@@ -409,6 +409,8 @@ static byte guards(byte p, byte u, byte c)
 static byte guards_wanted(byte c)
 {
     byte n = 1 + (city_size[c] >> 2);
+    // In the Crisis a city by the sea wants one more, for the Sea Peoples.
+    if (game_turn >= GAME_CRISIS_TURN && city_coastal(c)) ++n;
     if (nearest(city_owner[c], city_ax[c], city_ay[c]) <= THREAT_RANGE)
         ++n;
     else if (game_turn < BARB_FIRST_TURN)
@@ -416,20 +418,22 @@ static byte guards_wanted(byte c)
     return n;
 }
 
-// Whether a spearman is in city c.
+// Whether a spearman guards city c: fortified there. One that is only
+// passing does not count, or the city went on building spearmen over the
+// cap for one that never stayed (35 of them by turn 400, 22 Oct 2026).
 static byte spearman_in(byte c)
 {
     byte v;
     for (v = 0; v < MAX_UNITS; ++v)
         if (unit_kind[v] == KIND_SPEARMAN && unit_ax[v] == city_ax[c]
-            && unit_ay[v] == city_ay[c])
+            && unit_ay[v] == city_ay[c] && unit_orders[v] == ORDERS_FORTIFY)
             return 1;
     return 0;
 }
 
 // With a spearman in city c, the warriors fortified there beyond the
 // guards it wants are disbanded: the spearman has replaced them, and the
-// unit cap and the 64 places in the unit list are wanted for other things.
+// unit cap and the places in the unit list are wanted for other things.
 static void retire(byte p, byte c)
 {
     byte v;
@@ -762,9 +766,12 @@ static void move_unit(byte u)
         // a city grew.
         if (attack_near(u, AI_ODDS)) return;
         c = home(u);
+        // A spearman also goes home to a city with none, to take the
+        // warriors' place (retire()).
         if (c != CITY_NONE
             && distance(ax, ay, city_ax[c], city_ay[c]) <= RECALL_RANGE
-            && guards(unit_owner[u], u, c) < guards_wanted(c)) {
+            && (guards(unit_owner[u], u, c) < guards_wanted(c)
+                || (unit_kind[u] == KIND_SPEARMAN && !spearman_in(c)))) {
             if (ax == city_ax[c] && ay == city_ay[c]) {
                 unit_orders[u] = ORDERS_FORTIFY;
                 unit_moves[u] = 0;

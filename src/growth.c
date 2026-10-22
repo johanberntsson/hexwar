@@ -9,6 +9,7 @@
 
 #include "growth.h"
 #include "city.h"
+#include "crisis.h"
 #include "map.h"
 #include "sheet.h"
 #include "trade.h"
@@ -80,6 +81,10 @@ static void yield(byte ax, byte ay)
     byte t = m & MAP_TERRAIN_MASK;
 
     hex_food = terrain_food[t];
+    // The Crisis's droughts (crisis.h): the dry land's food fails.
+    if (crisis_drought && hex_food
+        && (t == TILE_GRASS || t == TILE_PLAINS || t == TILE_DESERT))
+        --hex_food;
     hex_shields = terrain_shields[t];
     hex_trade = terrain_trade[t];
     t = map_resource_at(ax, ay);

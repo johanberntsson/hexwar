@@ -10,7 +10,11 @@
 
 #include "mega65.h"
 
-#define MAX_UNITS 64
+// 96, not 64, since milestone 10 (22 Oct 2026): by the Crisis three
+// computer players, the human and the barbarians had filled 64, and the
+// Sea Peoples could not come. The redraw's unit_at() walks the list for
+// every occupied hexagon in view: 0.13 ms more in a busy view.
+#define MAX_UNITS 96
 #define UNIT_NONE 0xff
 
 // Unit kinds. 0 is a free slot, so that a zeroed BSS is an empty list.

@@ -139,7 +139,7 @@ through the city screen, CHANGE, help, the menus, Save Game, Play 50 Turns,
 Top Five, Retire, Load Saved Game and 50 more turns), `-dumpmem` both,
 and compare `map_tile` and the unit and city arrays at the addresses each
 build's listing gives (`unit_kind = 0000a280` and so on, at their real
-lengths: 64 units, 32 cities). The game is deterministic, so they must be
+lengths: 96 units, 32 cities). The game is deterministic, so they must be
 byte-identical; the screenshots can differ only where a unit blinks.
 **A quit is tested with a `DIM` at READY** (see **Quitting**), and BASIC
 on its own with `-importbas FILE` (a BASIC 65 program as text, typed in
@@ -205,12 +205,12 @@ buffers at the default `$FF80000` and corrupts the display.
 
 | Address | Size | Contents |
 |---|---|---|
-| `$2001-$5FFF`, `$8000-$9FFF` | 24 KB | the resident program: code, data, BSS, C stack. 724 bytes free, nearly all at `$5D3B-$5FFF` |
+| `$2001-$5FFF`, `$8000-$9FFF` | 24 KB | the resident program: code, data, BSS, C stack. 704 bytes free, nearly all at `$5D4F-$5FFF` |
 | `$6000-$7FFF` | 8 KB | the code window (`src/region.h`); as loaded, region 0 — the title, setup and help screens (and the Civilopedia's pages), save and load, the sheet's and the map's loaders, the owners' flags, the end of a turn and a game's start (`src/turn.c`), the computer players' starts (`src/aiplace.c`), the hover readout (`src/hover.c`). 0.8 KB free |
-| `$13000-$14FFF` | 8 KB | code slot 1: region 1, from `SEVENSHIPS.R1` by way of attic: the computer players and their ferrying, the cities' yields and growth, bronze. 123 bytes free |
-| `$15000-$16FFF` | 8 KB | code slot 2, shared: region 2 (the city screen, Top Five Cities, the builders' improvements; 2.7 KB free) region 3 (diplomacy; 2.3 KB free) region 4 (trade, the ships' routes, exploring and fishing, the menus; 2.0 KB free) or region 5 (the score and the end, `src/score.c`; 6.2 KB free), whichever was called last |
+| `$13000-$14FFF` | 8 KB | code slot 1: region 1, from `SEVENSHIPS.R1` by way of attic: the computer players and their ferrying, the cities' yields and growth, bronze. 38 bytes free |
+| `$15000-$16FFF` | 8 KB | code slot 2, shared: region 2 (the city screen, Top Five Cities, the builders' improvements; 2.7 KB free) region 3 (diplomacy; 2.3 KB free) region 4 (trade, the ships' routes, exploring and fishing, the menus; 1.9 KB free) or region 5 (the Crisis, the score and the end, `src/crisis.c`, `src/score.c`; 4.0 KB free), whichever was called last |
 | `$17000-$1EFFF` | 32 KB | the packed tile sheet's second area, where regions 3 to 6 would have been: whatever rows did not fit bank 5's; with bank 5's, 18 KB free (`tools/mktiles.py` says) |
-| `$A000-$BFFF` | 8 KB | `highram`, under the BASIC ROM, banked out by `src/bank.s`: `map_tile`, the unit and city arrays, the sprite blocks, the AI's headings, the staging buffers of the texts and the regions, the texts' line buffers, the sheet loader's buffers, the saved VIC registers, the AI's exploration memory, the resource list, the sheet's row tables, the peoples' relations and attitudes and the letters' names, the trade deals; about 2.1 KB free — `HIGH_BSS` in `src/mega65.h` moves a variable there, and **the startup does not clear it** |
+| `$A000-$BFFF` | 8 KB | `highram`, under the BASIC ROM, banked out by `src/bank.s`: `map_tile`, the unit and city arrays, the sprite blocks, the AI's headings, the staging buffers of the texts and the regions, the texts' line buffers, the sheet loader's buffers, the saved VIC registers, the AI's exploration memory, the resource list, the sheet's row tables, the peoples' relations and attitudes and the letters' names, the trade deals; about 1.7 KB free — `HIGH_BSS` in `src/mega65.h` moves a variable there, and **the startup does not clear it** |
 | `$1600-$1EFF` | 2304 | `zpsave` (56 bytes, BASIC's zero page during the run), then `lowfree`: the popup's 400-byte text and the scratch buffers of the view and the minimap, and the sea routes' search (`src/path.c`), 990 bytes free — `LOW_FREE` in `src/mega65.h` moves a variable there |
 | `$12000` | 4000 | screen RAM, 80x25 cells of 2 bytes |
 | `$40000-$56FFF` | 94208 | the view's tile store, 23 rows of 4096: 3840 for the window, then 256 holding four of the minimap's characters (all 80 of them, rows 0-19) or, in rows 20-22, two of the owners' flags (92 slots) |
@@ -527,11 +527,11 @@ entry in each of `dispatch.s`'s per-region tables (`slot_of`,
 `region_stamp[]`'s initialiser in `src/region.c`, and its file in the
 Makefile's `REGION_FILES`; `packprg.py` needs nothing. Attic's bank 1
 holds eight regions as the tables stand. **Resident space is what to
-watch now**: 724 bytes (22 Oct 2026, after milestone 10's score and
-end; the hover readout's move to region 0 gave back 625; the slot
-copying cost 140, and each stub is 13), against 0.8 KB in region 0, 123 in
-region 1, 2.6 KB in region 2, 2.3 KB in region 3, 2.0 KB in region 4 and
-6.2 KB in region 5, which milestone 10 is for.
+watch now**: 704 bytes (22 Oct 2026, after milestone 10's Crisis; the
+hover readout's move to region 0 gave back 625; the slot
+copying cost 140, and each stub is 13), against 0.8 KB in region 0, **38
+bytes in region 1**, 2.6 KB in region 2, 2.3 KB in region 3, 1.9 KB in
+region 4 and 4.0 KB in region 5.
 `src/menu.c` moved from region 0 to region 4 the same day, when region 0
 was down to 188 bytes. **Region 1 is nearly full too**: its next room
 is more of `ai.c` moving out (as `ai_place()` went to `src/aiplace.c`
@@ -817,9 +817,11 @@ milestone 8's diplomacy, "well enough", so its tuning is still open
 **Not yet tried on one**: the computer players' ferrying.
 
 **Where to start next time**: TODO.txt — milestone 10, the end game:
-its calendar, end and score are in (**The end**), the Crisis itself
-(omens, Sea Peoples, shocks, fracture) is next, and wants room in region
-1 for the AI's part first. The merchant fleets and emporia and ferrying
+its calendar, end and score are in (**The end**), and the Crisis
+(**The Crisis**); still to come are the computer players' collapse (a
+people that loses its capital or half its cities breaking up) and the
+pictures of `screens/`. Region 1 is full (63 bytes): more of `ai.c` has
+to move out before the AI can grow. The merchant fleets and emporia and ferrying
 armies are what is left of milestone 9. The tile sheet is packed and has about a dozen units'
 room left (**When bank 5 fills up**, step 1c).
 
@@ -992,7 +994,8 @@ up to one per city, if it has hexagons to improve; 4. warriors, until
 the player has `AI_UNIT_BASE` + `AI_UNITS_A_CITY` per city units (3 + 2,
 at most `AI_UNIT_MAX`, 12), settlers apart, when it builds nothing
 (`city_build` = `KIND_NONE`), so that three computer players and the
-barbarians cannot fill the 64 unit slots everyone shares. A settler takes
+barbarians cannot fill the unit slots everyone shares (`MAX_UNITS`, 96
+since the Crisis; it was 64). A settler takes
 a citizen, so it waits for size 2 (see **Production**). In 150-turn
 autoplays this gave 18 cities on map seed 1 and 23 on seed 7, with 41 and
 46 improvements and all four peoples alive. Before Civilization's
@@ -1273,6 +1276,11 @@ before irrigating; `find_site()` counts copper and tin in reach double;
 with bronze a city's new guards are spearmen, a city guarded only by
 warriors builds one spearman even over the unit cap, and once it is in,
 `retire()` disbands the fortified warriors beyond the guards wanted.
+**"In" means fortified there** (`spearman_in()`, fixed 22 Oct 2026), and
+a spearman goes home to a city that has none: before, the new spearman
+walked off to hunt, since the warriors already guarded the city, and the
+city built another over the cap, and another — 35 by turn 400 on seed 7,
+which filled the unit list.
 **Tin is scarce by design**: four nodes at the top and bottom rows (the
 imports from the edge of the world, vision.md), where no city is founded,
 and inland on hills and mountains about two thirds as often as copper,
@@ -1502,6 +1510,48 @@ build ending after turn 60, through 100 turns of autoplay (the panel
 "Game over", three greetings, then the screen: "The end of the Bronze
 Age, 1482 BC", the sums right, a survival victory); Retire; and a whole
 400-turn game, which stopped at turn 400 in 1026 BC.
+
+**The Crisis** (milestone 10, vision.md §4; `src/crisis.c`, region 5,
+`crisis_turn()` once a turn from `game_end_turn()` before the cities
+grow). **Omens**: at the end of turn 200 a rumour, at 215 a warning from
+a ruler the human has met, and at 226 (`GAME_CRISIS_TURN`) Ammurapi's
+letter, "Seven ships of the enemy came" (or, with nobody met, fugitives'
+news) — `res/text/crisis_*.txt`, popups. **The Sea Peoples are
+barbarians** (`PLAYER_BARBARIAN`): a fleet is a barbarian galley a ship
+with two warriors aboard (spearmen from turn 300), one ship and up to
+three late on, appearing on empty shallows 3-6 hexagons from the
+richest coastal city (size, a little chance, more for a trading
+people), 2 turns in 16 at first and 7 by the end, up to `SEA_CAP` (20)
+barbarian units in all. **Nothing new moves them**: `ai_barbarians()`
+already attacks whatever is next to a unit and hunts within 24, a
+galley through the shallows, and the warriors aboard attack from the
+ship or step ashore, and burn a city by moving into it once it is empty.
+**Shocks**, one turn in 16: drought (`crisis_drought` turns, 8-15, in
+which `yield()` takes a food from grassland, plains and desert), an
+earthquake (a city a citizen smaller and an improvement next to it
+gone), plague (the largest city a third smaller), a revolt (two
+barbarian warriors next to a city nobody guards). **Pleas**: a ruler the
+human has met writes when it has lost a city since the last turn
+(`crisis_cities[]`), a letter a turn. **Network fracture**: in the
+Crisis a trade deal is lost at sea one turn in 32 (`trade_turn()`; the
+panel says so if it was the human's), and bronze already ends with the
+copper or tin it came from. **The computer players** want a guard more
+in every coastal city from turn 226 (`guards_wanted()`). The human hears
+of all of it by popup when it is theirs or everyone's, and not during
+Play 50 Turns (`diplomacy_auto`). `crisis_drought` and `crisis_cities`
+are saved (`SAVE_VERSION` 11). **The unit list went from 64 to 96**
+(`MAX_UNITS`): by the Crisis it was full and almost no fleet could be
+created (0 ships in 175 turns on seed 7); the redraw's `unit_at()` walks
+it for every occupied hexagon, 0.13 ms more in a busy view (17.12 → 17.25
+ms). Measured in 400 turns of autoplay (a throwaway count): 21, 33 and 40
+ships on seeds 1, 3 and 7, mostly held at `SEA_CAP`, and 7-12 shocks; the
+Hittites fell on seed 1 (6 cities to 0), the Mycenaeans lost one on seed
+7, nobody else lost a city, and citizens fell by a quarter to a half
+(seed 7: 96 at turn 400 without the Crisis, 69 with it). Milder than
+TODO.txt's "half survive": `SEA_CAP`, the raid rate in `crisis_turn()`
+and the fleets' size are the knobs. **Watch the automatic end of turn when
+scripting**: a key meant to end the turn may instead close the first
+popup of the next.
 
 **Popups** (`src/popup.c`) are a box of word-wrapped text over the middle
 of the map window, closed by a click anywhere, fire, Return, space or Esc.

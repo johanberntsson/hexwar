@@ -50,6 +50,7 @@
 #define COLOR_GREEN 5
 #define COLOR_BLUE 6
 #define COLOR_YELLOW 7
+#define COLOR_GREY 12
 #define COLOR_LIGHTGREEN 13
 #define COLOR_LIGHTGREY 15
 

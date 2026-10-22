@@ -13,6 +13,7 @@
 #include "civ.h"
 #include "combat.h"
 #include "crisis.h"
+#include "treasury.h"
 #include "emporium.h"
 #include "diplomacy.h"
 #include "growth.h"
@@ -45,6 +46,7 @@ void game_end_turn(void)
     if (kind != ORDERS_NONE)
         message(kind == ORDERS_IRRIGATE ? "Irrigation" : "Mine", "finished");
     crisis_turn();              // before the cities grow, for the drought
+    treasury_turn();            // before they produce: the AI's buying
     for (c = 0; c < city_count; ++c) {
         // Food before shields, so a city that grows works its new hexagon
         // at once; and a city built up to a settler can let it go.
@@ -187,7 +189,12 @@ void game_init(void)
     crisis_drought = 0;
     crisis_capitals = 0;
     emporium_count = 0;
-    for (ax = 0; ax < PLAYERS; ++ax) crisis_cities[ax] = 0;
+    for (ax = 0; ax < PLAYERS; ++ax) {
+        crisis_cities[ax] = 0;
+        player_gold[ax] = 0;
+    }
+    // Civilization's 50 at the easiest level.
+    if (!game_level) player_gold[PLAYER_HUMAN] = TREASURY_START;
     dirty = 1;
     hover_dirty = 1;
 }

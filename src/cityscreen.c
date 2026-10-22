@@ -18,6 +18,7 @@
 #include "input.h"
 #include "map.h"
 #include "screen.h"
+#include "treasury.h"
 #include "unit.h"
 #include "view.h"
 
@@ -27,6 +28,7 @@
 #define BORDER_COLOUR COLOR_LIGHTGREY
 #define BUTTON_CHANGE (ATTR_REVERSE | COLOR_CYAN)
 #define BUTTON_EXIT (ATTR_REVERSE | COLOR_RED)
+#define BUTTON_OFF (ATTR_REVERSE | COLOR_GREY)  // BUY, with too little gold
 
 // Three boxes across rows 2-13: the units, the city, what it builds.
 #define BOX_TOP 2
@@ -239,6 +241,22 @@ static void draw_info(byte c)
     put(&x, y, number(work_trade), TEXT_COLOUR);
 }
 
+// **Civilization's price** for the rest of what city c builds: 2r + r*r/20
+// gold for the r shields still wanted, twice that before the first
+// shield. 0 if there is nothing to buy.
+#define BUY_LEFT (TEXT_LEFT(BUILD_LEFT) + sizeof CHANGE_TEXT)
+static byte buy_width;          // the BUY button's, for the click
+
+static word buy_cost(byte c)
+{
+    word r, cost = unit_kind_cost[city_build[c]];
+
+    if (city_build[c] == KIND_NONE || city_shields[c] >= cost) return 0;
+    r = cost - city_shields[c];
+    cost = 2 * r + r * r / 20;
+    return city_shields[c] ? cost : 2 * cost;
+}
+
 static void draw_build(byte c)
 {
     byte x = TEXT_LEFT(BUILD_LEFT);
@@ -273,6 +291,32 @@ static void draw_build(byte c)
                       "waits for size 2", COLOR_YELLOW);
     screen_putsxy(TEXT_LEFT(BUILD_LEFT), CHANGE_ROW, CHANGE_TEXT,
                   BUTTON_CHANGE);
+
+    // The treasury, and BUY with its price on it.
+    x = TEXT_LEFT(BUILD_LEFT);
+    s = number(player_gold[PLAYER_HUMAN]);
+    screen_putsxy(x, LIST_ROW + 4, s, TEXT_COLOUR);
+    screen_putsxy(x + length(s), LIST_ROW + 4, " gold in hand", TEXT_COLOUR);
+    buy_width = 0;
+    if (!buy_cost(c)) return;
+    s = number(buy_cost(c));
+    buy_width = 6 + length(s);
+    kind = player_gold[PLAYER_HUMAN] >= buy_cost(c) ? BUTTON_CHANGE
+                                                    : BUTTON_OFF;
+    screen_putsxy(BUY_LEFT, CHANGE_ROW, " BUY ", kind);
+    screen_putsxy(BUY_LEFT + 5, CHANGE_ROW, s, kind);
+    screen_putsxy(BUY_LEFT + buy_width - 1, CHANGE_ROW, " ", kind);
+}
+
+// B or the BUY button: the rest of the production for gold, finished at
+// the end of the turn, if the treasury has enough.
+static void buy(byte c)
+{
+    word cost = buy_cost(c);
+    if (!cost || player_gold[PLAYER_HUMAN] < cost) return;
+    player_gold[PLAYER_HUMAN] -= cost;
+    city_shields[c] = unit_kind_cost[city_build[c]];
+    draw_build(c);
 }
 
 static void draw_choice(byte i, byte selected)
@@ -434,7 +478,7 @@ void city_screen(byte c)
     draw_units(c);
     draw_build(c);
     screen_putsxy(0, EXIT_ROW,
-                  "c change  click a hexagon or its moving key: work it  "
+                  "c change  b buy  click a hexagon or its key: work it  "
                   "esc exit", COLOR_LIGHTGREY);
     screen_putsxy(EXIT_LEFT, EXIT_ROW, EXIT_TEXT, BUTTON_EXIT);
 
@@ -450,6 +494,10 @@ void city_screen(byte c)
             if (pointer_on(CHANGE_ROW, TEXT_LEFT(BUILD_LEFT),
                            TEXT_LEFT(BUILD_LEFT) + sizeof CHANGE_TEXT - 2))
                 change(c);
+            else if (buy_width
+                     && pointer_on(CHANGE_ROW, BUY_LEFT,
+                                   BUY_LEFT + buy_width - 1))
+                buy(c);
             else if (unit_under_pointer() != 0xff)
                 wake(c, unit_under_pointer());
             else
@@ -459,6 +507,8 @@ void city_screen(byte c)
             return;
         } else if (key == 'c') {
             change(c);
+        } else if (key == 'b') {
+            buy(c);
         } else if (key >= '1' && key < '1' + UNITS_LISTED) {
             wake(c, key - '1');
         } else {

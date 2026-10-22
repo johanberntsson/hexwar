@@ -16,6 +16,7 @@
 #include "ai.h"
 #include "boat.h"
 #include "emporium.h"
+#include "treasury.h"
 #include "city.h"
 #include "cityscreen.h"
 #include "topcities.h"
@@ -123,6 +124,7 @@ static void panel_text(byte row, const char *s, byte colour)
 #define ROW_CIV 9
 #define ROW_YEAR 10
 #define ROW_TURN 11
+#define ROW_GOLD 12
 #define ROW_UNIT 13
 #define ROW_MOVES 14
 #define ROW_PROMPT 16           // two rows
@@ -159,6 +161,10 @@ void draw_status(void)
     line_add("Turn ");
     line_add_num(game_turn);
     panel_text(ROW_TURN, line, TEXT_COLOUR);
+    line_clear();
+    line_add_num(player_gold[PLAYER_HUMAN]);
+    line_add(" gold");
+    panel_text(ROW_GOLD, line, TEXT_COLOUR);
 }
 
 // The unit waiting for orders, or the end-of-turn prompt if there is none.
@@ -534,6 +540,10 @@ static void menu_command(byte command)
         break;
     case MENU_SCORE:
         score_screen(SCORE_NOW);
+        draw_screen();
+        break;
+    case MENU_FINANCE:
+        finance_screen();
         draw_screen();
         break;
 #ifdef DEBUG_MENU

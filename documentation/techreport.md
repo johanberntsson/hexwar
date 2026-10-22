@@ -109,6 +109,7 @@ most important routines included in each source file.
 | aibuild.c | what each computer player's city builds, out of ai.c into region 2 |
 | emporium.c | merchant ships and the emporia they found on foreign coasts |
 | picture.c | full pictures in the map window, with their own palette: the title's and the end's |
+| treasury.c | each player's gold: the cities' trade less corruption, the deals, the computer players' buying, and Advisors/Finance |
 |  |  |
 | trade.c | goods exchanged between the peoples, as gifts or for other goods |
 | &nbsp;&nbsp;&nbsp;_trade\_turn_ | once a turn: deals end with the peace, and the computer players ask for goods or tribute |
@@ -167,7 +168,7 @@ to `release/`), holding these files:
 | SEVENSHIPS.R2 | code region 2, the city screen, Top Five Cities, the builders' improvements and what the computer players' cities build, the same way |
 | SEVENSHIPS.R3 | code region 3, diplomacy, the same way |
 | SEVENSHIPS.R4 | code region 4, trade, the ships' routes, exploring and fishing, merchant ships and emporia, and the menus, the same way |
-| SEVENSHIPS.R5 | code region 5, the Crisis and the peoples' collapse, the score and the end of the game, and the pictures, the same way |
+| SEVENSHIPS.R5 | code region 5, the Crisis and the peoples' collapse, the score and the end of the game, the pictures and the treasury, the same way |
 | INTRO.PIC, DEFEAT.PIC, WIN_SURVIVAL.PIC, WIN_HEGEMONY.PIC | the pictures shown at boot and at the end: a palette and 60x23 full colour characters, 87 KB each |
 
 The C65 ROM boots AUTOBOOT.C65 automatically. `main()` then:
@@ -300,7 +301,8 @@ improvements and what the computer players' cities build, which calls
 the improvements for every city and so is beside them; region 3
 diplomacy; region 4 trade, the ships' routes, exploring and fishing,
 merchant ships and emporia, and the menus; region 5 the Crisis and the
-peoples' collapse, the score and the end of the game, and the pictures.
+peoples' collapse, the score and the end of the game, the pictures and
+the treasury.
 
 Resident code calls a function in a region through a stub of the same
 name (`src/dispatch.s`), which maps the region in (copying it into its
@@ -464,6 +466,7 @@ terrain is drawn, and their overlays are drawn after the next row's terrain.
 | Barbarians | `ai_barbarians`: perhaps a new band, then every barbarian's move |
 | Diplomacy | `diplomacy_turn`, and `trade_turn` at its end: contact between all the peoples, deals ended by war, goods asked for, the attitudes, ceasefires running out, and each computer player's war, ceasefire or peace with each other player one turn in four; what concerns the player waits as letters, shown over the map once it is redrawn |
 | The Crisis | `crisis_turn`: a people that has lost its capital breaks up, its furthest cities going over to the rebels (the barbarians), and from 1200 BC the omens, the Sea Peoples' fleets and the shocks |
+| Treasury | `treasury_turn`: every city's trade, less corruption (more the further it is from the capital), into its owner's gold, two gold a deal, and the computer players' gold turned into shields for soldiers and galleys |
 | Production | every city adds its shields (its own hexagon's, at least 1, plus its best neighbour's); one that reaches the cost of what it is building puts the unit on its hexagon and keeps the surplus |
 | New turn | the turn number goes up, the year moves on ten years from 1600 BC, and every unit gets its moves back |
 

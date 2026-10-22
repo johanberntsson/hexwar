@@ -36,6 +36,10 @@ extern byte crisis_cities[PLAYERS];
 // seen once (the collapse). Saved; 0 for a new game.
 extern byte crisis_capitals;
 
+// p's capital, the first city it founded while it holds it, or CITY_NONE.
+// In region 5, for crisis.c and treasury.c only: there is no stub.
+byte crisis_capital(byte p);
+
 // A turn of it, before the cities grow: does nothing before the omens.
 void crisis_turn(void);
 

@@ -179,7 +179,7 @@ static void raid(void)
 
 // p's capital: the first city it founded -- the first name on its list --
 // while it is still p's. CITY_NONE once it has been taken or burnt.
-static byte capital(byte p)
+byte crisis_capital(byte p)
 {
     byte c;
     for (c = 0; c < city_count; ++c)
@@ -325,7 +325,7 @@ void crisis_turn(void)
     // whenever it happens, not only in the Crisis.
     for (p = PLAYER_FIRST_AI; p < PLAYERS; ++p) {
         n = (byte)(1 << p);
-        if (capital(p) != CITY_NONE) {
+        if (crisis_capital(p) != CITY_NONE) {
             crisis_capitals |= n;
         } else if (crisis_capitals & n) {
             crisis_capitals &= (byte)~n;

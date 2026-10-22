@@ -232,9 +232,11 @@ stub:       .macro  name, target, region
             stub    menu_click, menu_click_r4, 4
             stub    menu_key, menu_key_r4, 4
 
-; Region 5, slot 2: the Crisis, the score and the end of the game, and
-; the pictures.
+; Region 5, slot 2: the Crisis, the score and the end of the game, the
+; pictures, and the treasury.
             stub    score_screen, score_screen_r5, 5
             stub    crisis_turn, crisis_turn_r5, 5
             stub    picture_show, picture_show_r5, 5
             stub    picture_end, picture_end_r5, 5
+            stub    treasury_turn, treasury_turn_r5, 5
+            stub    finance_screen, finance_screen_r5, 5

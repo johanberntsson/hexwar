@@ -14,6 +14,7 @@
 #include "picture.h"
 #include "screen.h"
 #include "trade.h"
+#include "treasury.h"
 #include "unit.h"
 #include "view.h"
 
@@ -27,14 +28,16 @@
 // The table: a row a people, a column a figure, right-aligned at these.
 #define TABLE_TOP 6
 #define PEOPLE_LEFT 8
-#define FIGURES 5
+#define FIGURES 6
 static const char *const heading[FIGURES] = {
-    "Cities", "Citizens", "Goods", "Deals", "Score"
+    "Cities", "Citizens", "Goods", "Deals", "Gold", "Score"
 };
-static const byte column_right[FIGURES] = { 33, 43, 51, 59, 69 };
+static const byte column_right[FIGURES] = { 29, 39, 46, 53, 61, 70 };
 #define OUTCOME_ROW (TABLE_TOP + 2 * PLAYERS + 3)
 
 // The goods that count, as trade.h has them.
+#define GOLD_POINT 200          // by turn 300 a treasury is 1000-3500
+
 static const byte goods[] = {
     RES_OLIVES, RES_WINE, RES_CEDAR, RES_COPPER, RES_TIN, RES_DYE
 };
@@ -80,7 +83,10 @@ static void figures(byte p)
         if (deal_from[i] != DEAL_FREE
             && (deal_from[i] == p || deal_to[i] == p))
             ++figure[3];
-    figure[4] = figure[1] + 2 * figure[0] + 2 * figure[2] + 3 * figure[3];
+    figure[4] = player_gold[p];
+    // vision.md's wealth: a point for every GOLD_POINT in the treasury.
+    figure[5] = figure[1] + 2 * figure[0] + 2 * figure[2] + 3 * figure[3]
+                + figure[4] / GOLD_POINT;
 }
 
 static void put_year(byte x, byte y)
@@ -183,7 +189,9 @@ void score_screen(byte how)
     y = OUTCOME_ROW;
     if (how == SCORE_NOW) {
         screen_putsxy(PEOPLE_LEFT, y, "A point a citizen, two a city, two"
-                      " a good, three a trade deal.", COLOR_LIGHTGREY);
+                      " a good, three a trade deal,", COLOR_LIGHTGREY);
+        screen_putsxy(PEOPLE_LEFT, y + 1, "and one for every 200 gold.",
+                      COLOR_LIGHTGREY);
     } else if (!alive) {
         screen_putsxy(PEOPLE_LEFT, y, "Your people has fallen: defeat.",
                       COLOR_RED);

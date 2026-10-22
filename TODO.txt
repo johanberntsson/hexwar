@@ -1,16 +1,26 @@
 --- OPEN ---
 
-NEXT (22 Oct 2026, after items 1-6 of the last list were done; CLAUDE.md "Where to start
-next time"):
-1. Try on a real MEGA65: the boot splash and the end pictures, the collapse and the rebels'
-   cities, the raider, ferried armies, merchant ships and emporia, Help/Military Units
-2. Tune from play: the Crisis, the collapse, how often the AI builds merchant ships
-3. Room: region 4 has 0.2 KB -- move the menus (src/menu.c) out of it; resident 392 bytes
-4. The rest of 9 and 10 below: AI galleys against the Sea Peoples, a deal ending when its
-   good is lost, trade carried by merchant ships; then monuments and the legacy victory
-Room: resident 392 bytes, region 0 0.4 KB, region 1 178 bytes, region 2 1.6 KB, region 3
-2.2 KB, region 4 0.2 KB, region 5 2.7 KB, highram 1.4 KB; the tile sheet 12 KB, about
+NEXT (22 Oct 2026, after the treasury; CLAUDE.md "Where to start next time"):
+1. Try on a real MEGA65: the treasury (panel gold, BUY on the city screen, Advisors/Finance,
+   the score's Gold column)
+2. Merchant fleets carrying the trade deals, which closes milestone 9
+3. Monuments and the legacy victory; with them the treasury's first expenses
+4. Room first: region 4 0.2 KB (move the menus), region 5 0.6 KB (Finance could go to
+   region 3), resident 302 bytes
+5. Tune from play: the Crisis, the collapse, merchant ships, gold piling up (1000-3500 by
+   turn 300)
+Room: resident 302 bytes, region 0 0.4 KB, region 1 178 bytes, region 2 1.1 KB, region 3
+2.2 KB, region 4 0.2 KB, region 5 0.6 KB, highram 1.4 KB; the tile sheet 12 KB, about
 eight units (make in tiles/ says)
+
+DONE (22 Oct 2026): the treasury, Civ 1's: city trade less corruption (trade x distance to
+the capital x 3 / 100, Despotism's) into gold, +2 a turn a trade deal to each partner, no
+expenses yet. Buy on the city screen (b, Civ 1's price); the AI turns gold into shields for
+soldiers and galleys as Civ 1's does. Panel, Advisors/Finance, a Gold column in the score
+(a point per 200). SAVE_VERSION 13
+
+Need a financial adviros screen that shows main stats - income and expenses
+- DONE as Advisors/Finance (income only: there are no expenses yet)
 
 The AI ferries settlers now, but rarely: most peoples reach AI_CITY_CAP (6) on their own land
 before they have a galley. Raise the cap (7-8, MAX_CITIES is 32 shared) if overseas cities
@@ -33,8 +43,6 @@ wonders and Help/Wonders screen with descriptions. The Lion Gate, Pyramids etc
 
 Need city advisor screen (list of cities and basic stats (production etc). POssible to go into
 a city screen by selecting on city from this advisor screen.
-
-Need a financial adviros screen that shows main stats - income and expenses
 
 Evenually need to adjust game/AI for the difficulty levels (probably need to cheat
 on highter levels to make the game challenging)

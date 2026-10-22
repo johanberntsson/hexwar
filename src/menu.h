@@ -23,7 +23,8 @@
 #define MENU_END_OF_TURN 13
 #define MENU_TERRAINS 14        // opens Terrain Types; never returned either
 #define MENU_FISH 15
-#define MENU_TERRAIN 16         // + a terrain, TILE_HILLS to TILE_FLOODPLAIN; last
+#define MENU_SCORE 16
+#define MENU_TERRAIN 17         // + a terrain, TILE_HILLS to TILE_FLOODPLAIN; last
 
 // What the Orders menu offers, for the unit that has the orders: up to two
 // of MENU_FOUND_CITY, MENU_FORTIFY, MENU_IRRIGATE, MENU_MINE and MENU_FISH, MENU_NONE

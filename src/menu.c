@@ -76,8 +76,8 @@ static const byte debug_commands[] = { MENU_SHOW_MAP, MENU_PLAY_50 };
 static const char *const advisors_items[] = { "Diplomacy" };
 static const byte advisors_commands[] = { MENU_DIPLOMACY };
 
-static const char *const world_items[] = { "Top Five Cities" };
-static const byte world_commands[] = { MENU_TOP_CITIES };
+static const char *const world_items[] = { "Top Five Cities", "Score" };
+static const byte world_commands[] = { MENU_TOP_CITIES, MENU_SCORE };
 
 static const char *const help_items[] = { "Keyboard Control", "Terrain Types" };
 static const byte help_commands[] = { MENU_KEYS, MENU_TERRAINS };
@@ -91,7 +91,7 @@ static const byte *const menu_commands[MENUS + 2] = {
     game_commands, orders_commands, advisors_commands, world_commands,
     debug_commands, help_commands, options_commands, 0
 };
-static byte menu_count[MENUS + 2] = { 3, 0, 1, 1, 2, 2, 1, TERRAIN_COUNT };
+static byte menu_count[MENUS + 2] = { 3, 0, 1, 2, 2, 2, 1, TERRAIN_COUNT };
 #else
 static const char *const *const menu_items[MENUS + 2] = {
     game_items, orders_items, advisors_items, world_items, help_items,
@@ -101,7 +101,7 @@ static const byte *const menu_commands[MENUS + 2] = {
     game_commands, orders_commands, advisors_commands, world_commands,
     help_commands, options_commands, 0
 };
-static byte menu_count[MENUS + 2] = { 3, 0, 1, 1, 2, 1, TERRAIN_COUNT };
+static byte menu_count[MENUS + 2] = { 3, 0, 1, 2, 2, 1, TERRAIN_COUNT };
 #endif
 
 #define ORDERS 1                // Orders' index in the tables above

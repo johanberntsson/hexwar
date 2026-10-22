@@ -205,10 +205,10 @@ buffers at the default `$FF80000` and corrupts the display.
 
 | Address | Size | Contents |
 |---|---|---|
-| `$2001-$5FFF`, `$8000-$9FFF` | 24 KB | the resident program: code, data, BSS, C stack. 792 bytes free, nearly all at `$5CF5-$5FFF` |
-| `$6000-$7FFF` | 8 KB | the code window (`src/region.h`); as loaded, region 0 — the title, setup and help screens (and the Civilopedia's pages), save and load, the sheet's and the map's loaders, the owners' flags, the end of a turn and a game's start (`src/turn.c`), the computer players' starts (`src/aiplace.c`), the hover readout (`src/hover.c`). 0.9 KB free |
+| `$2001-$5FFF`, `$8000-$9FFF` | 24 KB | the resident program: code, data, BSS, C stack. 724 bytes free, nearly all at `$5D3B-$5FFF` |
+| `$6000-$7FFF` | 8 KB | the code window (`src/region.h`); as loaded, region 0 — the title, setup and help screens (and the Civilopedia's pages), save and load, the sheet's and the map's loaders, the owners' flags, the end of a turn and a game's start (`src/turn.c`), the computer players' starts (`src/aiplace.c`), the hover readout (`src/hover.c`). 0.8 KB free |
 | `$13000-$14FFF` | 8 KB | code slot 1: region 1, from `SEVENSHIPS.R1` by way of attic: the computer players and their ferrying, the cities' yields and growth, bronze. 123 bytes free |
-| `$15000-$16FFF` | 8 KB | code slot 2, shared: region 2 (the city screen, Top Five Cities, the builders' improvements; 2.7 KB free) region 3 (diplomacy; 2.3 KB free) or region 4 (trade, the ships' routes, exploring and fishing, the menus; 2.0 KB free), whichever was called last |
+| `$15000-$16FFF` | 8 KB | code slot 2, shared: region 2 (the city screen, Top Five Cities, the builders' improvements; 2.7 KB free) region 3 (diplomacy; 2.3 KB free) region 4 (trade, the ships' routes, exploring and fishing, the menus; 2.0 KB free) or region 5 (the score and the end, `src/score.c`; 6.2 KB free), whichever was called last |
 | `$17000-$1EFFF` | 32 KB | the packed tile sheet's second area, where regions 3 to 6 would have been: whatever rows did not fit bank 5's; with bank 5's, 18 KB free (`tools/mktiles.py` says) |
 | `$A000-$BFFF` | 8 KB | `highram`, under the BASIC ROM, banked out by `src/bank.s`: `map_tile`, the unit and city arrays, the sprite blocks, the AI's headings, the staging buffers of the texts and the regions, the texts' line buffers, the sheet loader's buffers, the saved VIC registers, the AI's exploration memory, the resource list, the sheet's row tables, the peoples' relations and attitudes and the letters' names, the trade deals; about 2.1 KB free — `HIGH_BSS` in `src/mega65.h` moves a variable there, and **the startup does not clear it** |
 | `$1600-$1EFF` | 2304 | `zpsave` (56 bytes, BASIC's zero page during the run), then `lowfree`: the popup's 400-byte text and the scratch buffers of the view and the minimap, and the sea routes' search (`src/path.c`), 990 bytes free — `LOW_FREE` in `src/mega65.h` moves a variable there |
@@ -527,10 +527,11 @@ entry in each of `dispatch.s`'s per-region tables (`slot_of`,
 `region_stamp[]`'s initialiser in `src/region.c`, and its file in the
 Makefile's `REGION_FILES`; `packprg.py` needs nothing. Attic's bank 1
 holds eight regions as the tables stand. **Resident space is what to
-watch now**: 792 bytes (22 Oct 2026, after the fishing boat's work and
-the hover readout's move to region 0; the slot
-copying cost 140, and each stub is 13), against 0.9 KB in region 0, 123 in
-region 1, 2.6 KB in region 2, 2.3 KB in region 3 and 2.0 KB in region 4.
+watch now**: 724 bytes (22 Oct 2026, after milestone 10's score and
+end; the hover readout's move to region 0 gave back 625; the slot
+copying cost 140, and each stub is 13), against 0.8 KB in region 0, 123 in
+region 1, 2.6 KB in region 2, 2.3 KB in region 3, 2.0 KB in region 4 and
+6.2 KB in region 5, which milestone 10 is for.
 `src/menu.c` moved from region 0 to region 4 the same day, when region 0
 was down to 188 bytes. **Region 1 is nearly full too**: its next room
 is more of `ai.c` moving out (as `ai_place()` went to `src/aiplace.c`
@@ -815,10 +816,11 @@ milestone 8's diplomacy, "well enough", so its tuning is still open
 (TODO.txt); and trade, the galley and `src/turn.c` ("looking good").
 **Not yet tried on one**: the computer players' ferrying.
 
-**Where to start next time**: TODO.txt — milestone 10's end game is
-drafted there; the merchant fleets and emporia and ferrying armies are
-what is left of milestone 9, and the fishing boat's work on fish
-(**Galleys**). The tile sheet is packed and has about a dozen units'
+**Where to start next time**: TODO.txt — milestone 10, the end game:
+its calendar, end and score are in (**The end**), the Crisis itself
+(omens, Sea Peoples, shocks, fracture) is next, and wants room in region
+1 for the AI's part first. The merchant fleets and emporia and ferrying
+armies are what is left of milestone 9. The tile sheet is packed and has about a dozen units'
 room left (**When bank 5 fills up**, step 1c).
 
 **The title screen comes first** (`src/title.c`): `title_show()` puts the
@@ -836,7 +838,8 @@ screen in between. Quit returns from `main()` without the map view ever
 having been set up.
 
 **`main()` goes round for every game.** `game_run()` returns `GAME_QUIT`
-(Esc, or the game was over) or `GAME_RETIRE`, and on a retire `main()`
+(Esc) or `GAME_RETIRE` (Retire, or the game is over, after the score;
+see **The end**), and on a retire `main()`
 puts the title back up and runs it again, then `view_init()`,
 `game_init()` and `view_clear()` as for the first game. **`game_init()`
 therefore resets everything a game leaves behind** — `map_reset()` (the
@@ -870,14 +873,14 @@ the last unit leave nobody wanting any, and `game_run()` ends the turn
 once the greetings and letters are shown — so a turn in which nobody had
 orders to give still waits. A preference, neither saved nor reset by a new
 game. **Retire** asks "Do you want to quit this game?" with
-`popup_ask()` (Yes/No buttons, `y`/`n`, Esc for No, or the cursor keys to move the highlight — No to begin with — and Return) and on Yes goes back
-to the title screen. **Orders is filled in for the active unit** just
+`popup_ask()` (Yes/No buttons, `y`/`n`, Esc for No, or the cursor keys to move the highlight — No to begin with — and Return) and on Yes shows the
+score (**The end**) and goes back to the title screen. **Orders is filled in for the active unit** just
 before a menu opens (`set_orders_menu()` in `src/game.c`, through
 `menu_orders()`): Found City for a settler, Fortify for a warrior, and
 for anything else, or no unit wanting orders, it is empty and does not
 open; its items do what `b` and `f` do. World has **Top Five Cities**
 (`src/topcities.c`, region 2): the five largest cities the player has
-seen, whoever's, with their people and size. Advisors has **Diplomacy**
+seen, whoever's, with their people and size; and **Score** (**The end**). Advisors has **Diplomacy**
 (see **Contact** below). Help
 has **Keyboard Control**, the help screen, and **Terrain Types**, a
 submenu like Options (`TERRAINS` in `src/menu.c`) of the ten terrains in
@@ -1476,6 +1479,30 @@ the city screen's CHANGE list; and with a boat on the fish at (21,4) on
 seed 1, `i`: "Fishing boats at work", the boat gone, the fishing boats
 drawn with no overlay, and "Shallows+Fish+boats 4/0/2".
 
+**The end** (milestone 10, its first part; `src/score.c`, region 5).
+**The calendar** is vision.md's (`GAME_SLOW_TURN` and the rest in
+`src/game.h`): 1600 BC, two years a turn to 1250 BC at turn 176, then
+one, so the Crisis is due in 1200 BC at turn 226 and the game ends after
+turn 400 in 1026 BC — Civilization's 400 turns. `game_end_turn()` stops
+there, or when every computer player is out, by setting `game_over` (the
+turn and the year stay at the last), and `select_unit()` then hands out
+no orders; the human out is game over as before. **A game over is no
+longer a quit to BASIC**: the next key shows the final score and goes
+back to the title (`GAME_RETIRE`), as Retire does after its own. **The
+score** (`score_screen()`): per people, cities, citizens, goods it has
+(the six trade goods, `player_has()`), trade deals, and a score of a
+point a citizen, two a city, two a good and three a deal, after
+Civilization's; peoples not yet met are "not yet met" until the end,
+those out "fallen". The outcome: fallen is defeat; standing at the end a
+survival victory, and with the highest score a hegemony victory
+(vision.md §5; legacy wants monuments). The pictures in `screens/` are
+for these and not shown yet. World → Score shows the same table and the
+turns left. Checked headlessly: World → Score at the start; a throwaway
+build ending after turn 60, through 100 turns of autoplay (the panel
+"Game over", three greetings, then the screen: "The end of the Bronze
+Age, 1482 BC", the sums right, a survival victory); Retire; and a whole
+400-turn game, which stopped at turn 400 in 1026 BC.
+
 **Popups** (`src/popup.c`) are a box of word-wrapped text over the middle
 of the map window, closed by a click anywhere, fire, Return, space or Esc.
 Build the text with `popup_begin()`, `popup_add()` and `popup_add_num()`
@@ -1500,7 +1527,8 @@ blinking in xemu and on a real MEGA65 (19 Oct 2026). A turn is: every human unit
 orders gets asked, in list order (`unit_next()`); then the prompt; then
 `ai_turn()` for each computer player; then every city's production; then
 the year moves on. The game is over
-when the human has neither units nor cities.
+when the human has neither units nor cities, after the last turn, or
+when the human's people is the last (**The end**).
 
 **Units and cities are arrays per field** (`unit_kind[]`, `unit_ax[]`, …),
 not arrays of structs: a byte array indexed by a byte is `lda abs,x` in

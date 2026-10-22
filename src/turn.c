@@ -23,8 +23,7 @@
 
 #pragma clang section text="r0text" rodata="r0rodata"
 
-#define START_YEAR 1600         // BC; the Crisis is due about 1200
-#define YEARS_PER_TURN 10
+#define START_YEAR 1600         // BC; the calendar is in game.h
 
 // The end of a turn: the computer players and the barbarians move, the
 // diplomacy and the trade are settled, the builders work, and every city
@@ -79,8 +78,17 @@ void game_end_turn(void)
     dirty = 1;
     hover_dirty = 1;
     contact = 1;
-    ++game_turn;
-    game_year -= YEARS_PER_TURN;
+    // **The end** (milestone 10): after the last turn, or once the human's
+    // people is the only one left -- and, as before, once it is out, which
+    // select_unit() sees. game_run() then shows the score (score.h).
+    for (c = PLAYER_FIRST_AI; c < PLAYERS && !player_alive(c); ++c)
+        ;
+    if (game_turn == GAME_LAST_TURN || c == PLAYERS) {
+        game_over = 1;
+    } else {
+        game_year -= game_turn < GAME_SLOW_TURN ? 2 : 1;
+        ++game_turn;
+    }
     unit_begin_turn(PLAYER_HUMAN);
     draw_status();
     select_unit(UNIT_NONE);

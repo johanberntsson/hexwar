@@ -19,6 +19,7 @@
 #include "cityscreen.h"
 #include "topcities.h"
 #include "save.h"
+#include "score.h"
 #include "text.h"
 #include "civ.h"
 #include "diplomacy.h"
@@ -263,7 +264,7 @@ void select_unit(byte after)
     byte was = unit_active;
     byte u = unit_next(PLAYER_HUMAN, after);
 
-    if (!player_alive(PLAYER_HUMAN)) {
+    if (game_over || !player_alive(PLAYER_HUMAN)) {
         game_over = 1;
         u = UNIT_NONE;
     }
@@ -519,9 +520,14 @@ static void menu_command(byte command)
     switch (command) {
     case MENU_RETIRE:
         if (popup_ask("Do you want to quit this game?")) {
+            score_screen(SCORE_RETIRED);
             retired = 1;
             quit = 1;
         }
+        break;
+    case MENU_SCORE:
+        score_screen(SCORE_NOW);
+        draw_screen();
         break;
 #ifdef DEBUG_MENU
     case MENU_SHOW_MAP:
@@ -826,7 +832,10 @@ byte game_run(void)
         if (!key) continue;
         if (key >= 'A' && key <= 'Z') key += 'a' - 'A';
 
+        // The game is over: the final score, then the title screen.
         if (game_over) {
+            score_screen(SCORE_END);
+            retired = 1;
             quit = 1;
             continue;
         }

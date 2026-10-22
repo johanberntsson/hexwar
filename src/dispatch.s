@@ -20,22 +20,22 @@ cur_region: .byte   0
 ; Region r's slot (src/region.h has the scheme), and
 ; the region each slot holds, 0 for none yet: region_load() leaves them all
 ; empty, so a region is first copied in when it is first called.
-slot_of:    .byte   0, 1, 2, 2, 2
+slot_of:    .byte   0, 1, 2, 2, 2, 2
 slot_held:  .byte   0, 0, 0
 
 ; Where each region is in attic RAM, REGION_ATTIC(r): bank bits 16-19 and
 ; bits 8-15, for r from 0 (unused) up. And where each slot is in bank 1,
 ; bits 8-15.
-attic_bank: .byte   0, 1, 1, 1, 1
-attic_hi:   .byte   0, 0x00, 0x20, 0x40, 0x60
+attic_bank: .byte   0, 1, 1, 1, 1, 1
+attic_hi:   .byte   0, 0x00, 0x20, 0x40, 0x60, 0x80
 slot_hi:    .byte   0, 0x30, 0x50
 
 ; Each region's length, set by region_load() from its file.
             .public region_length_lo, region_length_hi
 region_length_lo:
-            .byte   0, 0, 0, 0, 0
+            .byte   0, 0, 0, 0, 0, 0
 region_length_hi:
-            .byte   0, 0, 0, 0, 0
+            .byte   0, 0, 0, 0, 0, 0
 
 ; The copy from attic RAM into a slot: an enhanced job with the source in
 ; megabyte $80, the destination in $00, then F018B as in src/mega65.c.
@@ -224,3 +224,6 @@ stub:       .macro  name, target, region
             stub    menu_draw, menu_draw_r4, 4
             stub    menu_click, menu_click_r4, 4
             stub    menu_key, menu_key_r4, 4
+
+; Region 5, slot 2: the score and the end of the game.
+            stub    score_screen, score_screen_r5, 5

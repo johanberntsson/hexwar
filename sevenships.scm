@@ -69,6 +69,7 @@
     (memory win2 (address (#x6000 . #x7fff)) (section r2text r2rodata))
     (memory win3 (address (#x6000 . #x7fff)) (section r3text r3rodata))
     (memory win4 (address (#x6000 . #x7fff)) (section r4text r4rodata))
+    (memory win5 (address (#x6000 . #x7fff)) (section r5text r5rodata))
     (memory zeroPage (address (#x2 . #x7f)) (type ram) (qualifier zpage)
             (section (registers #x2)))
     (memory highram

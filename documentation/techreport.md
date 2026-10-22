@@ -162,14 +162,15 @@ to `release/`), holding five files:
 | SEVENSHIPS.R1 | code region 1, the computer players and the cities' growth: a header and the code, kept in Attic RAM and run at \$6000 from bank 1 |
 | SEVENSHIPS.R2 | code region 2, the city screen, Top Five Cities and the builders' improvements, the same way |
 | SEVENSHIPS.R3 | code region 3, diplomacy, the same way |
-| SEVENSHIPS.R4 | code region 4, trade and the galleys' routes, the same way |
+| SEVENSHIPS.R4 | code region 4, trade, the ships' routes, exploring and fishing, and the menus, the same way |
+| SEVENSHIPS.R5 | code region 5, the score and the end of the game, the same way |
 
 The C65 ROM boots AUTOBOOT.C65 automatically. `main()` then:
 
 1. keeps the VIC registers as BASIC left them (`screen_save`), switches the
    VIC-IV to 80x25 16-bit text mode with full colour characters
    (`screen_init`), reads TEXT.PAK into Attic RAM (`text_load`) and
-   SEVENSHIPS.R1 to .R3 into Attic RAM (`region_load`), and puts up the title
+   SEVENSHIPS.R1 to .R5 into Attic RAM (`region_load`), and puts up the title
    screen, which is one of those texts (`title_show`);
 2. reads TILES.FCI, a character at a time. Each character is widened to twice
    its width, because a pixel of this screen mode is half as wide as it is
@@ -286,7 +287,8 @@ turn and the readout of what is under the arrow;
 region 1 holds the computer players and the cities' yields and growth;
 region 2 the city screen, Top Five Cities and the builders'
 improvements; region 3 diplomacy; region 4 trade, the ships' routes,
-exploring and fishing, and the menus.
+exploring and fishing, and the menus; region 5 the score and the end
+of the game.
 
 Resident code calls a function in a region through a stub of the same
 name (`src/dispatch.s`), which maps the region in (copying it into its

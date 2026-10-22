@@ -102,7 +102,7 @@ SRCS     = src/sevenships.c \
            src/save.c \
            src/text.c \
            src/game.c \
-           src/turn.c src/hover.c \
+           src/turn.c src/hover.c src/score.c \
            src/ai.c \
            src/aiplace.c \
            src/improve.c \
@@ -116,7 +116,7 @@ SRCS     = src/sevenships.c \
 
 # The files whose code is in a MAP window region (src/region.h), compiled
 # without the shared instruction fragments that could be called across one.
-BANKED   = src/title.c src/turn.c src/hover.c src/aiplace.c src/cityscreen.c src/topcities.c src/diplomacy.c \
+BANKED   = src/title.c src/turn.c src/hover.c src/score.c src/aiplace.c src/cityscreen.c src/topcities.c src/diplomacy.c \
            src/save.c src/sheet.c src/mapload.c src/help.c src/menu.c src/ai.c \
            src/improve.c src/growth.c src/trade.c src/path.c src/boat.c
 
@@ -132,7 +132,8 @@ PRG      = $(BUILD)/sevenships.prg
 # The code regions, read into attic RAM and run from bank 1, one file each
 # (src/region.h).
 REGION_FILES = $(BUILD)/sevenships.r1 $(BUILD)/sevenships.r2 \
-               $(BUILD)/sevenships.r3 $(BUILD)/sevenships.r4
+               $(BUILD)/sevenships.r3 $(BUILD)/sevenships.r4 \
+               $(BUILD)/sevenships.r5
 
 # The map, made by tools/mapgen.py and read off the disk at start-up. Same seed,
 # same map: `make MAP_SEED=7` is how to look at another one, and MAP_LAND is the

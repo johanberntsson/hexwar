@@ -1,11 +1,11 @@
 --- OPEN ---
 
 NEXT: what is left of milestone 9 -- ferrying armies (an AI at war with a people over the
-water), merchant fleets and emporia -- or milestone 10,
-the end game (drafted below). The tile sheet is packed and has about 18 KB free, a dozen
-units (make in tiles/ says). Room: resident 792 bytes (the hover readout moved to region
-0), region 0 0.9 KB, region 1 123 bytes -- full: more of ai.c has to move out, as
-ai_place() did, before the AI grows -- region 2 2.6 KB, region 3 2.3 KB, region 4 2.0 KB
+water), merchant fleets and emporia -- or the rest of milestone 10, the Crisis (drafted
+below; the calendar, the end and the score are in). The tile sheet is packed and has
+about 18 KB free, a dozen units (make in tiles/ says). Room: resident 724 bytes, region 0
+0.8 KB, region 1 123 bytes -- full: more of ai.c has to move out, as ai_place() did,
+before the AI grows -- region 2 2.6 KB, region 3 2.3 KB, region 4 2.0 KB, region 5 6.2 KB
 
 The AI ferries settlers now, but rarely: most peoples reach AI_CITY_CAP (6) on their own land
 before they have a galley. Raise the cap (7-8, MAX_CITIES is 32 shared) if overseas cities
@@ -126,10 +126,9 @@ Milestone 9: trade
 
 Milestone 10: the end game -- the Bronze Age Collapse (DRAFT, vision.md sections 4 and 5)
 A game is 400 turns, as Civ 1's: growth and rivalry first, then the Crisis, then the end.
-- Calendar: 1600 BC to about 1025 BC. Now it is 10 years a turn, which reaches 1200 BC at
-  turn 40. Instead e.g. 2 years a turn to turn 175 (1250 BC), then 1 a turn, so the Crisis
-  starts about turn 225 (1200 BC) and lasts 175 turns. Year and turn on the panel as now;
-  "Turns left" somewhere (Advisors?). Saved already (game_turn, game_year)
+- DONE (22 Oct 2026): calendar, 2 years a turn to turn 176 (1250 BC), then 1; the Crisis
+  is due at turn 226 (1200 BC) and the game ends after turn 400 (1026 BC). Turns left on
+  World/Score
 - Omens before the Crisis (turns ~200-225): letters from the others in the Amarna voice
   ("My father, behold, the enemy's ships came; my cities were burned") and rumours, so the
   player can build guards and galleys before it starts. Civ has no such phase; vision.md
@@ -150,16 +149,18 @@ A game is 400 turns, as Civ 1's: growth and rivalry first, then the Crisis, then
   barbarians). Each with a popup and a panel line. Climate stress grows towards the end
 - Collapse of the computer players: a people that loses its capital or half its cities
   may break up (cities to the barbarians, Civ 1's civil war), so the map ends in a dark age
-- The end at turn 400, or earlier if only one people is left (or the human is out, as now):
-  a final screen with each people's score and who survived. Score, after Civ 1's:
-  citizens (1 a citizen), cities, goods held, deals, and a big bonus for having survived the
-  Crisis with cities left; later Legacy points for monuments (vision.md 5B, needs wonders,
-  a milestone of its own). Victory: survived with the highest score. Retire (Game menu)
-  shows the same screen, after one of screens/' pictures (defeat, win_survival, win_legacy,
-  win_hegemony). A Top Five style "Score" under World during the game
-- Memory: a region of its own (crisis.c: events, Sea Peoples, scoring; once a turn from
-  end_turn(), like diplomacy_turn()); state saved (SAVE_VERSION). The score screen could be
-  a text in attic plus numbers, as the help screen
+- DONE (22 Oct 2026): the end at turn 400, or when the human's people is the last left, or
+  is out; the final screen (src/score.c, region 5) with each people's cities, citizens,
+  goods, deals and score (1 a citizen, 2 a city, 2 a good, 3 a deal) and the outcome:
+  defeat, survival victory, or hegemony victory with the highest score. Game over now goes
+  to the title, not to BASIC. Retire shows the same screen, and World/Score during the game
+- Still to do for the end: screens/' pictures before the final screen (defeat,
+  win_survival, win_hegemony; win_legacy needs monuments, vision.md 5B, a milestone of its
+  own). The survival bonus left out: everybody standing would get it, and the fallen score
+  next to nothing anyway
+- Memory: the Crisis goes in region 5 with the score (6.2 KB free), once a turn from
+  end_turn(), like diplomacy_turn(); its state saved (SAVE_VERSION). The AI's part (Sea
+  Peoples, coastal guards) needs room in region 1 first (123 bytes free)
 - Test: Play 50 Turns to 400 with AUTOPLAY_TURNS=200, and see that the game ends, that
   peoples survive the Crisis about half the time, and that the score screen is right
 

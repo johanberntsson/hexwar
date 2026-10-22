@@ -11,8 +11,9 @@
 void game_init(void);
 
 // What game_run() ended with.
-#define GAME_QUIT 0             // Esc, or the game was over: back to BASIC
-#define GAME_RETIRE 1           // Game/Retire: back to the title screen
+#define GAME_QUIT 0             // Esc: back to BASIC
+#define GAME_RETIRE 1           // Game/Retire, or the game is over: the score
+                                // has been shown; back to the title screen
 
 // Play until the player quits, retires or the game is over.
 byte game_run(void);
@@ -29,6 +30,14 @@ byte key_dir(byte key);
 // for Return at the end of every turn; not (the default), it waits only if
 // no unit was given orders during the turn. A preference, not saved.
 extern byte game_end_wait;
+
+// **The calendar** (milestone 10): from 1600 BC, two years a turn until
+// turn GAME_SLOW_TURN (1250 BC), then one, so that the Crisis is due at
+// GAME_CRISIS_TURN (1200 BC) and the game ends after GAME_LAST_TURN
+// (1026 BC) -- Civilization's 400 turns, the last 175 of them the Collapse.
+#define GAME_SLOW_TURN 176
+#define GAME_CRISIS_TURN 226
+#define GAME_LAST_TURN 400
 
 // The turn, from 1, and the year, BC; for save.c.
 extern word game_turn;

@@ -1,0 +1,172 @@
+// In region 5 (src/region.h): called through the stub in src/dispatch.s,
+// under this name here.
+#define score_screen score_screen_r5
+
+#include "score.h"
+#include "city.h"
+#include "civ.h"
+#include "combat.h"
+#include "diplomacy.h"
+#include "game.h"
+#include "growth.h"
+#include "input.h"
+#include "map.h"
+#include "screen.h"
+#include "trade.h"
+#include "unit.h"
+
+#pragma clang section text="r5text" rodata="r5rodata"
+
+#define BUTTON_EXIT (ATTR_REVERSE | COLOR_RED)
+#define EXIT_ROW (SCREEN_ROWS - 1)
+#define EXIT_TEXT " EXIT "
+#define EXIT_LEFT (SCREEN_COLUMNS - 2 - (sizeof EXIT_TEXT - 1))
+
+// The table: a row a people, a column a figure, right-aligned at these.
+#define TABLE_TOP 6
+#define PEOPLE_LEFT 8
+#define FIGURES 5
+static const char *const heading[FIGURES] = {
+    "Cities", "Citizens", "Goods", "Deals", "Score"
+};
+static const byte column_right[FIGURES] = { 33, 43, 51, 59, 69 };
+#define OUTCOME_ROW (TABLE_TOP + 2 * PLAYERS + 3)
+
+// The goods that count, as trade.h has them.
+static const byte goods[] = {
+    RES_OLIVES, RES_WINE, RES_CEDAR, RES_COPPER, RES_TIN, RES_DYE
+};
+
+static char digits[6];
+
+static const char *number(word v)
+{
+    byte i = sizeof digits - 1;
+    digits[i] = 0;
+    do { digits[--i] = (char)('0' + v % 10); v /= 10; } while (v);
+    return digits + i;
+}
+
+static byte length(const char *s)
+{
+    byte n = 0;
+    while (s[n]) ++n;
+    return n;
+}
+
+static void put_right(byte right, byte y, const char *s, byte colour)
+{
+    screen_putsxy(right + 1 - length(s), y, s, colour);
+}
+
+// People p's figures, FIGURES of them, the score last.
+static word figure[FIGURES];
+
+static void figures(byte p)
+{
+    byte c, i;
+
+    for (i = 0; i < FIGURES; ++i) figure[i] = 0;
+    for (c = 0; c < city_count; ++c)
+        if (city_owner[c] == p) {
+            ++figure[0];
+            figure[1] += city_size[c];
+        }
+    for (i = 0; i < sizeof goods; ++i)
+        if (player_has(p, goods[i])) ++figure[2];
+    for (i = 0; i < MAX_DEALS; ++i)
+        if (deal_from[i] != DEAL_FREE
+            && (deal_from[i] == p || deal_to[i] == p))
+            ++figure[3];
+    figure[4] = figure[1] + 2 * figure[0] + 2 * figure[2] + 3 * figure[3];
+}
+
+static void put_year(byte x, byte y)
+{
+    screen_putsxy(x, y, number(game_year), COLOR_WHITE);
+    screen_putsxy(x + length(number(game_year)) + 1, y, "BC", COLOR_WHITE);
+}
+
+void score_screen(byte how)
+{
+    byte p, i, x, y, key, alive = player_alive(PLAYER_HUMAN), best = 1;
+    word mine = 0;
+
+    sprite_hide(2);             // the minimap's outline, which is gone
+    sprite_hide(3);
+    screen_clear();
+    screen_putsxy(PEOPLE_LEFT, 2,
+                  how == SCORE_END ? "The end of the Bronze Age,"
+                  : how == SCORE_RETIRED ? "Retired in"
+                  : "The score in", COLOR_WHITE);
+    put_year(how == SCORE_END ? PEOPLE_LEFT + 27
+             : how == SCORE_RETIRED ? PEOPLE_LEFT + 11 : PEOPLE_LEFT + 13, 2);
+    if (how == SCORE_NOW) {
+        x = PEOPLE_LEFT;
+        screen_putsxy(x, 3, "Turn", COLOR_LIGHTGREY);
+        x += 5;
+        screen_putsxy(x, 3, number(game_turn), COLOR_LIGHTGREY);
+        x += length(number(game_turn));
+        screen_putsxy(x + 1, 3, "of", COLOR_LIGHTGREY);
+        screen_putsxy(x + 4, 3, number(GAME_LAST_TURN), COLOR_LIGHTGREY);
+        if (game_turn < GAME_CRISIS_TURN)
+            screen_putsxy(x + 8, 3, "-- the Crisis is due about 1200 BC",
+                          COLOR_LIGHTGREY);
+    }
+
+    for (i = 0; i < FIGURES; ++i)
+        put_right(column_right[i], TABLE_TOP, heading[i], COLOR_LIGHTGREY);
+    figures(PLAYER_HUMAN);
+    mine = figure[FIGURES - 1];
+    for (p = 0; p < PLAYERS; ++p) {
+        y = TABLE_TOP + 2 + 2 * p;
+        screen_putsxy(PEOPLE_LEFT, y, player_people(p),
+                      p == PLAYER_HUMAN ? COLOR_WHITE : COLOR_LIGHTGREEN);
+        // During the game, only the peoples met; at the end, everybody.
+        if (how != SCORE_END && p != PLAYER_HUMAN
+            && !((diplomacy_known[PLAYER_HUMAN] >> p) & 1)) {
+            screen_putsxy(column_right[0] - 5, y, "not yet met",
+                          COLOR_LIGHTGREY);
+            continue;
+        }
+        if (!player_alive(p)) {
+            screen_putsxy(column_right[0] - 5, y, "fallen", COLOR_RED);
+            continue;
+        }
+        figures(p);
+        if (p != PLAYER_HUMAN && figure[FIGURES - 1] >= mine) best = 0;
+        for (i = 0; i < FIGURES; ++i)
+            put_right(column_right[i], y, number(figure[i]),
+                      i == FIGURES - 1 ? COLOR_YELLOW : COLOR_LIGHTGREEN);
+    }
+
+    y = OUTCOME_ROW;
+    if (how == SCORE_NOW) {
+        screen_putsxy(PEOPLE_LEFT, y, "A point a citizen, two a city, two"
+                      " a good, three a trade deal.", COLOR_LIGHTGREY);
+    } else if (!alive) {
+        screen_putsxy(PEOPLE_LEFT, y, "Your people has fallen: defeat.",
+                      COLOR_RED);
+    } else if (how == SCORE_RETIRED) {
+        screen_putsxy(PEOPLE_LEFT, y, "You left before the end of the age.",
+                      COLOR_WHITE);
+    } else if (best) {
+        screen_putsxy(PEOPLE_LEFT, y, "Your people came through the Collapse"
+                      " with the highest score:", COLOR_YELLOW);
+        screen_putsxy(PEOPLE_LEFT, y + 1, "a hegemony victory.",
+                      COLOR_YELLOW);
+    } else {
+        screen_putsxy(PEOPLE_LEFT, y, "Your people came through the Collapse:"
+                      " a survival victory.", COLOR_YELLOW);
+    }
+    screen_putsxy(0, EXIT_ROW, "Esc or Return to go on", COLOR_LIGHTGREY);
+    screen_putsxy(EXIT_LEFT, EXIT_ROW, EXIT_TEXT, BUTTON_EXIT);
+
+    for (;;) {
+        screen_wait_raster(SCREEN_ROW_LINE(SCREEN_ROWS - 1));
+        key = input_poll();
+        if (key == KEY_ESC || key == KEY_RUNSTOP || key == KEY_RETURN
+            || key == KEY_SPACE || key == KEY_CLICK)
+            return;
+    }
+}

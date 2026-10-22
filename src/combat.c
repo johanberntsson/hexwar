@@ -1,4 +1,5 @@
 #include "combat.h"
+#include "culture.h"
 #include "city.h"
 #include "map.h"
 #include "sheet.h"
@@ -47,12 +48,15 @@ static byte defence(byte u)
 {
     byte ax = unit_ax[u], ay = unit_ay[u];
     byte t = MAP_TERRAIN(ax, ay);
-    byte d = (byte)(4 * unit_kind_defence[unit_kind[u]]);
+    byte d = (byte)(4 * unit_kind_defence[unit_kind[u]]), c;
 
     if (t == TILE_HILLS || t == TILE_FOREST) d += d >> 1;
     else if (t == TILE_MOUNTAIN) d <<= 1;
-    if (unit_orders[u] == ORDERS_FORTIFY || city_at(ax, ay) != CITY_NONE)
+    c = city_at(ax, ay);
+    if (unit_orders[u] == ORDERS_FORTIFY || c != CITY_NONE)
         d += d >> 1;
+    // The Lion Gate is the walls of its city (src/culture.h).
+    if (c != CITY_NONE && (city_culture[c] & CITY_LION_GATE)) d <<= 1;
     return d;
 }
 

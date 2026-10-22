@@ -1,20 +1,22 @@
-// In region 5 (src/region.h): called through the stubs in src/dispatch.s,
+// In region 6 (src/region.h): called through the stubs in src/dispatch.s,
 // under these names here.
-#define treasury_turn treasury_turn_r5
-#define finance_screen finance_screen_r5
+#define treasury_turn treasury_turn_r6
+#define finance_screen finance_screen_r6
 
 #include "treasury.h"
 #include "city.h"
 #include "combat.h"
 #include "crisis.h"
+#include "culture.h"
 #include "game.h"
+#include "gameint.h"
 #include "growth.h"
 #include "input.h"
 #include "map.h"
 #include "screen.h"
 #include "trade.h"
 
-#pragma clang section text="r5text" rodata="r5rodata"
+#pragma clang section text="r6text" rodata="r6rodata"
 
 HIGH_BSS word player_gold[PLAYERS];
 
@@ -31,12 +33,23 @@ static word distance(byte ax, byte ay, byte bx, byte by)
     return (word)(dy + (dx > dy ? (dx - dy) / 2 : 0));
 }
 
+// p's capital, as crisis_capital() in region 5 has it: the first city it
+// founded, while it holds it. A copy, as a stub would cost resident room.
+static byte capital(byte p)
+{
+    byte c;
+    for (c = 0; c < city_count; ++c)
+        if (city_founder[c] == p && city_name[c] == 0 && city_owner[c] == p)
+            return c;
+    return CITY_NONE;
+}
+
 // City c's trade and its corruption, into these.
 static byte trade, corruption;
 
 static void income(byte c)
 {
-    byte k = crisis_capital(city_owner[c]);
+    byte k = capital(city_owner[c]);
     word d = k == CITY_NONE ? NO_CAPITAL
              : distance(city_ax[c], city_ay[c], city_ax[k], city_ay[k]);
     word lost;
@@ -74,6 +87,16 @@ void treasury_turn(void)
         if (p >= PLAYERS) continue;             // the rebels' (crisis.c)
         income(c);
         add(p, trade - corruption);
+        // A temple's upkeep, Civilization's 1 a turn; with nothing in the
+        // treasury it is sold, as Civilization sells a building.
+        if (city_culture[c] & CITY_TEMPLE) {
+            if (player_gold[p]) {
+                --player_gold[p];
+            } else {
+                city_culture[c] &= (byte)~CITY_TEMPLE;
+                if (p == PLAYER_HUMAN) message("No gold: a temple", "was sold");
+            }
+        }
         // The computer players buy as Civilization's do: shields for gold,
         // two to one, for a soldier or a galley under way -- up to a third
         // of the treasury in a city with nobody in it, a 64th otherwise.
@@ -131,7 +154,7 @@ static void put_right(byte right, byte y, const char *s, byte colour)
 
 void finance_screen(void)
 {
-    byte c, i, y = TABLE_TOP + 2, key, n;
+    byte c, i, y = TABLE_TOP + 2, key, n, temples = 0;
     word total = 0;
 
     sprite_hide(2);             // the minimap's outline, which is gone
@@ -150,6 +173,7 @@ void finance_screen(void)
         if (city_owner[c] != PLAYER_HUMAN) continue;
         income(c);
         total += trade - corruption;
+        if (city_culture[c] & CITY_TEMPLE) ++temples;
         if (y >= TABLE_TOP + 2 + TABLE_ROWS) continue;  // counted, not listed
         screen_putsxy(LEFT, y, city_name_of(c), COLOR_LIGHTGREEN);
         put_right(column_right[0], y, number(trade), COLOR_LIGHTGREEN);
@@ -166,7 +190,11 @@ void finance_screen(void)
     y += 2;
     screen_putsxy(LEFT, y, "Income a turn", COLOR_WHITE);
     put_right(column_right[2], y, number(total), COLOR_YELLOW);
-    screen_putsxy(LEFT, y + 1, "Expenses: none", COLOR_LIGHTGREY);
+    screen_putsxy(LEFT, y + 1, "Temples' upkeep", COLOR_WHITE);
+    put_right(column_right[0], y + 1, number(temples), COLOR_LIGHTGREEN);
+    screen_putsxy(column_right[2] - length(number(temples)), y + 1, "-",
+                  COLOR_RED);
+    put_right(column_right[2], y + 1, number(temples), COLOR_RED);
     screen_putsxy(LEFT, y + 3, "Corruption grows with the distance from the "
                   "capital.", COLOR_LIGHTGREY);
     screen_putsxy(LEFT, y + 4, "Gold buys production: b on the city screen.",

@@ -13,6 +13,7 @@
 
 #include "cityscreen.h"
 #include "city.h"
+#include "culture.h"
 #include "game.h"
 #include "growth.h"
 #include "input.h"
@@ -46,7 +47,8 @@
 
 #define TEXT_LEFT(BOX) ((BOX) + 2)
 #define HEADING_ROW (BOX_TOP + 1)
-#define LIST_ROW (BOX_TOP + 3)  // units, the item, the choices
+#define LIST_ROW (BOX_TOP + 3)  // units, the item
+#define CHOICE_ROW (BOX_TOP + 2) // CHANGE's list, a row higher for its nine
 #define LIST_ROWS (BOX_BOTTOM - LIST_ROW)
 
 #define CHANGE_ROW (BOX_BOTTOM - 2)
@@ -74,7 +76,7 @@ static const byte patch_cy[7] = { 2, 2, 5, 5, 5, 8, 8 };
 // only with cedar in a coastal city; without them CHANGE says what is
 // missing. The fishing boat and the merchant ship, in a coastal city.
 // change() fills it.
-static byte buildable[KINDS];
+static byte buildable[BUILD_KINDS];
 static byte buildable_n;
 #define BUILDABLE buildable_n
 
@@ -239,11 +241,18 @@ static void draw_info(byte c)
     x = x0 + 13;
     put(&x, y, "Trade ", COLOR_WHITE);
     put(&x, y, number(work_trade), TEXT_COLOUR);
+
+    // Its buildings (src/culture.h).
+    x = x0;
+    ++y;
+    if (city_culture[c] & CITY_TEMPLE) put(&x, y, "Temple ", COLOR_YELLOW);
+    if (city_culture[c] & CITY_LION_GATE) put(&x, y, "Lion Gate", COLOR_YELLOW);
 }
 
 // **Civilization's price** for the rest of what city c builds: 2r + r*r/20
-// gold for the r shields still wanted, twice that before the first
-// shield. 0 if there is nothing to buy.
+// gold for the r shields still wanted for a unit, 2r for a building and
+// 4r for a wonder; twice that before the first shield. 0 if there is
+// nothing to buy.
 #define BUY_LEFT (TEXT_LEFT(BUILD_LEFT) + sizeof CHANGE_TEXT)
 static byte buy_width;          // the BUY button's, for the click
 
@@ -253,7 +262,8 @@ static word buy_cost(byte c)
 
     if (city_build[c] == KIND_NONE || city_shields[c] >= cost) return 0;
     r = cost - city_shields[c];
-    cost = 2 * r + r * r / 20;
+    cost = city_build[c] == KIND_LION_GATE ? 4 * r
+           : city_build[c] == KIND_TEMPLE ? 2 * r : 2 * r + r * r / 20;
     return city_shields[c] ? cost : 2 * cost;
 }
 
@@ -326,16 +336,17 @@ static void draw_choice(byte i, byte selected)
     byte colour = (i == selected) ? (ATTR_REVERSE | COLOR_WHITE)
                                   : TEXT_COLOUR;
 
-    screen_fill(x, LIST_ROW + i, BUILD_RIGHT - x - 1, colour);
-    screen_putsxy(x + 1, LIST_ROW + i, unit_kind_name[kind], colour);
-    screen_putsxy(x + 14, LIST_ROW + i, number(unit_kind_cost[kind]), colour);
+    screen_fill(x, CHOICE_ROW + i, BUILD_RIGHT - x - 1, colour);
+    screen_putsxy(x + 1, CHOICE_ROW + i, unit_kind_name[kind], colour);
+    screen_putsxy(x + 14, CHOICE_ROW + i, number(unit_kind_cost[kind]),
+                  colour);
 }
 
 static byte choice_under_pointer(void)
 {
     byte i;
     for (i = 0; i < BUILDABLE; ++i)
-        if (pointer_on(LIST_ROW + i, TEXT_LEFT(BUILD_LEFT), BUILD_RIGHT - 1))
+        if (pointer_on(CHOICE_ROW + i, TEXT_LEFT(BUILD_LEFT), BUILD_RIGHT - 1))
             return i;
     return 0xff;
 }
@@ -361,6 +372,8 @@ static void change(byte c)
         buildable[buildable_n++] = KIND_BOAT;
         buildable[buildable_n++] = KIND_MERCHANT;
     }
+    for (i = KIND_TEMPLE; i < BUILD_KINDS; ++i)
+        if (CULTURE_CAN(c, i)) buildable[buildable_n++] = i;
 
     for (i = 0; i < BUILDABLE; ++i)
         if (buildable[i] == city_build[c]) sel = i;
@@ -368,19 +381,18 @@ static void change(byte c)
     blank_box(BUILD_LEFT, BUILD_RIGHT);
     screen_putsxy(TEXT_LEFT(BUILD_LEFT), HEADING_ROW, "Build what?",
                   COLOR_WHITE);
-    screen_putsxy(TEXT_LEFT(BUILD_LEFT) + 14, LIST_ROW - 1, "shields",
+    screen_putsxy(TEXT_LEFT(BUILD_LEFT) + 14, HEADING_ROW, "shields",
                   COLOR_LIGHTGREY);
     for (i = 0; i < BUILDABLE; ++i) draw_choice(i, sel);
-    // Straight under the list: with the merchant ship there is no room
-    // for a blank line when the bronze note has two.
-    row = LIST_ROW + BUILDABLE;
-    if (!(copper && tin)) {
+    // Straight under the list, a line each: with the buildings there is
+    // room for no more (nine choices and the box's ten rows).
+    row = CHOICE_ROW + BUILDABLE;
+    if (!(copper && tin))
         screen_putsxy(TEXT_LEFT(BUILD_LEFT), row++,
-                      "Spearman needs bronze:", COLOR_LIGHTGREY);
-        screen_putsxy(TEXT_LEFT(BUILD_LEFT), row++,
-                      copper ? "tin" : tin ? "copper" : "copper and tin",
+                      copper ? "Spearman needs tin"
+                      : tin ? "Spearman needs copper"
+                            : "Spearman: copper, tin",
                       COLOR_LIGHTGREY);
-    }
     if (coast && !cedar)
         screen_putsxy(TEXT_LEFT(BUILD_LEFT), row, "Galley needs cedar",
                       COLOR_LIGHTGREY);

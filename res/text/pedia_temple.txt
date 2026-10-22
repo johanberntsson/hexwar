@@ -1,0 +1,13 @@
+# The Civilopedia's page on the Temple: Help/Buildings. A placeholder.
+# The markup is described in tools/mktext.py.
+{at 42 4}{head}TEMPLE
+{at 42 6}{grey}City Building
+{at 6 9}{head}Temple
+{text}  Cost: 40 shields
+  Upkeep: 1 gold a turn
+  Legacy: 3 points
+  One a city
+{at 6 16}{text}The house of the city's god, and of its scribes. A temple adds to its
+people's legacy, which counts in the score, and the people with the
+greatest legacy at the end of the age wins, even if it has fallen.
+With no gold for its upkeep a temple is sold.

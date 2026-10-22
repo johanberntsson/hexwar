@@ -8,9 +8,9 @@
 // no capital (distance 32, as there): the capital is the first city a
 // people founded, while it holds it (crisis_capital()). **Each trade deal
 // is worth TREASURY_DEAL gold a turn to both partners**, in the place of
-// Civilization's trade routes. **There are no expenses yet**: in
-// Civilization only buildings cost upkeep, and the monuments will be the
-// first buildings.
+// Civilization's trade routes. **The expenses are the temples' upkeep**,
+// 1 gold a turn each, as Civilization's buildings cost; with an empty
+// treasury a temple is sold (src/culture.h).
 //
 // **Gold buys production**, at Civilization's price (city_buy_cost() in
 // src/cityscreen.c): the human with b on the city screen; the computer
@@ -18,8 +18,8 @@
 // their cities' turns -- up to a third of the treasury in a city nobody
 // is in, otherwise a 64th.
 //
-// **In region 5** (src/region.h), with the Crisis and the score: once a
-// turn from game_end_turn(), and Advisors -> Finance.
+// **In region 6** (src/region.h), with the menus: once a turn from
+// game_end_turn(), and Advisors -> Finance. (Region 5 until 23 Oct 2026.)
 #ifndef SEVENSHIPS_TREASURY_H
 #define SEVENSHIPS_TREASURY_H
 
@@ -33,7 +33,8 @@
 // Each player's gold; HIGH_BSS, saved.
 extern word player_gold[PLAYERS];
 
-// A turn's income for every player, and the computer players' buying.
+// A turn's income and upkeep for every player, and the computer players'
+// buying.
 void treasury_turn(void);
 
 // Advisors -> Finance: the treasury, each of the human's cities' trade,

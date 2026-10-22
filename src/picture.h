@@ -25,6 +25,7 @@
 #define PICTURE_DEFEAT 1
 #define PICTURE_SURVIVAL 2
 #define PICTURE_HEGEMONY 3
+#define PICTURE_LEGACY 4
 
 // The tiles' palette, entries 16-255 as the sheet has them: red, then
 // green, then blue, 256 bytes each, at the entry's index. Above the texts

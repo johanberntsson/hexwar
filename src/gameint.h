@@ -32,6 +32,11 @@
 #define line_len game_line_len
 #define line_add_unit game_line_add_unit
 #define pointer_hex game_pointer_hex
+#define show_met game_show_met
+#define unit_key game_unit_key
+#define draw_screen game_draw_screen
+#define open_help game_open_help
+#define open_top_cities game_open_top_cities
 
 extern word off_x, off_y;       // the view, in map characters
 extern byte dirty;              // the view wants redrawing
@@ -62,6 +67,21 @@ void message(const char *first, const char *second);
 void draw_status(void);
 // Hand the orders to the next unit after `after` that wants some.
 void select_unit(byte after);
+
+// For command.c (region 6), out of game.c: bring the newly met into view;
+// a key for the unit with the orders; the map screen put back whole;
+// help screen `id`, then the map; Top Five Cities, then the map.
+void show_met(void);
+void unit_key(byte key);
+void draw_screen(void);
+void open_help(byte id);
+void open_top_cities(void);
+
+// In command.c, region 6: do what a menu item asks for, picked by click
+// or by key. Whatever it does, the view is redrawn afterwards, which puts
+// back the minimap's outline the dropdown hid. Out of game.c on 23 Oct
+// 2026, for resident room.
+void game_menu_command(byte command);
 
 // In hover.c, region 0: the readout of what is under the arrow, or the
 // ring, or hover_ax/ay, at the end of the top row.

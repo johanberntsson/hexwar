@@ -28,6 +28,14 @@
 #define KIND_BOAT 7             // a fishing boat: a coastal city; carries nobody
 #define KIND_MERCHANT 8         // a coastal city; founds an emporium (emporium.h)
 #define KINDS 9
+// **Buildings follow the units** (src/culture.h): what a city can build
+// is a kind, so city_build[] and the CHANGE list take them as they are,
+// with a name and a cost in unit_kind_name[] and unit_kind_cost[] -- and
+// nothing else of the units' tables, since nothing ever creates one.
+#define KIND_TEMPLE 9
+#define KIND_LION_GATE 10       // a wonder: one in the world
+#define BUILD_KINDS 11
+#define KIND_IS_BUILDING(K) ((K) >= KIND_TEMPLE)
 
 // **The ships are the kinds from KIND_GALLEY on**: they sail the shallows
 // and their own cities, and everything else is a land unit, which on the

@@ -57,10 +57,12 @@ void help_screen(byte id)
     // A unit's page (Help/Military Units): on grassland, a ship on the
     // shallows.
     k = id - TEXT_PEDIA_SETTLER + KIND_SETTLER;
-    if (id >= TEXT_PEDIA_SETTLER && k < KINDS) {
-        draw_picture(KIND_IS_SHIP(k) ? TILE_SHALLOW_OCEAN : TILE_GRASS);
+    // A building's: a city on grassland, for want of its own art.
+    if (id >= TEXT_PEDIA_SETTLER && k < BUILD_KINDS) {
+        draw_picture(KIND_IS_SHIP(k) && k < KINDS ? TILE_SHALLOW_OCEAN
+                                                  : TILE_GRASS);
         view_draw_tile(PICTURE_LEFT - VIEW_LEFT + 4, PICTURE_TOP - VIEW_TOP,
-                       unit_kind_tile[k]);
+                       k < KINDS ? unit_kind_tile[k] : TILE_CITY);
     }
     screen_clear();
     if (id != TEXT_HELP) {      // a page, framed as Civilization's are

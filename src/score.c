@@ -15,6 +15,7 @@
 #include "screen.h"
 #include "trade.h"
 #include "treasury.h"
+#include "culture.h"
 #include "unit.h"
 #include "view.h"
 
@@ -28,11 +29,11 @@
 // The table: a row a people, a column a figure, right-aligned at these.
 #define TABLE_TOP 6
 #define PEOPLE_LEFT 8
-#define FIGURES 6
+#define FIGURES 7
 static const char *const heading[FIGURES] = {
-    "Cities", "Citizens", "Goods", "Deals", "Gold", "Score"
+    "Cities", "Citizens", "Goods", "Deals", "Gold", "Legacy", "Score"
 };
-static const byte column_right[FIGURES] = { 29, 39, 46, 53, 61, 70 };
+static const byte column_right[FIGURES] = { 27, 37, 44, 51, 58, 66, 74 };
 #define OUTCOME_ROW (TABLE_TOP + 2 * PLAYERS + 3)
 
 // The goods that count, as trade.h has them.
@@ -84,9 +85,11 @@ static void figures(byte p)
             && (deal_from[i] == p || deal_to[i] == p))
             ++figure[3];
     figure[4] = player_gold[p];
-    // vision.md's wealth: a point for every GOLD_POINT in the treasury.
-    figure[5] = figure[1] + 2 * figure[0] + 2 * figure[2] + 3 * figure[3]
-                + figure[4] / GOLD_POINT;
+    figure[5] = player_legacy[p];
+    // vision.md's wealth: a point for every GOLD_POINT in the treasury;
+    // and its legacy, the temples and the wonders (culture.h).
+    figure[6] = figure[1] + 2 * figure[0] + 2 * figure[2] + 3 * figure[3]
+                + figure[4] / GOLD_POINT + figure[5];
 }
 
 static void put_year(byte x, byte y)
@@ -111,6 +114,20 @@ static byte highest(void)
     return 1;
 }
 
+// **The legacy victory** (vision.md 5B): the human's legacy points above
+// every other people's, fallen or not -- a people can win it
+// posthumously.
+static byte legacy_first(void)
+{
+    byte p;
+    word mine = player_legacy[PLAYER_HUMAN];
+
+    if (!mine) return 0;
+    for (p = 0; p < PLAYERS; ++p)
+        if (p != PLAYER_HUMAN && player_legacy[p] >= mine) return 0;
+    return 1;
+}
+
 // Until a key or a click.
 static void wait_key(void)
 {
@@ -123,12 +140,11 @@ static void wait_key(void)
 
 // **The end's picture** (src/picture.h), in the map window, with the
 // panel cleared but for a line or two, before the table.
-static void end_picture(byte alive, byte best)
+static void end_picture(byte outcome)
 {
     screen_clear();
     view_init();
-    picture_show(!alive ? PICTURE_DEFEAT
-                 : best ? PICTURE_HEGEMONY : PICTURE_SURVIVAL);
+    picture_show(outcome);
     screen_putsxy(1, 10, "The end of the", COLOR_WHITE);
     screen_putsxy(1, 11, "Bronze Age", COLOR_WHITE);
     screen_putsxy(1, 13, "Press a key", COLOR_LIGHTGREY);
@@ -138,11 +154,16 @@ static void end_picture(byte alive, byte best)
 
 void score_screen(byte how)
 {
-    byte p, i, x, y, alive = player_alive(PLAYER_HUMAN), best = highest();
+    byte p, i, x, y, alive = player_alive(PLAYER_HUMAN), outcome;
 
+    // Hegemony first, then legacy, which a fallen people can win; then
+    // survival, or defeat. PICTURE_* numbers, which are the pictures.
+    outcome = alive && highest() ? PICTURE_HEGEMONY
+              : legacy_first() ? PICTURE_LEGACY
+              : alive ? PICTURE_SURVIVAL : PICTURE_DEFEAT;
     sprite_hide(2);             // the minimap's outline, which is gone
     sprite_hide(3);
-    if (how == SCORE_END) end_picture(alive, best);
+    if (how == SCORE_END) end_picture(outcome);
     screen_clear();
     screen_putsxy(PEOPLE_LEFT, 2,
                   how == SCORE_END ? "The end of the Bronze Age,"
@@ -190,15 +211,20 @@ void score_screen(byte how)
     if (how == SCORE_NOW) {
         screen_putsxy(PEOPLE_LEFT, y, "A point a citizen, two a city, two"
                       " a good, three a trade deal,", COLOR_LIGHTGREY);
-        screen_putsxy(PEOPLE_LEFT, y + 1, "and one for every 200 gold.",
-                      COLOR_LIGHTGREY);
-    } else if (!alive) {
-        screen_putsxy(PEOPLE_LEFT, y, "Your people has fallen: defeat.",
-                      COLOR_RED);
+        screen_putsxy(PEOPLE_LEFT, y + 1, "one for every 200 gold, and the"
+                      " legacy of temples and wonders.", COLOR_LIGHTGREY);
     } else if (how == SCORE_RETIRED) {
         screen_putsxy(PEOPLE_LEFT, y, "You left before the end of the age.",
                       COLOR_WHITE);
-    } else if (best) {
+    } else if (outcome == PICTURE_LEGACY) {
+        screen_putsxy(PEOPLE_LEFT, y, alive ? "Your people's works outlast"
+                      " the age:" : "Your people has fallen, but its works"
+                      " outlast the age:", COLOR_YELLOW);
+        screen_putsxy(PEOPLE_LEFT, y + 1, "a legacy victory.", COLOR_YELLOW);
+    } else if (!alive) {
+        screen_putsxy(PEOPLE_LEFT, y, "Your people has fallen: defeat.",
+                      COLOR_RED);
+    } else if (outcome == PICTURE_HEGEMONY) {
         screen_putsxy(PEOPLE_LEFT, y, "Your people came through the Collapse"
                       " with the highest score:", COLOR_YELLOW);
         screen_putsxy(PEOPLE_LEFT, y + 1, "a hegemony victory.",

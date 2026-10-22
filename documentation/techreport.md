@@ -109,7 +109,9 @@ most important routines included in each source file.
 | aibuild.c | what each computer player's city builds, out of ai.c into region 2 |
 | emporium.c | merchant ships and the emporia they found on foreign coasts |
 | picture.c | full pictures in the map window, with their own palette: the title's and the end's |
-| treasury.c | each player's gold: the cities' trade less corruption, the deals, the computer players' buying, and Advisors/Finance |
+| treasury.c | each player's gold: the cities' trade less corruption, the deals, the temples' upkeep, the computer players' buying, and Advisors/Finance |
+| culture.c | the temple and the Lion Gate, finished, and the legacy points they give |
+| command.c | what a menu item does, out of game.c |
 |  |  |
 | trade.c | goods exchanged between the peoples, as gifts or for other goods |
 | &nbsp;&nbsp;&nbsp;_trade\_turn_ | once a turn: deals end with the peace, and the computer players ask for goods or tribute |
@@ -168,9 +170,9 @@ to `release/`), holding these files:
 | SEVENSHIPS.R2 | code region 2, the city screen, Top Five Cities, the builders' improvements and what the computer players' cities build, the same way |
 | SEVENSHIPS.R3 | code region 3, diplomacy, the same way |
 | SEVENSHIPS.R4 | code region 4, trade, the ships' routes, exploring and fishing, merchant ships and emporia, and the menus, the same way |
-| SEVENSHIPS.R5 | code region 5, the Crisis and the peoples' collapse, the score and the end of the game, the pictures and the treasury, the same way |
-| SEVENSHIPS.R6 | code region 6, the menus, the same way |
-| INTRO.PIC, DEFEAT.PIC, WIN_SURVIVAL.PIC, WIN_HEGEMONY.PIC | the pictures shown at boot and at the end: a palette and 60x23 full colour characters, 87 KB each |
+| SEVENSHIPS.R5 | code region 5, the Crisis and the peoples' collapse, the score and the end of the game, and the pictures, the same way |
+| SEVENSHIPS.R6 | code region 6, the menus and their commands, the treasury, and buildings and wonders, the same way |
+| INTRO.PIC, DEFEAT.PIC, WIN_SURVIVAL.PIC, WIN_HEGEMONY.PIC, WIN_LEGACY.PIC | the pictures shown at boot and at the end: a palette and 60x23 full colour characters, 87 KB each |
 
 The C65 ROM boots AUTOBOOT.C65 automatically. `main()` then:
 
@@ -301,9 +303,9 @@ region 2 the city screen, Top Five Cities, the builders'
 improvements and what the computer players' cities build, which calls
 the improvements for every city and so is beside them; region 3
 diplomacy; region 4 trade, the ships' routes, exploring and fishing,
-merchant ships and emporia; region 6 the menus; region 5 the Crisis and the
-peoples' collapse, the score and the end of the game, the pictures and
-the treasury.
+merchant ships and emporia; region 5 the Crisis and the peoples'
+collapse, the score and the end of the game, and the pictures; region 6
+the menus and their commands, the treasury, and buildings and wonders.
 
 Resident code calls a function in a region through a stub of the same
 name (`src/dispatch.s`), which maps the region in (copying it into its

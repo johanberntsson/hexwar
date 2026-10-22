@@ -1,0 +1,13 @@
+# The Civilopedia's page on the Lion Gate: Help/Buildings. A placeholder.
+# The markup is described in tools/mktext.py.
+{at 42 4}{head}LION GATE
+{at 42 6}{grey}Wonder
+{at 6 9}{head}Lion Gate
+{text}  Cost: 160 shields
+  Upkeep: none
+  Legacy: 20 points
+  One in the world
+{at 6 16}{text}The gate of Mycenae, two lions over the lintel, c. 1250 BC: the great
+walls of the citadel. Every unit in its city defends twice as well, and
+it adds to its people's legacy. When it is built, everybody hears of it,
+and nobody else can build it.

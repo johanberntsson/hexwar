@@ -1,17 +1,23 @@
 --- OPEN ---
 
-NEXT (23 Oct 2026, after the merchant fleets; CLAUDE.md "Where to start next time"):
-1. Try on a real MEGA65: deals lapsing without ships ("ships due in" on Advisors/Diplomacy),
-   a merchant ship renewing one, the menus from region 6
-2. Monuments and the legacy victory; with them the treasury's first expenses
-3. The Crisis may have grown harsher (400-turn autoplays: human's side gone on seed 7 by
-   turn 311, seed 3 down to a city or two each) -- check against a build without buying
-4. Tune from play: the collapse, AI merchant ships (they agree deals they cannot serve),
-   gold piling up (1000-3500 by turn 300)
+NEXT (23 Oct 2026, after the temple and the Lion Gate; CLAUDE.md "Where to start next time"):
+1. Try on a real MEGA65: CHANGE's Temple and Lion Gate, a temple's upkeep on Advisors/Finance,
+   the Lion Gate's announcement, Help/Buildings, the Legacy column and the legacy victory
+2. More culture: more wonders (Pyramids, Palace of Knossos), clay tablets of knowledge
+   (Linear B, law codes, the alphabet: a science of sorts), building art
+3. The Crisis may have grown harsher -- play, or compare seeds
+4. Tune from play: the collapse, merchant ships, gold, legacy's weight in the score
 5. Escorts for merchant ships; AI galleys against the Sea Peoples
-Room: resident 295 bytes, region 0 0.4 KB, region 1 178 bytes, region 2 1.1 KB, region 3
-2.1 KB, region 4 1.5 KB, region 5 0.6 KB, region 6 (the menus) 5.8 KB, highram 1.4 KB; the
-tile sheet 12 KB, about eight units
+Room: resident 653 bytes, region 0 0.3 KB, region 1 178 bytes, region 2 0.7 KB, region 3
+2.1 KB, region 4 1.5 KB, region 5 2.2 KB, region 6 2.7 KB, highram 1.4 KB; the tile sheet
+12 KB, about eight units
+
+DONE (23 Oct 2026): the temple (40 shields, 1 gold upkeep, 3 legacy, sold when broke) and the
+Lion Gate (160 shields, one in the world, doubles defence in its city, 20 legacy), as kinds
+after the units; legacy points in the score and the legacy victory (posthumous; after
+hegemony) with win_legacy's picture; Help/Buildings; the AI builds both at its unit cap.
+SAVE_VERSION 15. The menu commands moved out of game.c into src/command.c, region 6, for
+resident room
 
 DONE (23 Oct 2026): merchant fleets carry the trade deals (option A): a deal lapses 40 turns
 after its last ship unless a merchant ship loaded at home comes to a partner's city;
@@ -46,6 +52,8 @@ war on it if it is the weaker.
 Need cultural building and monument/wonders for the lasting legacy win. This also means
 wonders and Help/Wonders screen with descriptions. The Lion Gate, Pyramids etc
 (if it fits the time period - the oldest pyramids are probably too old anyway)
+- DONE in part (23 Oct 2026): the temple and the Lion Gate, Help/Buildings, the legacy victory.
+  More wonders to come
 
 Need city advisor screen (list of cities and basic stats (production etc). POssible to go into
 a city screen by selecting on city from this advisor screen.

@@ -228,17 +228,19 @@ stub:       .macro  name, target, region
             stub    emporium_order, emporium_order_r4, 4
             stub    emporium_ai, emporium_ai_r4, 4
 
-; Region 5, slot 2: the Crisis, the score and the end of the game, the
-; pictures, and the treasury.
+; Region 5, slot 2: the Crisis, the score and the end of the game, and the
+; pictures.
             stub    score_screen, score_screen_r5, 5
             stub    crisis_turn, crisis_turn_r5, 5
             stub    picture_show, picture_show_r5, 5
             stub    picture_end, picture_end_r5, 5
-            stub    treasury_turn, treasury_turn_r5, 5
-            stub    finance_screen, finance_screen_r5, 5
 
-; Region 6, slot 2: the menus.
+; Region 6, slot 2: the menus, the treasury, and buildings and wonders.
             stub    menu_orders, menu_orders_r6, 6
             stub    menu_draw, menu_draw_r6, 6
             stub    menu_click, menu_click_r6, 6
             stub    menu_key, menu_key_r6, 6
+            stub    treasury_turn, treasury_turn_r6, 6
+            stub    finance_screen, finance_screen_r6, 6
+            stub    culture_built, culture_built_r6, 6
+            stub    game_menu_command, game_menu_command_r6, 6

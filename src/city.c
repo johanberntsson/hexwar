@@ -1,4 +1,5 @@
 #include "city.h"
+#include "culture.h"
 #include "growth.h"
 #include "civ.h"
 #include "map.h"
@@ -20,6 +21,7 @@ HIGH_BSS word city_shields[MAX_CITIES];
 HIGH_BSS byte city_size[MAX_CITIES];
 HIGH_BSS byte city_food[MAX_CITIES];
 HIGH_BSS byte city_worked[MAX_CITIES];
+HIGH_BSS byte city_culture[MAX_CITIES];
 
 // How many cities each player has named, so the next gets the next name.
 byte city_named[PLAYERS];
@@ -60,6 +62,7 @@ byte city_found(byte owner, byte ax, byte ay)
     city_name[c] = city_named[owner]++;
     city_size[c] = 1;
     city_food[c] = 0;
+    city_culture[c] = 0;
     city_founded |= (byte)(1 << owner);
     ++city_count;
     city_capture(c, owner);
@@ -91,6 +94,7 @@ void city_destroy(byte c)
     city_size[c] = city_size[last];
     city_food[c] = city_food[last];
     city_worked[c] = city_worked[last];
+    city_culture[c] = city_culture[last];
     unit_mark(ax, ay);
 }
 
@@ -125,6 +129,11 @@ byte city_produce(byte c)
     if (kind == KIND_NONE) return KIND_NONE;    // told to build nothing
     city_shields[c] += city_production(c);
     if (city_shields[c] < cost) return KIND_NONE;
+    if (KIND_IS_BUILDING(kind)) {               // src/culture.h
+        city_shields[c] -= cost;
+        culture_built(c, kind);
+        return kind;
+    }
     if ((kind == KIND_SETTLER && city_size[c] < 2)
         || unit_create(kind, city_owner[c], city_ax[c], city_ay[c])
                == UNIT_NONE) {

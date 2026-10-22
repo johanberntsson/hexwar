@@ -24,10 +24,12 @@ byte unit_hidden;
 // which founds emporia, as Civilization's caravan founds trade routes.
 const char *const unit_kind_name[] = {
     "", "Settler", "Warrior", "Builder", "Spearman", "Raider", "Galley",
-    "Fishing Boat", "Merchant"
+    "Fishing Boat", "Merchant", "Temple", "Lion Gate"
 };
 const byte unit_kind_moves[] = { 0, 1, 1, 1, 1, 1, 3, 2, 3 };
-const byte unit_kind_cost[] = { 0, 30, 10, 20, 20, 30, 40, 20, 30 };
+// The temple's is Civilization's; the Lion Gate's a wonder's for cities
+// that make a few shields a turn (Civilization's take 200-600).
+const byte unit_kind_cost[] = { 0, 30, 10, 20, 20, 30, 40, 20, 30, 40, 160 };
 const byte unit_kind_attack[] = { 0, 0, 1, 0, 1, 3, 1, 0, 0 };
 const byte unit_kind_defence[] = { 0, 1, 1, 1, 2, 1, 1, 1, 1 };
 const byte unit_kind_tile[] = {

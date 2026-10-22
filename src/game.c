@@ -241,7 +241,7 @@ static void centre_on(byte ax, byte ay)
 // if it is below, as it is half the time.
 #define MET_ROW 1               // the window row of the tile's top
 #define MET_ROW_BELOW 17
-static void show_met(void)
+void show_met(void)
 {
     byte ax = diplomacy_ax, ay = diplomacy_ay;
     int y = (int)MAP_CELL_Y(ax, ay) - MET_ROW;
@@ -433,7 +433,7 @@ static void improve(byte orders)
     select_unit(u);
 }
 
-static void unit_key(byte key)
+void unit_key(byte key)
 {
     byte u = unit_active;
     byte dir = key_dir(key);
@@ -470,7 +470,7 @@ static void unit_key(byte key)
 // city screen, which wrote over every cell of it. The pixels of the minimap
 // are still in place, so only its cells come back; the view is redrawn on
 // the next frame, as the patch the city screen drew has replaced part of it.
-static void draw_screen(void)
+void draw_screen(void)
 {
     screen_clear();
     view_init();
@@ -492,13 +492,13 @@ static void open_city(byte c)
     draw_screen();
 }
 
-static void open_help(byte id)
+void open_help(byte id)
 {
     help_screen(id);
     draw_screen();
 }
 
-static void open_top_cities(void)
+void open_top_cities(void)
 {
     top_cities_screen();
     draw_screen();
@@ -523,87 +523,6 @@ static void set_orders_menu(void)
         }
     }
     menu_orders(command, second);
-}
-
-// Do what a menu item asks for, picked by click or by key. Whatever it
-// does, the view is redrawn afterwards, which puts back the minimap's
-// outline the dropdown hid.
-static void menu_command(byte command)
-{
-    switch (command) {
-    case MENU_RETIRE:
-        if (popup_ask("Do you want to quit this game?")) {
-            score_screen(SCORE_RETIRED);
-            retired = 1;
-            quit = 1;
-        }
-        break;
-    case MENU_SCORE:
-        score_screen(SCORE_NOW);
-        draw_screen();
-        break;
-    case MENU_FINANCE:
-        finance_screen();
-        draw_screen();
-        break;
-#ifdef DEBUG_MENU
-    case MENU_SHOW_MAP:
-        // The whole minimap changes, so it is drawn again; the view is
-        // redrawn below anyway.
-        map_show ^= MAP_EXPLORED;
-        minimap_init();
-        message(map_show ? "Map shown" : "Map hidden", "");
-        hover_dirty = 1;
-        break;
-    case MENU_PLAY_50:
-        game_autoplay(AUTOPLAY_TURNS);
-        break;
-#endif
-    case MENU_END_OF_TURN:
-        game_end_wait ^= 1;
-        message("End of Turn", game_end_wait ? "waits" : "automatic");
-        break;
-    case MENU_SAVE:
-        message("Saving", "");
-        message(save_write() ? "Game saved" : "Could not save", "");
-        break;
-    case MENU_FOUND_CITY:
-    case MENU_EMPORIUM:
-        unit_key('b');
-        break;
-    case MENU_FORTIFY:
-        unit_key('f');
-        break;
-    case MENU_IRRIGATE:
-        unit_key('i');
-        break;
-    case MENU_MINE:
-        unit_key('m');
-        break;
-    case MENU_FISH:
-        unit_key('i');
-        break;
-    case MENU_TOP_CITIES:
-        open_top_cities();
-        break;
-    case MENU_DIPLOMACY:
-        // Anybody in sight is met before the list, and greeted after it.
-        greet |= diplomacy_contact();
-        if (greet) show_met();
-        diplomacy_screen();
-        draw_screen();
-        break;
-    case MENU_KEYS:
-        open_help(TEXT_HELP);
-        break;
-    default:
-        if (command >= MENU_UNIT)
-            open_help(TEXT_PEDIA_SETTLER + (command - MENU_UNIT - KIND_SETTLER));
-        else if (command >= MENU_TERRAIN)
-            open_help(TEXT_PEDIA_HILLS + (command - MENU_TERRAIN));
-        break;
-    }
-    dirty = 1;
 }
 
 // A click on hexagon (ax, ay) of the map, by the arrow or by Return in tile
@@ -652,7 +571,7 @@ static void click(void)
 
     if ((byte)(input_y >> 3) == 0) {
         set_orders_menu();
-        menu_command(menu_click());
+        game_menu_command(menu_click());
         return;
     }
     if (minimap_hex(input_x, input_y, &ax, &ay)) {
@@ -903,7 +822,7 @@ byte game_run(void)
         default:
             if (KEY_IS_MEGA(key)) {
                 set_orders_menu();
-                menu_command(menu_key(key));
+                game_menu_command(menu_key(key));
             }
             else if (unit_active != UNIT_NONE) unit_key(key);
             else if (key == KEY_RETURN) game_end_turn();

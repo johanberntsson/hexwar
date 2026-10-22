@@ -24,6 +24,9 @@ extern byte city_food[MAX_CITIES];      // in the food box, of GROWTH_BOX
 extern byte city_worked[MAX_CITIES];
 #define CITY_MANUAL 0x80
 #define CITY_WORKED 0x3f
+// Its buildings, CITY_TEMPLE and the rest (src/culture.h). Kept when the
+// city is captured.
+extern byte city_culture[MAX_CITIES];
 
 // Bit p: player p has founded a city, so losing the last one is the end
 // (combat.c:player_alive()).

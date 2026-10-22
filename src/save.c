@@ -15,6 +15,7 @@
 #include "crisis.h"
 #include "emporium.h"
 #include "treasury.h"
+#include "culture.h"
 #include "diplomacy.h"
 #include "trade.h"
 #include "game.h"
@@ -84,6 +85,9 @@ static const struct block blocks[] = {
     { emporium_ax, sizeof emporium_ax },
     { emporium_ay, sizeof emporium_ay },
     { player_gold, sizeof player_gold },
+    { city_culture, sizeof city_culture },
+    { &wonders_built, sizeof wonders_built },
+    { player_legacy, sizeof player_legacy },
 };
 #define BLOCKS (sizeof blocks / sizeof blocks[0])
 

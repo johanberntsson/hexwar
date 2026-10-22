@@ -8,7 +8,9 @@
 #include "ai.h"
 #include "aiint.h"
 #include "city.h"
+#include "culture.h"
 #include "emporium.h"
+#include "treasury.h"
 #include "trade.h"
 #include "growth.h"
 #include "map.h"
@@ -54,6 +56,19 @@ static void retire(byte p, byte c)
             && unit_orders[v] == ORDERS_FORTIFY
             && unit_ax[v] == city_ax[c] && unit_ay[v] == city_ay[c])
             unit_remove(v);
+}
+
+// Whether another of p's cities than c is building the Lion Gate.
+#define LION_GATE_SIZE 5
+#define TEMPLE_SIZE 3
+
+static byte building(byte p, byte c)
+{
+    byte i;
+    for (i = 0; i < city_count; ++i)
+        if (i != c && city_owner[i] == p && city_build[i] == KIND_LION_GATE)
+            return 1;
+    return 0;
 }
 
 // Whether city c has fish next to it that no fishing boat works yet.
@@ -111,6 +126,11 @@ void ai_build(byte p)
             // the cap if need be, since the warriors it replaces go once it
             // is in (retire()).
             kind = KIND_SPEARMAN;
+        } else if (KIND_IS_BUILDING(city_build[c])
+                   && CULTURE_CAN(c, city_build[c])) {
+            // A building under way is finished, guards apart: changing
+            // would spend its shields on warriors.
+            kind = city_build[c];
         } else if (explorers < EXPLORERS(cities) && units < cap) {
             kind = KIND_WARRIOR;
             ++explorers;
@@ -148,7 +168,16 @@ void ai_build(byte p)
             kind = KIND_BOAT;
             ++boats;
         } else if (units >= cap) {
+            // At the cap, culture (src/culture.h): the Lion Gate in a city
+            // of LION_GATE_SIZE, one city at a time; a temple in a city of
+            // TEMPLE_SIZE that can pay for it; else nothing.
             kind = KIND_NONE;
+            if (city_size[c] >= LION_GATE_SIZE
+                && CULTURE_CAN(c, KIND_LION_GATE) && !building(p, c))
+                kind = KIND_LION_GATE;
+            else if (city_size[c] >= TEMPLE_SIZE
+                     && CULTURE_CAN(c, KIND_TEMPLE) && player_gold[p] >= 20)
+                kind = KIND_TEMPLE;
         } else if (builders < cities && ai_work_site(c)) {
             kind = KIND_BUILDER;
             ++builders;

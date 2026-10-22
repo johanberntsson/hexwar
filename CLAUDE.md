@@ -206,10 +206,10 @@ buffers at the default `$FF80000` and corrupts the display.
 
 | Address | Size | Contents |
 |---|---|---|
-| `$2001-$5FFF`, `$8000-$9FFF` | 24 KB | the resident program: code, data, BSS, C stack. 295 bytes free, nearly all at `$5EDD-$5FFF` |
+| `$2001-$5FFF`, `$8000-$9FFF` | 24 KB | the resident program: code, data, BSS, C stack. 653 bytes free, nearly all at `$5D73-$5FFF` |
 | `$6000-$7FFF` | 8 KB | the code window (`src/region.h`); as loaded, region 0 — the title, setup and help screens (and the Civilopedia's pages), save and load, the sheet's and the map's loaders, the owners' flags, the end of a turn and a game's start (`src/turn.c`), the computer players' starts (`src/aiplace.c`), the hover readout (`src/hover.c`), the boot splash (`title_splash()`). 0.4 KB free |
 | `$13000-$14FFF` | 8 KB | code slot 1: region 1, from `SEVENSHIPS.R1` by way of attic: the computer players and their ferrying, the cities' yields and growth, bronze. 178 bytes free |
-| `$15000-$16FFF` | 8 KB | code slot 2, shared: region 2 (the city screen, Top Five Cities, the builders' improvements, what the computer players' cities build, `src/aibuild.c`, buying; 1.1 KB free) region 3 (diplomacy; 2.1 KB free) region 4 (trade, the ships' routes, exploring and fishing, merchant ships and emporia; 1.5 KB free) region 5 (the Crisis and the collapse, the score and the end, the pictures, the treasury, `src/crisis.c`, `src/score.c`, `src/picture.c`, `src/treasury.c`; 0.6 KB free) or region 6 (the menus, `src/menu.c`; 5.8 KB free), whichever was called last. **Slot 1 is also the sheet loader's staging area at boot** (`STAGING` in `src/sheet.c`), before region 1 is first called |
+| `$15000-$16FFF` | 8 KB | code slot 2, shared: region 2 (the city screen, Top Five Cities, the builders' improvements, what the computer players' cities build, `src/aibuild.c`, buying; 0.7 KB free) region 3 (diplomacy; 2.1 KB free) region 4 (trade, the ships' routes, exploring and fishing, merchant ships and emporia; 1.5 KB free) region 5 (the Crisis and the collapse, the score and the end, the pictures, `src/crisis.c`, `src/score.c`, `src/picture.c`; 2.2 KB free) or region 6 (the menus and what their items do, the treasury, buildings and wonders, `src/menu.c`, `src/command.c`, `src/treasury.c`, `src/culture.c`; 2.7 KB free), whichever was called last. **Slot 1 is also the sheet loader's staging area at boot** (`STAGING` in `src/sheet.c`), before region 1 is first called |
 | `$17000-$1EFFF` | 32 KB | the packed tile sheet's second area, where regions 3 to 6 would have been: whatever rows did not fit bank 5's; with bank 5's, 12 KB free (`tools/mktiles.py` says) |
 | `$A000-$BFFF` | 8 KB | `highram`, under the BASIC ROM, banked out by `src/bank.s`: `map_tile`, the unit and city arrays, the sprite blocks, the AI's headings, the staging buffers of the texts and the regions, the texts' line buffers, the sheet loader's buffers, the saved VIC registers, the AI's exploration memory, the resource list, the sheet's row tables, the peoples' relations and attitudes and the letters' names, the trade deals, the emporia, the pictures' staging buffer, the treasuries; about 1.4 KB free — `HIGH_BSS` in `src/mega65.h` moves a variable there, and **the startup does not clear it** |
 | `$1600-$1EFF` | 2304 | `zpsave` (56 bytes, BASIC's zero page during the run), then `lowfree`: the popup's 400-byte text and the scratch buffers of the view and the minimap, and the sea routes' search (`src/path.c`), 990 bytes free — `LOW_FREE` in `src/mega65.h` moves a variable there |
@@ -529,15 +529,22 @@ entry in each of `dispatch.s`'s per-region tables (`slot_of`,
 `region_stamp[]`'s initialiser in `src/region.c`, and its file in the
 Makefile's `REGION_FILES`; `packprg.py` needs nothing. Attic's bank 1
 holds eight regions as the tables stand. **Resident space is what to
-watch now**: 295 bytes (23 Oct 2026, after the merchant fleets; 302 after the treasury; 392 after the
+watch now**: 653 bytes (23 Oct 2026, after the temple and the Lion Gate,
+which took it down to 193, and then **`menu_command()` moving out of
+`game.c` into `src/command.c`, region 6**, which gave back 460 — at 193
+a test build's nine-key `FAKE_KEYS` script no longer linked; 295 after
+the merchant fleets; 302 after the treasury; 392 after the
 pictures, the collapse, the raider, emporia and Help → Military Units;
 704 after the Crisis; the hover readout's move to region 0 gave back
-625; the slot copying cost 140, and each stub is 13), against 0.4 KB in
-region 0, **178 bytes in region 1**, 1.1 KB in region 2, 2.1 KB in
-region 3, 1.5 KB in region 4, **0.6 KB in region 5** and 5.8 KB in
-region 6. **Region 6 is the menus'** (23 Oct 2026, for the merchant
-fleets' room in region 4): the first region added since the slots,
-following **A new region** above, which held. **What a computer player's cities
+625; the slot copying cost 140, and each stub is 13), against 0.3 KB in
+region 0, **178 bytes in region 1**, **0.7 KB in region 2**, 2.1 KB in
+region 3, 1.5 KB in region 4, 2.2 KB in region 5 and 2.7 KB in region 6.
+**Region 6 is the menus'** (23 Oct 2026, for the merchant fleets' room
+in region 4): the first region added since the slots, following **A new
+region** above, which held; the treasury followed it from region 5 the
+same day, with a copy of `crisis_capital()` rather than a stub. **A
+`FAKE_KEYS` script is resident data**, about 4 bytes a key, so a long
+one needs resident room too. **What a computer player's cities
 build went to region 2** (`src/aibuild.c`, 22 Oct 2026), which gave
 region 1 800 bytes: it calls `improve_best()` for every city, through
 `work_site()`, so it sits beside it in region 2, and ai.c's helpers it
@@ -840,21 +847,21 @@ hover readout from region 0, the calendar, the score and the end
 screen, and the Crisis — omens, Sea Peoples, shocks — with the 96-unit
 list.
 
-**Where to start next time** (23 Oct 2026, after the merchant fleets;
-the user's order was the treasury, the fleets, then monuments):
-1. **Try on a real MEGA65**: deals that lapse without ships ("ships due
-   in" on Advisors → Diplomacy), the human's merchant ship renewing one,
-   the menus from region 6.
-2. **Monuments and the legacy victory** (TODO.txt): the first
-   buildings, and with them the treasury's first expenses.
-3. **The Crisis may have grown harsher** since the raider and the
-   treasury: 400-turn autoplays on 23 Oct 2026 lost the human's side on
-   seed 7 by turn 311 and left everyone on seed 3 with a city or two.
-   Runs differ a lot, so it wants play, or a few seeds compared against
-   a build without the treasury's buying.
-4. Tune from play: the collapse, the computer players' merchant ships
-   (they agree deals they cannot serve, which lapse and are agreed
-   again), how fast gold piles up.
+**Where to start next time** (23 Oct 2026, after the temple and the
+Lion Gate):
+1. **Try on a real MEGA65**: CHANGE's longer list (Temple, Lion Gate),
+   a temple bought or built and its upkeep on Advisors → Finance, the
+   Lion Gate's announcement, Help → Buildings, the Legacy column, the
+   legacy victory's picture, and the menus' commands from region 6.
+2. **More culture**: more wonders (vision.md 5B names the Pyramids, the
+   Palace of Knossos) and the clay tablets of knowledge (Linear B,
+   law codes, the alphabet), which want a science of some kind;
+   building art for the map and the Civilopedia, which has none yet.
+3. **The Crisis may have grown harsher** (see the merchant fleets'
+   measurements: the human's side gone on seed 7 by turn 300 in two
+   different builds) — play, or compare seeds.
+4. Tune from play: the collapse, merchant ships, gold, and the weight
+   of legacy against the rest of the score.
 5. Escorts for the merchant ships; the computer players' galleys
    against the Sea Peoples.
 
@@ -940,7 +947,11 @@ terrains'; an `#error` keeps them in step), with the unit drawn on the
 middle hexagon of grassland, a ship's on the shallows. **A new kind
 needs a page** at the end of that run in the Makefile's `TEXTS`, and
 an entry in `unit_order[]`; the pages are placeholders, so **a change
-to a unit's numbers has to be made on its page as well**. All of these
+to a unit's numbers has to be made on its page as well**; and
+**Buildings** (23 Oct 2026, `BUILDINGS`), the temple and the Lion Gate,
+`pedia_temple.txt` and `pedia_lion_gate.txt` after the units' pages,
+`MENU_UNIT` + their kinds, drawn as a city on grassland for want of art
+of their own. All of these
 take over the screen and `draw_screen()` puts the map back, as after
 HELP. **Debug exists only
 with `DEBUG_MENU`**, which the Makefile defines unless `DEBUG=0`, and
@@ -1621,11 +1632,16 @@ score** (`score_screen()`): per people, cities, citizens, goods it has
 (the six trade goods, `player_has()`), trade deals, and a score of a
 point a citizen, two a city, two a good and three a deal, after
 Civilization's; peoples not yet met are "not yet met" until the end,
-those out "fallen". The outcome: fallen is defeat; standing at the end a
-survival victory, and with the highest score a hegemony victory
-(vision.md §5; legacy wants monuments). **Before the final score, the
-outcome's picture** (`end_picture()`: defeat, survival or hegemony; see
-**Pictures**) is shown in the map window until a key. World → Score shows the same table and the
+those out "fallen". Since 23 Oct 2026 also gold (a point for every
+200) and legacy (**Buildings and wonders**), each a column. The outcome
+(vision.md §5), in this order: standing at the end with the highest
+score, a **hegemony** victory; the most legacy points of all the
+peoples, fallen or not, a **legacy** victory, which a fallen people can
+win "posthumously"; standing at the end, **survival**; else defeat.
+Since legacy counts in the score, the legacy victory is mostly for a
+people that has fallen or been outscored. **Before the final score, the
+outcome's picture** (`end_picture()`: the `PICTURE_*` the outcome is;
+see **Pictures**) is shown in the map window until a key. World → Score shows the same table and the
 turns left. Checked headlessly: World → Score at the start; a throwaway
 build ending after turn 60, through 100 turns of autoplay (the panel
 "Game over", three greetings, then the screen: "The end of the Bronze
@@ -1712,9 +1728,10 @@ capital × 3 / 100, with distance 32 (nearly all of it) for a people with
 no capital (`crisis_capital()` in `src/crisis.c`: the first city it
 founded, while it holds it). **Each trade deal is worth
 `TREASURY_DEAL` (2) gold a turn to each partner**, standing in for
-Civilization's trade routes. **No expenses yet**: Civilization's are
-buildings' upkeep, and units cost none; the monuments will bring the
-first. The human starts with 50 at the easiest level, as there, the
+Civilization's trade routes. **Expenses are the temples' upkeep**, 1
+gold a turn each (23 Oct 2026, **Buildings and wonders**), Civilization's,
+whose only expenses are buildings'; with an empty treasury a temple is
+sold, as there. Units cost none. The human starts with 50 at the easiest level, as there, the
 computer players with none; the ceiling is 30000. `treasury_turn()`
 runs from `game_end_turn()` after `crisis_turn()` and before the cities
 produce. **Gold buys production**: on the city screen, `b` or the BUY
@@ -1738,6 +1755,43 @@ vision.md's wealth. **Confirmed on a real MEGA65** (22 Oct 2026).
 Checked headlessly: the price (a warrior from
 nothing, 50), buying, the Finance screen, the score, save and load, and
 300-turn autoplays.
+
+**Buildings and wonders** (23 Oct 2026, the user's request: a cultural
+building and a wonder; `src/culture.c`, region 6; vision.md 5B). **They
+are kinds after the units'** (`KIND_TEMPLE` 9, `KIND_LION_GATE` 10,
+`BUILD_KINDS` in `src/unit.h`; `KINDS` is still the units' count), with
+a name and a cost in `unit_kind_name[]` and `unit_kind_cost[]`, so
+`city_build[]`, CHANGE, BUY and the panel's "built Temple" take them as
+they are; `city_produce()` hands a finished one to `culture_built()`
+(the one resident hook) and the city goes back to warriors. What a city
+has is `city_culture[]` (`CITY_TEMPLE`, `CITY_LION_GATE`, a bit each,
+`HIGH_BSS`, saved, kept on capture, moved in `city_destroy()`); a wonder
+built is `wonders_built`, so a wonder lost with its city cannot be built
+again. **The temple** is Civilization's: 40 shields, 1 gold a turn
+upkeep (`treasury_turn()`, shown on Advisors → Finance), sold with an
+empty treasury; with no happiness to make, it gives `LEGACY_TEMPLE` (3)
+legacy points. **The Lion Gate**, the first wonder: 160 shields (a
+Civilization wonder costs 200-600, for cities that make far more), one
+in the world, no upkeep, announced to all in a popup, and every other
+city building it goes back to warriors; **every unit in its city
+defends twice as well** (`defence()` in `src/combat.c`; Civilization's
+Great Wall is city walls) and it gives `LEGACY_WONDER` (20) points,
+Civilization's score for a wonder. **Legacy points** (`player_legacy[]`,
+saved, `SAVE_VERSION` 15) are the builder's for good, whatever becomes
+of the building; they count in the score and decide the legacy victory
+(**The end**). BUY's price is Civilization's for buildings, 2r, and 4r
+for a wonder, doubled before the first shield. The city screen lists the
+city's buildings under its shields and trade; CHANGE lists the temple
+where there is none and the Lion Gate while nobody has built it
+(`CULTURE_CAN()`), a row higher than it was, so that nine choices fit,
+and the bronze note is a line. **The computer players**, at their unit
+cap, build the Lion Gate in a city of 5 (one city at a time) and a
+temple in a city of 3 with 20 gold in hand, and finish a building they
+have started unless they need guards (`src/aibuild.c`). In 400 turns of
+autoplay on seeds 1, 3 and 7 the Lion Gate was built in every game (by
+the human's side, the Egyptians and the Canaanites) and legacy reached
+9-41 a people. Checked headlessly: CHANGE, Help → Buildings, the score
+and a legacy victory with its picture (a throwaway build).
 
 **Pictures** (22 Oct 2026; `src/picture.c`, region 5): the title's at
 boot (`title_splash()`, **The title's picture**) and the outcome's at

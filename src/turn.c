@@ -14,6 +14,7 @@
 #include "combat.h"
 #include "crisis.h"
 #include "treasury.h"
+#include "culture.h"
 #include "emporium.h"
 #include "diplomacy.h"
 #include "growth.h"
@@ -189,9 +190,11 @@ void game_init(void)
     crisis_drought = 0;
     crisis_capitals = 0;
     emporium_count = 0;
+    wonders_built = 0;
     for (ax = 0; ax < PLAYERS; ++ax) {
         crisis_cities[ax] = 0;
         player_gold[ax] = 0;
+        player_legacy[ax] = 0;
     }
     // Civilization's 50 at the easiest level.
     if (!game_level) player_gold[PLAYER_HUMAN] = TREASURY_START;

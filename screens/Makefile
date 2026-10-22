@@ -3,10 +3,7 @@
 # results in. The top-level build only puts the checked-in files on the
 # disk and does not need Pillow. `make` also leaves a preview of each, as
 # the MEGA65 will show it, in build/.
-#
-# win_legacy.png is not converted: the legacy victory needs monuments
-# (vision.md 5B), which are not in yet.
-PICTURES = intro defeat win_survival win_hegemony
+PICTURES = intro defeat win_survival win_hegemony win_legacy
 PICS = $(patsubst %,../res/%.pic,$(PICTURES))
 
 all: $(PICS)

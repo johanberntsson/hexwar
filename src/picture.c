@@ -18,7 +18,8 @@
 // own way while it reads the name, and sees region 0 at $6000, not this
 // region -- which is why the loaders in region 0 can pass a literal.
 static const char *const file_name[] = {
-    "INTRO.PIC", "DEFEAT.PIC", "WIN_SURVIVAL.PIC", "WIN_HEGEMONY.PIC"
+    "INTRO.PIC", "DEFEAT.PIC", "WIN_SURVIVAL.PIC", "WIN_HEGEMONY.PIC",
+    "WIN_LEGACY.PIC"
 };
 HIGH_BSS static char name[17];
 

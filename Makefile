@@ -102,7 +102,8 @@ SRCS     = src/sevenships.c \
            src/save.c \
            src/text.c \
            src/game.c \
-           src/turn.c src/hover.c src/score.c src/crisis.c src/treasury.c \
+           src/turn.c src/hover.c src/score.c src/crisis.c src/treasury.c src/culture.c \
+           src/command.c \
            src/ai.c \
            src/aiplace.c src/aibuild.c \
            src/improve.c \
@@ -116,7 +117,7 @@ SRCS     = src/sevenships.c \
 
 # The files whose code is in a MAP window region (src/region.h), compiled
 # without the shared instruction fragments that could be called across one.
-BANKED   = src/title.c src/picture.c src/turn.c src/hover.c src/score.c src/crisis.c src/treasury.c src/aiplace.c src/cityscreen.c src/topcities.c src/diplomacy.c \
+BANKED   = src/title.c src/picture.c src/turn.c src/hover.c src/score.c src/crisis.c src/treasury.c src/culture.c src/command.c src/aiplace.c src/cityscreen.c src/topcities.c src/diplomacy.c \
            src/save.c src/sheet.c src/mapload.c src/help.c src/menu.c src/ai.c src/aibuild.c \
            src/improve.c src/growth.c src/trade.c src/path.c src/boat.c src/emporium.c
 
@@ -193,7 +194,9 @@ TEXTS    = $(RES)/text/help.txt \
            $(RES)/text/pedia_raider.txt \
            $(RES)/text/pedia_galley.txt \
            $(RES)/text/pedia_boat.txt \
-           $(RES)/text/pedia_merchant.txt
+           $(RES)/text/pedia_merchant.txt \
+           $(RES)/text/pedia_temple.txt \
+           $(RES)/text/pedia_lion_gate.txt
 TEXT_PAK = $(BUILD)/text.pak
 TEXT_IDS = $(BUILD)/textid.h
 
@@ -301,7 +304,7 @@ d81: $(D81)
 
 # The pictures, made by screens/Makefile and checked in (src/picture.h).
 PICTURES = $(RES)/intro.pic $(RES)/defeat.pic $(RES)/win_survival.pic \
-           $(RES)/win_hegemony.pic
+           $(RES)/win_hegemony.pic $(RES)/win_legacy.pic
 
 $(D81): $(PRG) $(REGION_FILES) $(MAP) $(RES)/tiles.fci $(TEXT_PAK) $(PICTURES) tools/diskutil.rb
 	rm -f $@

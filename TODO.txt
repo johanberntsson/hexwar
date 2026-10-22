@@ -1,17 +1,23 @@
 --- OPEN ---
 
-NEXT (22 Oct 2026, after the treasury; CLAUDE.md "Where to start next time"):
-1. Try on a real MEGA65: the treasury (panel gold, BUY on the city screen, Advisors/Finance,
-   the score's Gold column)
-2. Merchant fleets carrying the trade deals, which closes milestone 9
-3. Monuments and the legacy victory; with them the treasury's first expenses
-4. Room first: region 4 0.2 KB (move the menus), region 5 0.6 KB (Finance could go to
-   region 3), resident 302 bytes
-5. Tune from play: the Crisis, the collapse, merchant ships, gold piling up (1000-3500 by
-   turn 300)
-Room: resident 302 bytes, region 0 0.4 KB, region 1 178 bytes, region 2 1.1 KB, region 3
-2.2 KB, region 4 0.2 KB, region 5 0.6 KB, highram 1.4 KB; the tile sheet 12 KB, about
-eight units (make in tiles/ says)
+NEXT (23 Oct 2026, after the merchant fleets; CLAUDE.md "Where to start next time"):
+1. Try on a real MEGA65: deals lapsing without ships ("ships due in" on Advisors/Diplomacy),
+   a merchant ship renewing one, the menus from region 6
+2. Monuments and the legacy victory; with them the treasury's first expenses
+3. The Crisis may have grown harsher (400-turn autoplays: human's side gone on seed 7 by
+   turn 311, seed 3 down to a city or two each) -- check against a build without buying
+4. Tune from play: the collapse, AI merchant ships (they agree deals they cannot serve),
+   gold piling up (1000-3500 by turn 300)
+5. Escorts for merchant ships; AI galleys against the Sea Peoples
+Room: resident 295 bytes, region 0 0.4 KB, region 1 178 bytes, region 2 1.1 KB, region 3
+2.1 KB, region 4 1.5 KB, region 5 0.6 KB, region 6 (the menus) 5.8 KB, highram 1.4 KB; the
+tile sheet 12 KB, about eight units
+
+DONE (23 Oct 2026): merchant fleets carry the trade deals (option A): a deal lapses 40 turns
+after its last ship unless a merchant ship loaded at home comes to a partner's city;
+neighbours (cities within 8) trade overland. The AI's merchant sails between its own and a
+partner's coast. The Crisis's random loss at sea is gone. SAVE_VERSION 14. Menus moved to a
+new region 6 to make room
 
 DONE (22 Oct 2026): the treasury, Civ 1's: city trade less corruption (trade x distance to
 the capital x 3 / 100, Despotism's) into gold, +2 a turn a trade deal to each partner, no
@@ -148,7 +154,7 @@ Milestone 9: trade
   owner owns the goods round it, for bronze, trade and score. Drawn as the improvement bits'
   fourth value (alltiles' bazaar); burnt by an enemy standing on it. The AI builds one at a
   time without bronze and makes for copper or tin it lacks. 3-6 emporia a 400-turn game
-- Later: trade deals carried by merchant ships (vision.md's physical fleets) and escorts
+- DONE (23 Oct 2026): trade deals carried by merchant ships (see above). Later: escorts
 
 Milestone 10: the end game -- the Bronze Age Collapse (DRAFT, vision.md sections 4 and 5)
 A game is 400 turns, as Civ 1's: growth and rivalry first, then the Crisis, then the end.

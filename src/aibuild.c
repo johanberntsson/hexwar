@@ -9,6 +9,7 @@
 #include "aiint.h"
 #include "city.h"
 #include "emporium.h"
+#include "trade.h"
 #include "growth.h"
 #include "map.h"
 #include "sheet.h"
@@ -128,12 +129,15 @@ void ai_build(byte p)
             // One galley, to explore the coasts, over the cap if need be.
             kind = KIND_GALLEY;
             ++galleys;
-        } else if (!merchants && guard != KIND_SPEARMAN && cities >= 2
-                   && city_size[c] >= 2 && city_coastal(c)
-                   && emporium_count < MAX_EMPORIA) {
-            // A merchant ship, to found an emporium by the copper or tin
-            // the player lacks (src/emporium.h): over the cap, since it is
-            // used up once it gets there. One at a time, and only without
+        } else if (!merchants && cities >= 2 && city_size[c] >= 2
+                   && city_coastal(c)
+                   && (trade_partners[p]
+                       || (guard != KIND_SPEARMAN
+                           && emporium_count < MAX_EMPORIA))) {
+            // A merchant ship, over the cap: to carry the player's trade
+            // deals, which lapse without ships (src/trade.h), or without
+            // deals to found an emporium by the copper or tin it lacks
+            // (src/emporium.h). One at a time, and for emporia only without
             // bronze, so that a people does not ring the world with them.
             kind = KIND_MERCHANT;
             ++merchants;

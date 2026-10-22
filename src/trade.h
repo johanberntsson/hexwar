@@ -10,7 +10,8 @@
 // them, as in Civilization IV's resource trades, and only a good a player
 // owns can be sent on. One deal a pair, MAX_DEALS in all, **for as long as
 // the two are at peace**: a war or a ceasefire ends it, at the next
-// trade_turn(). Partners think better of each other (diplomacy.c).
+// trade_turn() -- **and as long as merchant ships carry it** (deal_due[]).
+// Partners think better of each other (diplomacy.c).
 //
 // The computer players ask for what they lack -- copper or tin first, the
 // one that makes bronze above all -- offering what the other lacks, and one
@@ -35,6 +36,15 @@ extern byte deal_from[MAX_DEALS];
 extern byte deal_to[MAX_DEALS];
 extern byte deal_give[MAX_DEALS];
 extern byte deal_back[MAX_DEALS];
+// **Turns until deal i lapses** unless a merchant ship arrives (vision.md's
+// merchant fleets, 23 Oct 2026): DEAL_TERM when it is made, and again
+// whenever a merchant ship of either partner, loaded at one of its own
+// cities (unit_work[] 0), comes next to or into a city of the other --
+// or every turn for neighbours, whose cities are OVERLAND_RANGE of each
+// other, who trade overland. A lapsed deal ends at trade_turn(). Saved.
+#define DEAL_TERM 40
+extern byte deal_due[MAX_DEALS];
+#define OVERLAND_RANGE 8
 // Worked out from the deals: bit r of trade_got[p], p receives resource r;
 // bit q of trade_partners[p], p and q trade. Saved with them.
 extern word trade_got[PLAYERS];
@@ -47,8 +57,9 @@ extern byte trade_ask_give[PLAYERS];
 // No deals. From diplomacy_reset().
 void trade_reset(void);
 
-// Once a turn, from diplomacy_turn(): deals between players no longer at
-// peace end, and the computer players ask for what they want.
+// Once a turn, from diplomacy_turn(): the merchant ships' voyages, deals
+// between players no longer at peace or whose ships stopped coming end,
+// and the computer players ask for what they want.
 void trade_turn(void);
 
 // `from` sends `give` to `to`, who sends `back`: a new deal, 1 if made (0

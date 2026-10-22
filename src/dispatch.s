@@ -20,22 +20,22 @@ cur_region: .byte   0
 ; Region r's slot (src/region.h has the scheme), and
 ; the region each slot holds, 0 for none yet: region_load() leaves them all
 ; empty, so a region is first copied in when it is first called.
-slot_of:    .byte   0, 1, 2, 2, 2, 2
+slot_of:    .byte   0, 1, 2, 2, 2, 2, 2
 slot_held:  .byte   0, 0, 0
 
 ; Where each region is in attic RAM, REGION_ATTIC(r): bank bits 16-19 and
 ; bits 8-15, for r from 0 (unused) up. And where each slot is in bank 1,
 ; bits 8-15.
-attic_bank: .byte   0, 1, 1, 1, 1, 1
-attic_hi:   .byte   0, 0x00, 0x20, 0x40, 0x60, 0x80
+attic_bank: .byte   0, 1, 1, 1, 1, 1, 1
+attic_hi:   .byte   0, 0x00, 0x20, 0x40, 0x60, 0x80, 0xa0
 slot_hi:    .byte   0, 0x30, 0x50
 
 ; Each region's length, set by region_load() from its file.
             .public region_length_lo, region_length_hi
 region_length_lo:
-            .byte   0, 0, 0, 0, 0, 0
+            .byte   0, 0, 0, 0, 0, 0, 0
 region_length_hi:
-            .byte   0, 0, 0, 0, 0, 0
+            .byte   0, 0, 0, 0, 0, 0, 0
 
 ; The copy from attic RAM into a slot: an enhanced job with the source in
 ; megabyte $80, the destination in $00, then F018B as in src/mega65.c.
@@ -217,7 +217,7 @@ stub:       .macro  name, target, region
             stub    diplomacy_screen, diplomacy_screen_r3, 3
 
 ; Region 4, slot 2: trade, routes over the sea, the ships' exploring, the
-; merchant ships and emporia, and the menus.
+; merchant ships and emporia.
             stub    trade_reset, trade_reset_r4, 4
             stub    trade_turn, trade_turn_r4, 4
             stub    trade_agree, trade_agree_r4, 4
@@ -227,10 +227,6 @@ stub:       .macro  name, target, region
             stub    boat_order, boat_order_r4, 4
             stub    emporium_order, emporium_order_r4, 4
             stub    emporium_ai, emporium_ai_r4, 4
-            stub    menu_orders, menu_orders_r4, 4
-            stub    menu_draw, menu_draw_r4, 4
-            stub    menu_click, menu_click_r4, 4
-            stub    menu_key, menu_key_r4, 4
 
 ; Region 5, slot 2: the Crisis, the score and the end of the game, the
 ; pictures, and the treasury.
@@ -240,3 +236,9 @@ stub:       .macro  name, target, region
             stub    picture_end, picture_end_r5, 5
             stub    treasury_turn, treasury_turn_r5, 5
             stub    finance_screen, finance_screen_r5, 5
+
+; Region 6, slot 2: the menus.
+            stub    menu_orders, menu_orders_r6, 6
+            stub    menu_draw, menu_draw_r6, 6
+            stub    menu_click, menu_click_r6, 6
+            stub    menu_key, menu_key_r6, 6

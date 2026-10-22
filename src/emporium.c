@@ -12,6 +12,7 @@
 #include "map.h"
 #include "path.h"
 #include "sheet.h"
+#include "trade.h"
 #include "unit.h"
 
 #pragma clang section text="r4text" rodata="r4rodata"
@@ -145,11 +146,56 @@ static byte find_site(byte p, byte ax, byte ay)
     return best != 0xffff;
 }
 
+// **A merchant ship of a people that trades carries its deals** (trade.h):
+// loaded, to the nearest coastal city of a partner; unloaded, home to the
+// nearest coastal city of its own. Into (site_x, site_y); 0 if there is
+// none.
+static byte voyage(byte p, byte loaded, byte ax, byte ay)
+{
+    byte c, q;
+    word d, best = 0xffff;
+
+    for (c = 0; c < city_count; ++c) {
+        q = city_owner[c];
+        if (loaded ? q == p || q >= PLAYERS || !((trade_partners[p] >> q) & 1)
+                   : q != p)
+            continue;
+        if (!city_coastal(c)) continue;
+        d = distance(ax, ay, city_ax[c], city_ay[c]);
+        if (d >= best) continue;
+        best = d;
+        site_x = city_ax[c];
+        site_y = city_ay[c];
+    }
+    return best != 0xffff;
+}
+
 void emporium_ai(byte u)
 {
-    byte ax = unit_ax[u], ay = unit_ay[u], dir, nx, ny;
+    byte ax = unit_ax[u], ay = unit_ay[u], dir, nx, ny, p = unit_owner[u];
 
-    if (!find_site(unit_owner[u], ax, ay)) {
+    // Trade first: next to the city it makes for, it waits for
+    // trade_turn() to count the voyage; with no way there it explores,
+    // and is kept for the trade rather than spent on an emporium.
+    if (trade_partners[p]) {
+        if (voyage(p, !unit_work[u], ax, ay)) {
+            if (distance(ax, ay, site_x, site_y) <= 1) {
+                unit_moves[u] = 0;
+                return;
+            }
+            dir = sea_route(ax, ay, site_x, site_y);
+            if (dir != DIR_NONE && map_neighbour(ax, ay, dir, &nx, &ny)
+                && unit_can_enter(p, KIND_MERCHANT, nx, ny) == ENTER_OK) {
+                unit_move_to(u, nx, ny);
+                --unit_moves[u];
+                return;
+            }
+        }
+        boat_explore(u);
+        return;
+    }
+
+    if (!find_site(p, ax, ay)) {
         boat_explore(u);
         return;
     }
@@ -159,7 +205,7 @@ void emporium_ai(byte u)
     }
     dir = sea_route(ax, ay, site_x, site_y);
     if (dir != DIR_NONE && map_neighbour(ax, ay, dir, &nx, &ny)
-        && unit_can_enter(unit_owner[u], KIND_MERCHANT, nx, ny) == ENTER_OK) {
+        && unit_can_enter(p, KIND_MERCHANT, nx, ny) == ENTER_OK) {
         unit_move_to(u, nx, ny);
         --unit_moves[u];
         return;

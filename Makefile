@@ -133,7 +133,7 @@ PRG      = $(BUILD)/sevenships.prg
 # (src/region.h).
 REGION_FILES = $(BUILD)/sevenships.r1 $(BUILD)/sevenships.r2 \
                $(BUILD)/sevenships.r3 $(BUILD)/sevenships.r4 \
-               $(BUILD)/sevenships.r5
+               $(BUILD)/sevenships.r5 $(BUILD)/sevenships.r6
 
 # The map, made by tools/mapgen.py and read off the disk at start-up. Same seed,
 # same map: `make MAP_SEED=7` is how to look at another one, and MAP_LAND is the

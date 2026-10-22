@@ -554,6 +554,10 @@ static void draw_trade(byte p, byte y)
         put(&x, y, ", they send ", COLOR_LIGHTGREY);
         put(&x, y, back == RES_NONE ? "nothing"
                    : text_line(TEXT_LIST_RESOURCES, back), COLOR_LIGHTGREEN);
+        // How long it lasts without a merchant ship (trade.h).
+        put(&x, y, "; ships due in ", COLOR_LIGHTGREY);
+        put(&x, y, number(deal_due[i]), COLOR_WHITE);
+        put(&x, y, " turns", COLOR_LIGHTGREY);
         return;
     }
 }

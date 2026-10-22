@@ -60,7 +60,7 @@ checked in.
 
 **The program reads its texts, its code regions, the title's picture,
 its tile sheet and its map from drive 8** (`TEXT.PAK`, `SEVENSHIPS.R1`
-to `.R5`, `INTRO.PIC`, `TILES.FCI`, `SEVENSHIPS.MAP`, in that order), so it needs the d81 mounted: `make run`
+to `.R6`, `INTRO.PIC`, `TILES.FCI`, `SEVENSHIPS.MAP`, in that order), so it needs the d81 mounted: `make run`
 does that, and a bare `-prg` boot stops at `cannot read TEXT.PAK`.
 
 There are no tests. Verification is running it — see **Verifying a change**.
@@ -206,10 +206,10 @@ buffers at the default `$FF80000` and corrupts the display.
 
 | Address | Size | Contents |
 |---|---|---|
-| `$2001-$5FFF`, `$8000-$9FFF` | 24 KB | the resident program: code, data, BSS, C stack. 302 bytes free, nearly all at `$5ED8-$5FFF` |
+| `$2001-$5FFF`, `$8000-$9FFF` | 24 KB | the resident program: code, data, BSS, C stack. 295 bytes free, nearly all at `$5EDD-$5FFF` |
 | `$6000-$7FFF` | 8 KB | the code window (`src/region.h`); as loaded, region 0 — the title, setup and help screens (and the Civilopedia's pages), save and load, the sheet's and the map's loaders, the owners' flags, the end of a turn and a game's start (`src/turn.c`), the computer players' starts (`src/aiplace.c`), the hover readout (`src/hover.c`), the boot splash (`title_splash()`). 0.4 KB free |
 | `$13000-$14FFF` | 8 KB | code slot 1: region 1, from `SEVENSHIPS.R1` by way of attic: the computer players and their ferrying, the cities' yields and growth, bronze. 178 bytes free |
-| `$15000-$16FFF` | 8 KB | code slot 2, shared: region 2 (the city screen, Top Five Cities, the builders' improvements, what the computer players' cities build, `src/aibuild.c`, buying; 1.1 KB free) region 3 (diplomacy; 2.2 KB free) region 4 (trade, the ships' routes, exploring and fishing, merchant ships and emporia, the menus; 0.2 KB free) or region 5 (the Crisis and the collapse, the score and the end, the pictures, the treasury, `src/crisis.c`, `src/score.c`, `src/picture.c`, `src/treasury.c`; 0.6 KB free), whichever was called last. **Slot 1 is also the sheet loader's staging area at boot** (`STAGING` in `src/sheet.c`), before region 1 is first called |
+| `$15000-$16FFF` | 8 KB | code slot 2, shared: region 2 (the city screen, Top Five Cities, the builders' improvements, what the computer players' cities build, `src/aibuild.c`, buying; 1.1 KB free) region 3 (diplomacy; 2.1 KB free) region 4 (trade, the ships' routes, exploring and fishing, merchant ships and emporia; 1.5 KB free) region 5 (the Crisis and the collapse, the score and the end, the pictures, the treasury, `src/crisis.c`, `src/score.c`, `src/picture.c`, `src/treasury.c`; 0.6 KB free) or region 6 (the menus, `src/menu.c`; 5.8 KB free), whichever was called last. **Slot 1 is also the sheet loader's staging area at boot** (`STAGING` in `src/sheet.c`), before region 1 is first called |
 | `$17000-$1EFFF` | 32 KB | the packed tile sheet's second area, where regions 3 to 6 would have been: whatever rows did not fit bank 5's; with bank 5's, 12 KB free (`tools/mktiles.py` says) |
 | `$A000-$BFFF` | 8 KB | `highram`, under the BASIC ROM, banked out by `src/bank.s`: `map_tile`, the unit and city arrays, the sprite blocks, the AI's headings, the staging buffers of the texts and the regions, the texts' line buffers, the sheet loader's buffers, the saved VIC registers, the AI's exploration memory, the resource list, the sheet's row tables, the peoples' relations and attitudes and the letters' names, the trade deals, the emporia, the pictures' staging buffer, the treasuries; about 1.4 KB free — `HIGH_BSS` in `src/mega65.h` moves a variable there, and **the startup does not clear it** |
 | `$1600-$1EFF` | 2304 | `zpsave` (56 bytes, BASIC's zero page during the run), then `lowfree`: the popup's 400-byte text and the scratch buffers of the view and the minimap, and the sea routes' search (`src/path.c`), 990 bytes free — `LOW_FREE` in `src/mega65.h` moves a variable there |
@@ -529,12 +529,15 @@ entry in each of `dispatch.s`'s per-region tables (`slot_of`,
 `region_stamp[]`'s initialiser in `src/region.c`, and its file in the
 Makefile's `REGION_FILES`; `packprg.py` needs nothing. Attic's bank 1
 holds eight regions as the tables stand. **Resident space is what to
-watch now**: 302 bytes (22 Oct 2026, after the treasury; 392 after the
+watch now**: 295 bytes (23 Oct 2026, after the merchant fleets; 302 after the treasury; 392 after the
 pictures, the collapse, the raider, emporia and Help → Military Units;
 704 after the Crisis; the hover readout's move to region 0 gave back
 625; the slot copying cost 140, and each stub is 13), against 0.4 KB in
-region 0, **178 bytes in region 1**, 1.1 KB in region 2, 2.2 KB in
-region 3, **0.2 KB in region 4** and **0.6 KB in region 5**. **What a computer player's cities
+region 0, **178 bytes in region 1**, 1.1 KB in region 2, 2.1 KB in
+region 3, 1.5 KB in region 4, **0.6 KB in region 5** and 5.8 KB in
+region 6. **Region 6 is the menus'** (23 Oct 2026, for the merchant
+fleets' room in region 4): the first region added since the slots,
+following **A new region** above, which held. **What a computer player's cities
 build went to region 2** (`src/aibuild.c`, 22 Oct 2026), which gave
 region 1 800 bytes: it calls `improve_best()` for every city, through
 `work_site()`, so it sits beside it in region 2, and ai.c's helpers it
@@ -543,7 +546,7 @@ needs (`ai_guards_wanted()`, `ai_find_far_site()`, `ai_work_site()`,
 a call there copies nothing; `guards()` and `spearman_in()` are small
 enough to copy. Checked as byte-identical through 300 turns of autoplay.
 `src/menu.c` moved from region 0 to region 4 the same day, when region 0
-was down to 188 bytes. **Region 1 is nearly full too**: its next room
+was down to 188 bytes, and on to region 6 the next. **Region 1 is nearly full too**: its next room
 is more of `ai.c` moving out (as `ai_place()` went to `src/aiplace.c`
 in region 0, called directly from `game_init()` there, no stub), and new
 code goes to regions 2-4 or a new region 5 where it does not run in a
@@ -837,23 +840,23 @@ hover readout from region 0, the calendar, the score and the end
 screen, and the Crisis — omens, Sea Peoples, shocks — with the 96-unit
 list.
 
-**Where to start next time** (22 Oct 2026, after the treasury; the
-user's choice of order was the treasury, then merchant fleets carrying
-the trade deals, then monuments):
-1. **Try on a real MEGA65**: the treasury — the panel's gold, BUY on
-   the city screen, Advisors → Finance, the score's Gold column.
-2. **Merchant fleets carrying the deals** (vision.md §3), which closes
-   milestone 9: a deal's goods carried by a merchant ship between the
-   two peoples' cities, cut when it is caught; escorts.
-3. **Monuments and the legacy victory** (TODO.txt): the first
-   buildings, and with them the treasury's first expenses (upkeep, as
-   Civilization's buildings have), which give the gold a use.
-4. **Room** first, for either: region 4 has 0.2 KB (the menus are the
-   next to move out), region 5 0.6 KB (the Finance screen could go to
-   region 3 with Diplomacy, the other advisor), resident 302 bytes.
-5. Tune from play: the Crisis, the collapse, merchant ships, and how
-   fast gold piles up (1000-3500 by turn 300, with nothing yet to spend
-   it on but buying).
+**Where to start next time** (23 Oct 2026, after the merchant fleets;
+the user's order was the treasury, the fleets, then monuments):
+1. **Try on a real MEGA65**: deals that lapse without ships ("ships due
+   in" on Advisors → Diplomacy), the human's merchant ship renewing one,
+   the menus from region 6.
+2. **Monuments and the legacy victory** (TODO.txt): the first
+   buildings, and with them the treasury's first expenses.
+3. **The Crisis may have grown harsher** since the raider and the
+   treasury: 400-turn autoplays on 23 Oct 2026 lost the human's side on
+   seed 7 by turn 311 and left everyone on seed 3 with a city or two.
+   Runs differ a lot, so it wants play, or a few seeds compared against
+   a build without the treasury's buying.
+4. Tune from play: the collapse, the computer players' merchant ships
+   (they agree deals they cannot serve, which lapse and are agreed
+   again), how fast gold piles up.
+5. Escorts for the merchant ships; the computer players' galleys
+   against the Sea Peoples.
 
 The tile sheet is packed and has about eight units' room left (**When
 bank 5 fills up**, step 1c).
@@ -885,7 +888,7 @@ explored and occupied bits; the terrain is as loaded), `unit_reset()`,
 state has to be reset there too. The map is the same one each time.
 `NO_TITLE` builds go straight into a new game after a retire.
 
-**The menu bar** (`src/menu.c`, region 4) is row 0: Game, Orders, Advisors, World,
+**The menu bar** (`src/menu.c`, region 6) is row 0: Game, Orders, Advisors, World,
 Debug, Help. A click on a title opens its dropdown, picked by hover and
 click or the cursor keys and Return; a click elsewhere or Esc closes it.
 **MEGA and a title's first letter opens it from the keyboard**, as Alt
@@ -1439,7 +1442,29 @@ people already traded with ends the deal (20 off its attitude). Each
 people's block shows the trade on its fifth row. In 300 turns of
 autoplay on seed 1: the human's side sent dye to the Canaanites for
 copper, and the Canaanites copper to the Hittites for wine. Saved
-(`SAVE_VERSION` 10). Still to come: fleets and emporia.
+(`SAVE_VERSION` 10). **Merchant fleets carry the deals** (23 Oct 2026,
+vision.md §3, the user's option A of two: ships keep the deals agreed by
+letter alive, rather than making them as Civilization's caravans do):
+**a deal lapses DEAL_TERM (40) turns after its last ship**
+(`deal_due[]`, saved, `SAVE_VERSION` 14) unless a merchant ship of
+either partner, loaded at one of its own cities (`unit_work[]` 0),
+comes next to or into a city of the other (`voyages()` in
+`trade_turn()`, which unloads it); a new deal starts with the term, the
+letter's ship. **Neighbours trade overland**: partners with cities
+`OVERLAND_RANGE` (8) of each other renew every turn. The Diplomacy
+screen says "ships due in N turns"; a lapse is "No ships came: a trade
+ended" in the panel. The random loss at sea in the Crisis is gone:
+raiders and enemies sink the real ships. **The computer players** build
+a merchant ship (one at a time, over the cap) when they trade, and it
+sails between its own nearest coastal city and a partner's
+(`voyage()` in `src/emporium.c`), exploring when there is no way there
+rather than being spent on an emporium; without deals it founds emporia
+as before. Measured with throwaway counters in 400 turns on seeds 1, 3
+and 7: 18, 14 and 4 deals made, 7, 6 and 4 renewed by ships, 14, 13 and
+3 lapsed — the computer players agree deals they cannot serve. At first,
+with a term of 24, no overland trade, and a merchant with no way to its
+partner founding an emporium, 5 renewals against 32 lapses on seed 1.
+Not yet: escorts.
 
 **Galleys** (milestone 9, `KIND_GALLEY`, Civilization's trireme, after
 asking the user which ship first) need cedar (`player_has()`) and a
@@ -1632,9 +1657,9 @@ smaller), a revolt (a city nobody guards goes over to the rebels, with a
 barbarian warrior fortified in it; until 22 Oct 2026 two warriors
 appeared next to it and burnt it the next turn). **Pleas**: a ruler the
 human has met writes when it has lost a city since the last turn
-(`crisis_cities[]`), a letter a turn. **Network fracture**: in the
-Crisis a trade deal is lost at sea one turn in 32 (`trade_turn()`; the
-panel says so if it was the human's), and bronze already ends with the
+(`crisis_cities[]`), a letter a turn. **Network fracture**: raiders sink the
+merchant ships that keep the deals alive (**Trade**; until 23 Oct 2026 a
+deal was lost at sea one turn in 32), and bronze already ends with the
 copper or tin it came from. **The computer players** want a guard more
 in every coastal city from turn 226 (`guards_wanted()`). The human hears
 of all of it by popup when it is theirs or everyone's, and not during
@@ -1709,7 +1734,8 @@ human's cities' trade, corruption and gold, the deals, the income a
 turn), and on the score screen, where a **Gold** column adds a point
 for every 200 (`GOLD_POINT`; treasuries are 1000-3500 by turn 300, and
 at one for every 50 gold outweighed cities and citizens together),
-vision.md's wealth. Checked headlessly: the price (a warrior from
+vision.md's wealth. **Confirmed on a real MEGA65** (22 Oct 2026).
+Checked headlessly: the price (a warrior from
 nothing, 50), buying, the Finance screen, the score, save and load, and
 300-turn autoplays.
 

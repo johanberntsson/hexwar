@@ -169,6 +169,7 @@ to `release/`), holding these files:
 | SEVENSHIPS.R3 | code region 3, diplomacy, the same way |
 | SEVENSHIPS.R4 | code region 4, trade, the ships' routes, exploring and fishing, merchant ships and emporia, and the menus, the same way |
 | SEVENSHIPS.R5 | code region 5, the Crisis and the peoples' collapse, the score and the end of the game, the pictures and the treasury, the same way |
+| SEVENSHIPS.R6 | code region 6, the menus, the same way |
 | INTRO.PIC, DEFEAT.PIC, WIN_SURVIVAL.PIC, WIN_HEGEMONY.PIC | the pictures shown at boot and at the end: a palette and 60x23 full colour characters, 87 KB each |
 
 The C65 ROM boots AUTOBOOT.C65 automatically. `main()` then:
@@ -176,7 +177,7 @@ The C65 ROM boots AUTOBOOT.C65 automatically. `main()` then:
 1. keeps the VIC registers as BASIC left them (`screen_save`), switches the
    VIC-IV to 80x25 16-bit text mode with full colour characters
    (`screen_init`), reads TEXT.PAK into Attic RAM (`text_load`) and
-   SEVENSHIPS.R1 to .R5 into Attic RAM (`region_load`), and reads
+   SEVENSHIPS.R1 to .R6 into Attic RAM (`region_load`), and reads
    INTRO.PIC into the map window's tile store, palette first, so that the
    title picture shows while the rest loads (`title_splash`);
 2. reads TILES.FCI, a character at a time. Each character is widened to twice
@@ -300,7 +301,7 @@ region 2 the city screen, Top Five Cities, the builders'
 improvements and what the computer players' cities build, which calls
 the improvements for every city and so is beside them; region 3
 diplomacy; region 4 trade, the ships' routes, exploring and fishing,
-merchant ships and emporia, and the menus; region 5 the Crisis and the
+merchant ships and emporia; region 6 the menus; region 5 the Crisis and the
 peoples' collapse, the score and the end of the game, the pictures and
 the treasury.
 

@@ -68,6 +68,7 @@ static const struct block blocks[] = {
     { deal_to, sizeof deal_to },
     { deal_give, sizeof deal_give },
     { deal_back, sizeof deal_back },
+    { deal_due, sizeof deal_due },
     { trade_got, sizeof trade_got },
     { trade_partners, sizeof trade_partners },
     { &combat_seed, sizeof combat_seed },

@@ -1,10 +1,11 @@
-// In region 4 (src/region.h): called through the stubs in src/dispatch.s,
-// under these names here. It was in region 0 until that filled up (22 Oct
-// 2026); opening a menu may now copy region 4 into its slot, 3 ms at most.
-#define menu_orders menu_orders_r4
-#define menu_draw menu_draw_r4
-#define menu_click menu_click_r4
-#define menu_key menu_key_r4
+// In region 6 (src/region.h): called through the stubs in src/dispatch.s,
+// under these names here. It was in region 0 until that filled up, then
+// in region 4 until that did (22 Oct 2026); opening a menu may copy
+// region 6 into its slot, 3 ms at most.
+#define menu_orders menu_orders_r6
+#define menu_draw menu_draw_r6
+#define menu_click menu_click_r6
+#define menu_key menu_key_r6
 
 #include "menu.h"
 #include "game.h"
@@ -17,7 +18,7 @@
 #include "unit.h"
 #include "view.h"
 
-#pragma clang section text="r4text" rodata="r4rodata"
+#pragma clang section text="r6text" rodata="r6rodata"
 
 #define BAR_COLOUR COLOR_LIGHTGREEN
 #define ITEM_COLOUR COLOR_WHITE

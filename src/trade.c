@@ -6,6 +6,7 @@
 #define trade_propose trade_propose_r4
 
 #include "trade.h"
+#include "city.h"
 #include "civ.h"
 #include "combat.h"
 #include "diplomacy.h"
@@ -24,6 +25,7 @@ HIGH_BSS byte deal_from[MAX_DEALS];
 HIGH_BSS byte deal_to[MAX_DEALS];
 HIGH_BSS byte deal_give[MAX_DEALS];
 HIGH_BSS byte deal_back[MAX_DEALS];
+HIGH_BSS byte deal_due[MAX_DEALS];
 HIGH_BSS word trade_got[PLAYERS];
 HIGH_BSS byte trade_partners[PLAYERS];
 HIGH_BSS byte trade_ask_get[PLAYERS];
@@ -112,6 +114,7 @@ byte trade_agree(byte from, byte to, byte give, byte back)
     deal_to[i] = to;
     deal_give[i] = give;
     deal_back[i] = back;
+    deal_due[i] = DEAL_TERM;            // the letter came by ship
     if (back == RES_NONE) mood_up(to, from, MOOD_GIFT);
     recount();
     return 1;
@@ -160,19 +163,77 @@ static byte accepts(byte q, byte p, byte out, byte in)
     return !strategic(out) || strategic(in) || m >= MOOD_PEACE;
 }
 
+// **The merchant ships' voyages**: a loaded one next to or in a city of a
+// people its owner trades with renews their deal and unloads; next to or
+// in one of its own cities it loads again. So a deal needs ships going to
+// and fro, and one sunk by raiders or an enemy is a deal at risk -- the
+// Crisis's network fracture, which until 23 Oct 2026 was a deal lost at
+// random one turn in 32.
+static void voyages(void)
+{
+    byte u, p, q, dir, nx, ny, c, d;
+
+    for (u = 0; u < MAX_UNITS; ++u) {
+        if (unit_kind[u] != KIND_MERCHANT) continue;
+        p = unit_owner[u];
+        for (dir = 0; dir <= 6; ++dir) {
+            nx = unit_ax[u];
+            ny = unit_ay[u];
+            if (dir < 6 && !map_neighbour(nx, ny, dir, &nx, &ny)) continue;
+            c = city_at(nx, ny);
+            if (c == CITY_NONE) continue;
+            q = city_owner[c];
+            if (q == p) {
+                unit_work[u] = 0;
+            } else if (!unit_work[u] && q < PLAYERS
+                       && (d = find_deal(p, q)) != DEAL_FREE) {
+                deal_due[d] = DEAL_TERM;
+                unit_work[u] = 1;
+                if (p == PLAYER_HUMAN) message("Merchant ship", "trade renewed");
+            }
+        }
+    }
+}
+
+// Whether p and q have cities within OVERLAND_RANGE of each other, close
+// enough to trade overland without ships.
+static byte neighbours(byte p, byte q)
+{
+    byte a, b;
+    int dx, dy;
+
+    for (a = 0; a < city_count; ++a) {
+        if (city_owner[a] != p) continue;
+        for (b = 0; b < city_count; ++b) {
+            if (city_owner[b] != q) continue;
+            // Hexagons apart, as ai.c's distance().
+            dx = (int)city_ax[a] - (int)city_ax[b];
+            dy = (2 * (int)city_ay[a] + (city_ax[a] & 1))
+                 - (2 * (int)city_ay[b] + (city_ax[b] & 1));
+            if (dx < 0) dx = -dx;
+            if (dx > MAP_COLUMNS / 2) dx = MAP_COLUMNS - dx;
+            if (dy < 0) dy = -dy;
+            if (dy + (dx > dy ? (dx - dy) / 2 : 0) <= OVERLAND_RANGE)
+                return 1;
+        }
+    }
+    return 0;
+}
+
 void trade_turn(void)
 {
     byte i, p, q, get, give, ended = 0;
 
-    // A trade lasts as long as the peace -- and in the Crisis, one turn in
-    // 32, the ships are lost: vision.md's network fracture.
+    // A trade lasts as long as the peace, and as long as the ships come.
+    voyages();
     for (i = 0; i < MAX_DEALS; ++i) {
         p = deal_from[i];
         if (p == DEAL_FREE) continue;
         q = deal_to[i];
-        if (game_turn >= GAME_CRISIS_TURN && !(rnd() & 31)) {
+        if (neighbours(p, q)) deal_due[i] = DEAL_TERM;
+        if (!--deal_due[i]) {
             if (p == PLAYER_HUMAN || q == PLAYER_HUMAN)
-                message("Trade ships", "lost at sea");
+                message("No ships came:", "a trade ended");
         } else if (at_peace(p, q) && player_alive(p) && player_alive(q)) {
             continue;
         }

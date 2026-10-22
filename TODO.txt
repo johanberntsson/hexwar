@@ -1,15 +1,16 @@
 --- OPEN ---
 
-NEXT (23 Oct 2026, after the temple and the Lion Gate; CLAUDE.md "Where to start next time"):
-1. Try on a real MEGA65: CHANGE's Temple and Lion Gate, a temple's upkeep on Advisors/Finance,
+NEXT (23 Oct 2026, after the temple, the Lion Gate and Advisors/Cities; CLAUDE.md "Where to
+start next time"):
+1. Try on a real MEGA65: Advisors/Cities and a city screen from it, CHANGE's Temple and Lion Gate, a temple's upkeep on Advisors/Finance,
    the Lion Gate's announcement, Help/Buildings, the Legacy column and the legacy victory
 2. More culture: more wonders (Pyramids, Palace of Knossos), clay tablets of knowledge
    (Linear B, law codes, the alphabet: a science of sorts), building art
 3. The Crisis may have grown harsher -- play, or compare seeds
 4. Tune from play: the collapse, merchant ships, gold, legacy's weight in the score
 5. Escorts for merchant ships; AI galleys against the Sea Peoples
-Room: resident 653 bytes, region 0 0.3 KB, region 1 178 bytes, region 2 0.7 KB, region 3
-2.1 KB, region 4 1.5 KB, region 5 2.2 KB, region 6 2.7 KB, highram 1.4 KB; the tile sheet
+Room: resident 628 bytes, region 0 0.3 KB, region 1 178 bytes, region 2 0.7 KB, region 3
+2.1 KB, region 4 1.5 KB, region 5 2.2 KB, region 6 1.1 KB, highram 1.4 KB; the tile sheet
 12 KB, about eight units
 
 DONE (23 Oct 2026): the temple (40 shields, 1 gold upkeep, 3 legacy, sold when broke) and the
@@ -57,6 +58,8 @@ wonders and Help/Wonders screen with descriptions. The Lion Gate, Pyramids etc
 
 Need city advisor screen (list of cities and basic stats (production etc). POssible to go into
 a city screen by selecting on city from this advisor screen.
+- DONE (23 Oct 2026): Advisors/Cities (src/cities.c): size, food, shields, trade, production
+  and turns; Return or a click opens the city screen, and back to the list after it
 
 Evenually need to adjust game/AI for the difficulty levels (probably need to cheat
 on highter levels to make the game challenging)

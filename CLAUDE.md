@@ -206,10 +206,10 @@ buffers at the default `$FF80000` and corrupts the display.
 
 | Address | Size | Contents |
 |---|---|---|
-| `$2001-$5FFF`, `$8000-$9FFF` | 24 KB | the resident program: code, data, BSS, C stack. 653 bytes free, nearly all at `$5D73-$5FFF` |
+| `$2001-$5FFF`, `$8000-$9FFF` | 24 KB | the resident program: code, data, BSS, C stack. 628 bytes free, nearly all at `$5D8C-$5FFF` |
 | `$6000-$7FFF` | 8 KB | the code window (`src/region.h`); as loaded, region 0 — the title, setup and help screens (and the Civilopedia's pages), save and load, the sheet's and the map's loaders, the owners' flags, the end of a turn and a game's start (`src/turn.c`), the computer players' starts (`src/aiplace.c`), the hover readout (`src/hover.c`), the boot splash (`title_splash()`). 0.4 KB free |
 | `$13000-$14FFF` | 8 KB | code slot 1: region 1, from `SEVENSHIPS.R1` by way of attic: the computer players and their ferrying, the cities' yields and growth, bronze. 178 bytes free |
-| `$15000-$16FFF` | 8 KB | code slot 2, shared: region 2 (the city screen, Top Five Cities, the builders' improvements, what the computer players' cities build, `src/aibuild.c`, buying; 0.7 KB free) region 3 (diplomacy; 2.1 KB free) region 4 (trade, the ships' routes, exploring and fishing, merchant ships and emporia; 1.5 KB free) region 5 (the Crisis and the collapse, the score and the end, the pictures, `src/crisis.c`, `src/score.c`, `src/picture.c`; 2.2 KB free) or region 6 (the menus and what their items do, the treasury, buildings and wonders, `src/menu.c`, `src/command.c`, `src/treasury.c`, `src/culture.c`; 2.7 KB free), whichever was called last. **Slot 1 is also the sheet loader's staging area at boot** (`STAGING` in `src/sheet.c`), before region 1 is first called |
+| `$15000-$16FFF` | 8 KB | code slot 2, shared: region 2 (the city screen, Top Five Cities, the builders' improvements, what the computer players' cities build, `src/aibuild.c`, buying; 0.7 KB free) region 3 (diplomacy; 2.1 KB free) region 4 (trade, the ships' routes, exploring and fishing, merchant ships and emporia; 1.5 KB free) region 5 (the Crisis and the collapse, the score and the end, the pictures, `src/crisis.c`, `src/score.c`, `src/picture.c`; 2.2 KB free) or region 6 (the menus and what their items do, the treasury, buildings and wonders, `src/menu.c`, `src/command.c`, `src/treasury.c`, `src/culture.c`, `src/cities.c`; 1.1 KB free), whichever was called last. **Slot 1 is also the sheet loader's staging area at boot** (`STAGING` in `src/sheet.c`), before region 1 is first called |
 | `$17000-$1EFFF` | 32 KB | the packed tile sheet's second area, where regions 3 to 6 would have been: whatever rows did not fit bank 5's; with bank 5's, 12 KB free (`tools/mktiles.py` says) |
 | `$A000-$BFFF` | 8 KB | `highram`, under the BASIC ROM, banked out by `src/bank.s`: `map_tile`, the unit and city arrays, the sprite blocks, the AI's headings, the staging buffers of the texts and the regions, the texts' line buffers, the sheet loader's buffers, the saved VIC registers, the AI's exploration memory, the resource list, the sheet's row tables, the peoples' relations and attitudes and the letters' names, the trade deals, the emporia, the pictures' staging buffer, the treasuries; about 1.4 KB free — `HIGH_BSS` in `src/mega65.h` moves a variable there, and **the startup does not clear it** |
 | `$1600-$1EFF` | 2304 | `zpsave` (56 bytes, BASIC's zero page during the run), then `lowfree`: the popup's 400-byte text and the scratch buffers of the view and the minimap, and the sea routes' search (`src/path.c`), 990 bytes free — `LOW_FREE` in `src/mega65.h` moves a variable there |
@@ -538,7 +538,8 @@ pictures, the collapse, the raider, emporia and Help → Military Units;
 704 after the Crisis; the hover readout's move to region 0 gave back
 625; the slot copying cost 140, and each stub is 13), against 0.3 KB in
 region 0, **178 bytes in region 1**, **0.7 KB in region 2**, 2.1 KB in
-region 3, 1.5 KB in region 4, 2.2 KB in region 5 and 2.7 KB in region 6.
+region 3, 1.5 KB in region 4, 2.2 KB in region 5 and 1.1 KB in region 6
+(628 bytes resident and 1.1 KB in region 6 after Advisors → Cities).
 **Region 6 is the menus'** (23 Oct 2026, for the merchant fleets' room
 in region 4): the first region added since the slots, following **A new
 region** above, which held; the treasury followed it from region 5 the
@@ -847,9 +848,10 @@ hover readout from region 0, the calendar, the score and the end
 screen, and the Crisis — omens, Sea Peoples, shocks — with the 96-unit
 list.
 
-**Where to start next time** (23 Oct 2026, after the temple and the
-Lion Gate):
-1. **Try on a real MEGA65**: CHANGE's longer list (Temple, Lion Gate),
+**Where to start next time** (23 Oct 2026, after the temple, the Lion
+Gate and Advisors → Cities):
+1. **Try on a real MEGA65**: Advisors → Cities and a city screen from
+   it; CHANGE's longer list (Temple, Lion Gate),
    a temple bought or built and its upkeep on Advisors → Finance, the
    Lion Gate's announcement, Help → Buildings, the Legacy column, the
    legacy victory's picture, and the menus' commands from region 6.
@@ -928,7 +930,14 @@ for anything else, or no unit wanting orders, it is empty and does not
 open; its items do what `b` and `f` do. World has **Top Five Cities**
 (`src/topcities.c`, region 2): the five largest cities the player has
 seen, whoever's, with their people and size; and **Score** (**The end**). Advisors has **Diplomacy**
-(see **Contact** below) and **Finance** (**The treasury**). Help
+(see **Contact** below) and **Finance** (**The treasury**), and since
+23 Oct 2026 **Cities** first (`cities_screen()` in `src/cities.c`, region
+6, called straight from `src/command.c`): the human's cities after
+Civilization's City Status — size, food a turn after what the citizens
+eat, shields, trade, and what each produces and in how many turns,
+eighteen at most — picked by hover, the cursor keys and Return or a
+click, which opens the city screen and comes back to the list after it;
+Esc puts the map back. Help
 has **Keyboard Control**, the help screen, and **Terrain Types**, a
 submenu like Options (`TERRAINS` in `src/menu.c`) of the ten terrains in
 alphabetical order, named by `list_terrains.txt`, which opens the

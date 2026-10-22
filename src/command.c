@@ -33,6 +33,9 @@ void game_menu_command(byte command)
         score_screen(SCORE_NOW);
         draw_screen();
         break;
+    case MENU_CITIES:
+        cities_screen();
+        break;
     case MENU_FINANCE:
         finance_screen();
         draw_screen();

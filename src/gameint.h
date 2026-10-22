@@ -83,6 +83,11 @@ void open_top_cities(void);
 // 2026, for resident room.
 void game_menu_command(byte command);
 
+// In cities.c, region 6: Advisors -> Cities, the human's cities in a list,
+// and the city screen of the one picked, back to the list after it; the
+// map screen put back at the end. Called from command.c, no stub.
+void cities_screen(void);
+
 // In hover.c, region 0: the readout of what is under the arrow, or the
 // ring, or hover_ax/ay, at the end of the top row.
 void game_draw_hover(void);

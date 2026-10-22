@@ -112,6 +112,7 @@ most important routines included in each source file.
 | treasury.c | each player's gold: the cities' trade less corruption, the deals, the temples' upkeep, the computer players' buying, and Advisors/Finance |
 | culture.c | the temple and the Lion Gate, finished, and the legacy points they give |
 | command.c | what a menu item does, out of game.c |
+| cities.c | Advisors/Cities: the player's cities in a list, and a city screen from it |
 |  |  |
 | trade.c | goods exchanged between the peoples, as gifts or for other goods |
 | &nbsp;&nbsp;&nbsp;_trade\_turn_ | once a turn: deals end with the peace, and the computer players ask for goods or tribute |

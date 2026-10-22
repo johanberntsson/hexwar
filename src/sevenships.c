@@ -9,6 +9,7 @@
 #include "game.h"
 #include "input.h"
 #include "map.h"
+#include "picture.h"
 #include "region.h"
 #include "mega65.h"
 #include "screen.h"
@@ -54,13 +55,18 @@ int main(void)
     if (!region_load()) fatal("cannot read " REGION_FILE_NAME
                               " or it is not the one this build expects");
 #ifndef NO_TITLE
-    title_show();
+    title_splash(0);
 #endif
     if (!sheet_load()) fatal("cannot read " SHEET_FILE_NAME
                              " or it is not the sheet this build expects");
     if (!map_load()) fatal("cannot read " MAP_FILE_NAME);
 
     input_init();
+#ifndef NO_TITLE
+    title_splash(1);
+#else
+    picture_end();              // the tiles' palette, as sheet_load() left it
+#endif
 
     // Round again for every game retired from, back to the title screen.
     for (;;) {

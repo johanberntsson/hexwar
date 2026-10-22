@@ -14,6 +14,7 @@
 #include "screen.h"
 #include "sheet.h"
 #include "text.h"
+#include "unit.h"
 #include "view.h"
 
 #pragma clang section text="r4text" rodata="r4rodata"
@@ -60,7 +61,18 @@ static const byte terrain_order[] = {
     TILE_DESERT, TILE_FLOODPLAIN, TILE_FOREST, TILE_GRASS, TILE_HILLS,
     TILE_MOUNTAIN, TILE_OCEAN, TILE_PLAINS, TILE_SHALLOW_OCEAN, TILE_TUNDRA
 };
-static const char *const sub_heading[] = { "Options:", "Terrain Types:" };
+// Military Units' are the units' names, in alphabetical order too.
+static const byte unit_order[] = {
+    KIND_BUILDER, KIND_BOAT, KIND_GALLEY, KIND_MERCHANT, KIND_RAIDER,
+    KIND_SETTLER, KIND_SPEARMAN, KIND_WARRIOR
+};
+#define UNIT_PAGES (sizeof unit_order)
+#if MENU_UNIT != MENU_TERRAIN + TERRAIN_COUNT
+#error "MENU_UNIT in menu.h has to follow the terrains' commands"
+#endif
+static const char *const sub_heading[] = {
+    "Options:", "Terrain Types:", "Military Units:"
+};
 
 // Orders depends on the unit that has them, and menu_orders() fills it in.
 static const char *orders_items[2];
@@ -79,29 +91,35 @@ static const byte advisors_commands[] = { MENU_DIPLOMACY };
 static const char *const world_items[] = { "Top Five Cities", "Score" };
 static const byte world_commands[] = { MENU_TOP_CITIES, MENU_SCORE };
 
-static const char *const help_items[] = { "Keyboard Control", "Terrain Types" };
-static const byte help_commands[] = { MENU_KEYS, MENU_TERRAINS };
+static const char *const help_items[] = {
+    "Keyboard Control", "Terrain Types", "Military Units"
+};
+static const byte help_commands[] = { MENU_KEYS, MENU_TERRAINS, MENU_UNITS };
 
 #ifdef DEBUG_MENU
-static const char *const *const menu_items[MENUS + 2] = {
+static const char *const *const menu_items[MENUS + 3] = {
     game_items, orders_items, advisors_items, world_items, debug_items,
-    help_items, options_items, 0
+    help_items, options_items, 0, 0
 };
-static const byte *const menu_commands[MENUS + 2] = {
+static const byte *const menu_commands[MENUS + 3] = {
     game_commands, orders_commands, advisors_commands, world_commands,
-    debug_commands, help_commands, options_commands, 0
+    debug_commands, help_commands, options_commands, 0, 0
 };
-static byte menu_count[MENUS + 2] = { 3, 0, 1, 2, 2, 2, 1, TERRAIN_COUNT };
+static byte menu_count[MENUS + 3] = {
+    3, 0, 1, 2, 2, 3, 1, TERRAIN_COUNT, UNIT_PAGES
+};
 #else
-static const char *const *const menu_items[MENUS + 2] = {
+static const char *const *const menu_items[MENUS + 3] = {
     game_items, orders_items, advisors_items, world_items, help_items,
-    options_items, 0
+    options_items, 0, 0
 };
-static const byte *const menu_commands[MENUS + 2] = {
+static const byte *const menu_commands[MENUS + 3] = {
     game_commands, orders_commands, advisors_commands, world_commands,
-    help_commands, options_commands, 0
+    help_commands, options_commands, 0, 0
 };
-static byte menu_count[MENUS + 2] = { 3, 0, 1, 2, 2, 1, TERRAIN_COUNT };
+static byte menu_count[MENUS + 3] = {
+    3, 0, 1, 2, 3, 1, TERRAIN_COUNT, UNIT_PAGES
+};
 #endif
 
 #define ORDERS 1                // Orders' index in the tables above
@@ -109,19 +127,22 @@ static byte menu_count[MENUS + 2] = { 3, 0, 1, 2, 2, 1, TERRAIN_COUNT };
 #define HELP (MENUS - 1)
 #define OPTIONS MENUS           // the submenus
 #define TERRAINS (MENUS + 1)
+#define UNITS (MENUS + 2)
 
 // The menu each submenu opens from.
-static const byte sub_parent[] = { 0, HELP };
+static const byte sub_parent[] = { 0, HELP, HELP };
 
 static const char *item_name(byte m, byte i)
 {
     if (m == TERRAINS) return text_line(TEXT_LIST_TERRAINS, terrain_order[i]);
+    if (m == UNITS) return unit_kind_name[unit_order[i]];
     return menu_items[m][i];
 }
 
 static byte item_command(byte m, byte i)
 {
     if (m == TERRAINS) return MENU_TERRAIN + terrain_order[i];
+    if (m == UNITS) return MENU_UNIT + unit_order[i];
     return menu_commands[m][i];
 }
 
@@ -132,6 +153,7 @@ static const char *order_name(byte command)
     case MENU_IRRIGATE: return "Irrigate";
     case MENU_MINE: return "Mine";
     case MENU_FISH: return "Fish";
+    case MENU_EMPORIUM: return "Found Emporium";
     }
     return "Fortify";
 }
@@ -303,11 +325,13 @@ static byte run(byte m, byte sel)
             if (key == KEY_RETURN || key == KEY_SPACE) i = sel;
             if (i != 0xff) {
                 key = item_command(m, i);
-                if (key != MENU_OPTIONS && key != MENU_TERRAINS) {
+                if (key != MENU_OPTIONS && key != MENU_TERRAINS
+                    && key != MENU_UNITS) {
                     close_drop();
                     return key;
                 }
-                next = key == MENU_OPTIONS ? OPTIONS : TERRAINS;
+                next = key == MENU_OPTIONS ? OPTIONS
+                       : key == MENU_TERRAINS ? TERRAINS : UNITS;
                 parent_left = drop_left;
                 parent_width = drop_width;
                 parent_rows = n + 2;

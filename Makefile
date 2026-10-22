@@ -98,27 +98,27 @@ SRCS     = src/sevenships.c \
            src/topcities.c \
            src/diplomacy.c \
            src/trade.c \
-           src/path.c src/boat.c \
+           src/path.c src/boat.c src/emporium.c \
            src/save.c \
            src/text.c \
            src/game.c \
            src/turn.c src/hover.c src/score.c src/crisis.c \
            src/ai.c \
-           src/aiplace.c \
+           src/aiplace.c src/aibuild.c \
            src/improve.c \
            src/growth.c \
            src/combat.c \
            src/civ.c \
            src/popup.c \
            src/menu.c \
-           src/title.c \
+           src/title.c src/picture.c \
            src/region.c
 
 # The files whose code is in a MAP window region (src/region.h), compiled
 # without the shared instruction fragments that could be called across one.
-BANKED   = src/title.c src/turn.c src/hover.c src/score.c src/crisis.c src/aiplace.c src/cityscreen.c src/topcities.c src/diplomacy.c \
-           src/save.c src/sheet.c src/mapload.c src/help.c src/menu.c src/ai.c \
-           src/improve.c src/growth.c src/trade.c src/path.c src/boat.c
+BANKED   = src/title.c src/picture.c src/turn.c src/hover.c src/score.c src/crisis.c src/aiplace.c src/cityscreen.c src/topcities.c src/diplomacy.c \
+           src/save.c src/sheet.c src/mapload.c src/help.c src/menu.c src/ai.c src/aibuild.c \
+           src/improve.c src/growth.c src/trade.c src/path.c src/boat.c src/emporium.c
 
 # Assembly: src/bank.s, which banks BASIC out before main(), and
 # src/dispatch.s, the MAP window and the calls into it.
@@ -185,7 +185,15 @@ TEXTS    = $(RES)/text/help.txt \
            $(RES)/text/crisis_warning.txt \
            $(RES)/text/crisis_begins.txt \
            $(RES)/text/crisis_alone.txt \
-           $(RES)/text/crisis_plea.txt
+           $(RES)/text/crisis_plea.txt \
+           $(RES)/text/pedia_settler.txt \
+           $(RES)/text/pedia_warrior.txt \
+           $(RES)/text/pedia_builder.txt \
+           $(RES)/text/pedia_spearman.txt \
+           $(RES)/text/pedia_raider.txt \
+           $(RES)/text/pedia_galley.txt \
+           $(RES)/text/pedia_boat.txt \
+           $(RES)/text/pedia_merchant.txt
 TEXT_PAK = $(BUILD)/text.pak
 TEXT_IDS = $(BUILD)/textid.h
 
@@ -291,12 +299,17 @@ $(ELF) $(PRG) $(REGION_FILES) &: $(OBJS) $(LINKFILE) tools/packprg.py
 # opens them by name whatever their type.
 d81: $(D81)
 
-$(D81): $(PRG) $(REGION_FILES) $(MAP) $(RES)/tiles.fci $(TEXT_PAK) tools/diskutil.rb
+# The pictures, made by screens/Makefile and checked in (src/picture.h).
+PICTURES = $(RES)/intro.pic $(RES)/defeat.pic $(RES)/win_survival.pic \
+           $(RES)/win_hegemony.pic
+
+$(D81): $(PRG) $(REGION_FILES) $(MAP) $(RES)/tiles.fci $(TEXT_PAK) $(PICTURES) tools/diskutil.rb
 	rm -f $@
 	cp $(PRG) $(BUILD)/autoboot.c65
 	ruby tools/diskutil.rb $@ -name sevenships -id ss \
 	    -writeprg -copyf1 $(BUILD)/autoboot.c65 \
-	    -writeseq -copyf1 $(MAP) $(RES)/tiles.fci $(TEXT_PAK) $(REGION_FILES)
+	    -writeseq -copyf1 $(MAP) $(RES)/tiles.fci $(TEXT_PAK) $(REGION_FILES) \
+	    $(PICTURES)
 
 # The disk image as it is handed out. Plain `make release` after a test build
 # is safe, since the config stamp sees the flags change and rebuilds; what is

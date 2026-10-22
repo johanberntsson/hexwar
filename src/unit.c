@@ -17,17 +17,22 @@ byte unit_active = UNIT_NONE;
 byte unit_hidden;
 
 // The spearman is Civilization's phalanx, the galley its trireme, the
-// fishing boat Civilization IV's work boat.
+// fishing boat Civilization IV's work boat. The raider is the Sea Peoples'
+// swordsman, attack 3 against Civilization's barbarian legion's 4: with
+// the warriors' 1 they almost never took a guarded city, and the Crisis
+// was mild (22 Oct 2026). The merchant ship is vision.md's merchant fleet,
+// which founds emporia, as Civilization's caravan founds trade routes.
 const char *const unit_kind_name[] = {
-    "", "Settler", "Warrior", "Builder", "Spearman", "Galley", "Fishing Boat"
+    "", "Settler", "Warrior", "Builder", "Spearman", "Raider", "Galley",
+    "Fishing Boat", "Merchant"
 };
-const byte unit_kind_moves[] = { 0, 1, 1, 1, 1, 3, 2 };
-const byte unit_kind_cost[] = { 0, 30, 10, 20, 20, 40, 20 };
-const byte unit_kind_attack[] = { 0, 0, 1, 0, 1, 1, 0 };
-const byte unit_kind_defence[] = { 0, 1, 1, 1, 2, 1, 1 };
-static const byte unit_kind_tile[] = {
-    0, TILE_SETTLER, TILE_WARRIOR, TILE_BUILDER, TILE_SPEARMAN, TILE_GALLEY,
-    TILE_FISHING_BOAT
+const byte unit_kind_moves[] = { 0, 1, 1, 1, 1, 1, 3, 2, 3 };
+const byte unit_kind_cost[] = { 0, 30, 10, 20, 20, 30, 40, 20, 30 };
+const byte unit_kind_attack[] = { 0, 0, 1, 0, 1, 3, 1, 0, 0 };
+const byte unit_kind_defence[] = { 0, 1, 1, 1, 2, 1, 1, 1, 1 };
+const byte unit_kind_tile[] = {
+    0, TILE_SETTLER, TILE_WARRIOR, TILE_BUILDER, TILE_SPEARMAN, TILE_RAIDER,
+    TILE_GALLEY, TILE_FISHING_BOAT, TILE_MERCHANT
 };
 
 #define IS_WATER(T) ((T) == TILE_OCEAN || (T) == TILE_SHALLOW_OCEAN)

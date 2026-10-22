@@ -13,6 +13,13 @@
 
 // Clear the screen and put up the title, with "Loading" where the menu will
 // go. Call before the disk is read, so there is something to look at.
+// **The title's picture** (src/picture.h), at boot: with `loaded` 0 it
+// goes up in the map window, which the loads that follow leave alone, and
+// the panel says "Loading..."; with 1, once they are done and input_init()
+// has been, it waits for a key or a click and puts the tiles' palette in
+// place. Its key is the first of a FAKE_KEYS script.
+void title_splash(byte loaded);
+
 void title_show(void);
 
 // Run the menu until the player quits, starts a game or loads one, and

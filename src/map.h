@@ -74,8 +74,9 @@
 // sets it; nothing clears it. The map file has it clear everywhere.
 //
 // **Bits 4 and 5 are the builders' improvement** (src/improve.h): 0, or
-// MAP_IRRIGATED or MAP_MINED, never both, and 3 is free for one more. They
-// are drawn as an overlay over the terrain, the tile MAP_OVERLAY_TILE says.
+// MAP_IRRIGATED or MAP_MINED, or both, MAP_EMPORIUM, which a merchant ship
+// makes (src/emporium.h) and no builder can change. They are drawn as an
+// overlay over the terrain, the tile MAP_OVERLAY_TILE says.
 // Which leaves the low four bits for terrain, ten values of sixteen used;
 // roads will need a bit from somewhere else.
 //
@@ -86,6 +87,7 @@ extern byte map_tile[MAP_ROWS][MAP_COLUMNS];
 #define MAP_IMPROVEMENT 0x30
 #define MAP_IRRIGATED 0x10
 #define MAP_MINED 0x20
+#define MAP_EMPORIUM 0x30
 #define MAP_TERRAIN_MASK 0x0f
 // The overlay for a map byte whose MAP_IMPROVEMENT bits are not 0. **Not
 // on the shallows**, where MAP_IRRIGATED is fish worked by a fishing boat

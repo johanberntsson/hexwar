@@ -70,7 +70,8 @@ static const byte patch_cy[7] = { 2, 2, 5, 5, 5, 8, 8 };
 // settler from a city of size 1 waits at its cost until the city grows.
 // Then the spearman, only with bronze (player_bronze()), and the galley,
 // only with cedar in a coastal city; without them CHANGE says what is
-// missing. change() fills it.
+// missing. The fishing boat and the merchant ship, in a coastal city.
+// change() fills it.
 static byte buildable[KINDS];
 static byte buildable_n;
 #define BUILDABLE buildable_n
@@ -312,7 +313,10 @@ static void change(byte c)
     buildable_n = 3;
     if (copper && tin) buildable[buildable_n++] = KIND_SPEARMAN;
     if (cedar && coast) buildable[buildable_n++] = KIND_GALLEY;
-    if (coast) buildable[buildable_n++] = KIND_BOAT;
+    if (coast) {
+        buildable[buildable_n++] = KIND_BOAT;
+        buildable[buildable_n++] = KIND_MERCHANT;
+    }
 
     for (i = 0; i < BUILDABLE; ++i)
         if (buildable[i] == city_build[c]) sel = i;
@@ -323,7 +327,9 @@ static void change(byte c)
     screen_putsxy(TEXT_LEFT(BUILD_LEFT) + 14, LIST_ROW - 1, "shields",
                   COLOR_LIGHTGREY);
     for (i = 0; i < BUILDABLE; ++i) draw_choice(i, sel);
-    row = LIST_ROW + BUILDABLE + 1;
+    // Straight under the list: with the merchant ship there is no room
+    // for a blank line when the bronze note has two.
+    row = LIST_ROW + BUILDABLE;
     if (!(copper && tin)) {
         screen_putsxy(TEXT_LEFT(BUILD_LEFT), row++,
                       "Spearman needs bronze:", COLOR_LIGHTGREY);

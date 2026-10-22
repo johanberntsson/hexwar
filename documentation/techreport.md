@@ -106,6 +106,9 @@ most important routines included in each source file.
 |  |  |
 | path.c | routes along the shallows for galleys: a breadth-first search |
 | aiplace.c | where the computer players start, out of ai.c into region 0 |
+| aibuild.c | what each computer player's city builds, out of ai.c into region 2 |
+| emporium.c | merchant ships and the emporia they found on foreign coasts |
+| picture.c | full pictures in the map window, with their own palette: the title's and the end's |
 |  |  |
 | trade.c | goods exchanged between the peoples, as gifts or for other goods |
 | &nbsp;&nbsp;&nbsp;_trade\_turn_ | once a turn: deals end with the peace, and the computer players ask for goods or tribute |
@@ -144,42 +147,49 @@ most important routines included in each source file.
 
 The tools directory holds the build-time programs: `mapgen.py` generates the
 map, `mktiles.py` turns the tile PNGs in the tiles directory into the tile
-sheet, `res/tiles.fci`, and `diskutil.rb` (in Ruby, by Fredrik Ramsberg)
+sheet, `res/tiles.fci`, `mkpic.py` the pictures in the screens directory
+into `res/*.pic`, and `diskutil.rb` (in Ruby, by Fredrik Ramsberg)
 writes the disk image with a sector interleave suited to the MEGA65's floppy
 drive.
 
 ## Startup
 
 The build produces a disk image, `sevenships.d81` (`make release` copies it
-to `release/`), holding five files:
+to `release/`), holding these files:
 
 | **File** |  **Contents** |
 | -- |  ---- |
 | AUTOBOOT.C65 | the program, a C65-mode PRG loaded at \$2001 |
-| TILES.FCI | the tile sheet: a palette and 35 tiles of 4x4 full colour characters |
+| TILES.FCI | the tile sheet: a palette and 39 tiles of 4x4 full colour characters |
 | SEVENSHIPS.MAP | the map: a 16-byte header and one 4096-byte layer of terrain |
 | TEXT.PAK | the texts -- the title, help and new-game screens, the opening popup, and the lists of names -- with their markup |
 | SEVENSHIPS.R1 | code region 1, the computer players and the cities' growth: a header and the code, kept in Attic RAM and run at \$6000 from bank 1 |
-| SEVENSHIPS.R2 | code region 2, the city screen, Top Five Cities and the builders' improvements, the same way |
+| SEVENSHIPS.R2 | code region 2, the city screen, Top Five Cities, the builders' improvements and what the computer players' cities build, the same way |
 | SEVENSHIPS.R3 | code region 3, diplomacy, the same way |
-| SEVENSHIPS.R4 | code region 4, trade, the ships' routes, exploring and fishing, and the menus, the same way |
-| SEVENSHIPS.R5 | code region 5, the Crisis, the score and the end of the game, the same way |
+| SEVENSHIPS.R4 | code region 4, trade, the ships' routes, exploring and fishing, merchant ships and emporia, and the menus, the same way |
+| SEVENSHIPS.R5 | code region 5, the Crisis and the peoples' collapse, the score and the end of the game, and the pictures, the same way |
+| INTRO.PIC, DEFEAT.PIC, WIN_SURVIVAL.PIC, WIN_HEGEMONY.PIC | the pictures shown at boot and at the end: a palette and 60x23 full colour characters, 87 KB each |
 
 The C65 ROM boots AUTOBOOT.C65 automatically. `main()` then:
 
 1. keeps the VIC registers as BASIC left them (`screen_save`), switches the
    VIC-IV to 80x25 16-bit text mode with full colour characters
    (`screen_init`), reads TEXT.PAK into Attic RAM (`text_load`) and
-   SEVENSHIPS.R1 to .R5 into Attic RAM (`region_load`), and puts up the title
-   screen, which is one of those texts (`title_show`);
+   SEVENSHIPS.R1 to .R5 into Attic RAM (`region_load`), and reads
+   INTRO.PIC into the map window's tile store, palette first, so that the
+   title picture shows while the rest loads (`title_splash`);
 2. reads TILES.FCI, a character at a time. Each character is widened to twice
    its width, because a pixel of this screen mode is half as wide as it is
    tall, and each tile row, once its four characters are in, packed into
    the expanded sheet in bank 5, and bank 1 when that is full
-   (`sheet_load`);
+   (`sheet_load`). A row is staged in code slot 1, not in the tile store,
+   which holds the picture, and the sheet's palette goes to Attic RAM
+   rather than to the VIC, for `picture_end` to put in place once the
+   picture has gone;
 3. reads SEVENSHIPS.MAP: the terrain into `map_tile`, and the resources,
    a list sorted by hexagon row, into `map_res_*` (`map_load`);
-4. sets up the pointer sprites (`input_init`) and runs the title menu
+4. sets up the pointer sprites (`input_init`), waits for a key over the
+   picture and puts the tiles' palette in place, and runs the title menu
    (`title_run`): Start Game, Load Saved Game or Quit.
    Start Game then asks for a people (Mycenaeans, Hittites, Egyptians or
    Canaanites) and one of five difficulty levels. Each menu has a
@@ -191,8 +201,8 @@ The C65 ROM boots AUTOBOOT.C65 automatically. `main()` then:
    up (`game_load`), going back to step 4 if there is none;
 6. clears the tile store and enters the main loop (`game_run`).
 
-Apart from saving and loading a game, all disk access is finished by the
-end of step 3. The KERNAL stays available
+Apart from saving and loading a game, and the picture before the final
+score, all disk access is finished by the end of step 3. The KERNAL stays available
 throughout, because the only part of the ROM the program banks out is BASIC,
 at \$a000-\$bfff, and that before `main()` starts.
 
@@ -224,15 +234,15 @@ window shows one region of code at a time. The figures below are from the linker
 | \$1600-\$1637 | 0.05 | `zpsave`: BASIC's zero page \$02-\$39, saved at start-up and put back on exit |
 | \$1638-\$1b20 | 1.2 | the `lowfree` section (`LOW_FREE`): the popup's text, the scratch buffers of the view and the minimap, and the galleys' route search |
 | \$1b21-\$1eff | 1.0 | free |
-| \$2001-\$5a5b | 14.5 | BASIC stub, startup and resident code |
-| \$5a5c-\$5aa8 | 0.1 | initialised data: the DMA lists |
-| \$5aa9-\$5ba8 | 0.25 | C stack |
-| \$5ba9-\$5d4e | 0.4 | BSS: small state |
-| \$5d4f-\$5fff | 0.7 | free |
-| \$6000-\$7fff | 8 | the code window; region 0 as loaded (7.2 KB used) |
-| \$8000-\$9ffe | 8 | resident constant data and code |
-| \$a000-\$b941 | 6.3 | `highbss` (`HIGH_BSS`): the map `map_tile` (terrain, improvements, explored and occupied bits), the unit and city arrays (the cities' size and food box among them), the peoples' relations and attitudes, the trade deals, the sprite blocks, the AI's headings, the staging buffers of the texts and the regions, the texts' line buffers, the sheet loader's buffers and its rows' extents and addresses, the saved VIC registers, and the resources, a list by hexagon row |
-| \$b942-\$bfff | 1.7 | free |
+| \$2001-\$5b7f | 14.8 | BASIC stub, startup and resident code |
+| \$5b80-\$5bde | 0.1 | initialised data: the DMA lists |
+| \$5bdf-\$5cde | 0.25 | C stack |
+| \$5cdf-\$5e88 | 0.4 | BSS: small state |
+| \$5e89-\$5fff | 0.4 | free |
+| \$6000-\$7fff | 8 | the code window; region 0 as loaded (7.6 KB used) |
+| \$8000-\$9fee | 8 | resident constant data and code |
+| \$a000-\$ba40 | 6.6 | `highbss` (`HIGH_BSS`): the map `map_tile` (terrain, improvements, explored and occupied bits), the unit and city arrays (the cities' size and food box among them), the peoples' relations and attitudes, the trade deals, the emporia, the sprite blocks, the AI's headings, the staging buffers of the texts, the regions and the pictures, the texts' line buffers, the sheet loader's buffers and its rows' extents and addresses, the saved VIC registers, and the resources, a list by hexagon row |
+| \$ba41-\$bfff | 1.4 | free |
 
 The long texts and the names are not in this table at all: they are in
 TEXT.PAK, read into Attic RAM at start-up, which is most of why the
@@ -285,10 +295,12 @@ holds the screens that are not the map -- title, setup, help -- with
 save and load, the loaders of the tile sheet and the map, the end of a
 turn and the readout of what is under the arrow;
 region 1 holds the computer players and the cities' yields and growth;
-region 2 the city screen, Top Five Cities and the builders'
-improvements; region 3 diplomacy; region 4 trade, the ships' routes,
-exploring and fishing, and the menus; region 5 the Crisis, the score
-and the end of the game.
+region 2 the city screen, Top Five Cities, the builders'
+improvements and what the computer players' cities build, which calls
+the improvements for every city and so is beside them; region 3
+diplomacy; region 4 trade, the ships' routes, exploring and fishing,
+merchant ships and emporia, and the menus; region 5 the Crisis and the
+peoples' collapse, the score and the end of the game, and the pictures.
 
 Resident code calls a function in a region through a stub of the same
 name (`src/dispatch.s`), which maps the region in (copying it into its
@@ -313,7 +325,7 @@ and the main loop stay resident, where a call costs nothing.
 | \$20000-\$3ffff | 128 | The C65 ROM, left in place |
 | \$40000-\$56fff | 92 | The tile store: the map window's character definitions, and in the row padding the minimap's 80 and the owners' flags |
 | \$57000-\$5ffff | 36 | The expanded tile sheet, first area |
-| \$08000000- | 8192 | Attic RAM: the texts from TEXT.PAK at the bottom, the code regions from \$08010000, 8 KB each, the rest free |
+| \$08000000- | 8192 | Attic RAM: the texts from TEXT.PAK at the bottom, the tiles' palette at \$0800f000 (for after a picture), the code regions from \$08010000, 8 KB each, the rest free |
 | \$0ff81000-\$0ff81f9f | 4 | Colour RAM |
 
 **The tile store** is the heart of the display. A screen cell in this mode is a
@@ -337,7 +349,7 @@ the store is 94208 bytes, which leaves banks 2 and 3, the ROM, alone. A larger
 window would need the ROM banked out, with everything that brings with it;
 `src/view.h` stops the build if the store outgrows \$60000.
 
-**The expanded sheet** is the tile art as it is drawn: 35 tiles of 8x4
+**The expanded sheet** is the tile art as it is drawn: 39 tiles of 8x4
 characters, 2 KB each as drawn, but packed. It is in chip RAM rather
 than in Attic RAM because the redraw copies about 160 KB out of it, and DMA
 reading Attic RAM is about seven times slower than reading chip RAM on the
@@ -348,7 +360,7 @@ program notes which characters of each tile row have any pixels, keeps
 only those, and records where each row went, its bank and address: a
 unit or an improvement, a small picture in the middle of its tile, then
 takes a fraction of a whole tile's room and costs a fraction of its
-copying. The 35 tiles take 51 KB of the 68 KB the two parts hold. No
+copying. The 39 tiles take 56 KB of the 68 KB the two parts hold. No
 row crosses a bank, so a source address is 16 bits, and the redraw
 changes the DMA's source bank only when a row is in the other part.
 
@@ -451,6 +463,7 @@ terrain is drawn, and their overlays are drawn after the next row's terrain.
 | Computer players | `ai_turn` for each of the three: what each city builds, and every unit's move. A player with two warriors, one fortified, and a builder has a city build a settler, which founds a new city on the nearest good site within six hexagons, at least four from any other city, up to four cities |
 | Barbarians | `ai_barbarians`: perhaps a new band, then every barbarian's move |
 | Diplomacy | `diplomacy_turn`, and `trade_turn` at its end: contact between all the peoples, deals ended by war, goods asked for, the attitudes, ceasefires running out, and each computer player's war, ceasefire or peace with each other player one turn in four; what concerns the player waits as letters, shown over the map once it is redrawn |
+| The Crisis | `crisis_turn`: a people that has lost its capital breaks up, its furthest cities going over to the rebels (the barbarians), and from 1200 BC the omens, the Sea Peoples' fleets and the shocks |
 | Production | every city adds its shields (its own hexagon's, at least 1, plus its best neighbour's); one that reaches the cost of what it is building puts the unit on its hexagon and keeps the surplus |
 | New turn | the turn number goes up, the year moves on ten years from 1600 BC, and every unit gets its moves back |
 
@@ -466,7 +479,7 @@ The orders a unit can be given are:
 | **Key** |  **Order** |
 | -- |  ---- |
 | 0, -, p, \*, :, = | move north-west, north-east, west, east, south-west, south-east |
-| b | found a city (settlers only); the settler becomes the city |
+| b | found a city (settlers); the settler becomes the city. A merchant ship founds an emporium on the coast next to it instead |
 | space | no orders this turn |
 | w | wait: ask again after the other units |
 | f | fortify: no orders until woken |
@@ -499,8 +512,11 @@ wins with probability *attack* / (*attack* + *defence*):
 | **Unit** | **Attack** | **Defence** |
 | -- | - | - |
 | Warrior | 1 | 1 |
-| Settler | 0 | 1 |
-| Builder | 0 | 1 |
+| Spearman (bronze) | 1 | 2 |
+| Raider (the Sea Peoples only) | 3 | 1 |
+| Settler, builder | 0 | 1 |
+| Galley | 1 | 1 |
+| Fishing boat, merchant ship | 0 | 1 |
 
 The defence is worth half as much again on hills and twice as much on
 mountains, and half as much again to a unit that is fortified or in a city.

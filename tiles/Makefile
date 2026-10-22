@@ -17,7 +17,9 @@ TERRAIN = tile_plains_hill.png tile_grass.png tile_mountain.png tile_ocean.png \
 # The overlays come after: drawn over a terrain, never instead of one. overlay_mine.png is the mine cut
 # out of alltiles' plains and tundra hill mines (what the two have in common
 # and neither bare hill has); overlay_irrigation.png is a placeholder.
-OVERLAYS = overlay_irrigation.png overlay_mine.png
+# overlay_emporium.png is alltiles' bazaar, scaled into lines 8-23: the
+# fourth value of the improvement bits (MAP_EMPORIUM in src/map.h).
+OVERLAYS = overlay_irrigation.png overlay_mine.png overlay_emporium.png
 # The resources, overlays too, in RES_* order (src/map.h) from tile 18. res_cattle, res_copper and res_tin are alltiles' cattle, copper
 # and iron cut to pixel lines 8-23; res_olives and res_wine its orange trees
 # recoloured; res_grain, res_fish, res_cedar and res_dye placeholders.
@@ -33,11 +35,13 @@ MINES = res_copper_mine.png res_tin_mine.png
 IRRIGATED = res_cattle_pasture.png res_olives_grove.png res_wine_vineyard.png
 # Then the galley (milestone 9) and the fishing boat, alltiles' galley and
 # work boat as they are, and fish worked by a fishing boat, alltiles'
-# tile_fish_improved.
+# tile_fish_improved. Then the Sea Peoples' raider (milestone 10's Crisis),
+# alltiles' swordsman as it is; and the merchant ship, its cargo ship.
 TILES = $(TERRAIN) tile_city.png tile_select.png \
         unit_settler.png unit_warrior.png unit_builder.png tile_undiscovered.png \
         $(OVERLAYS) $(RESOURCES) $(MINES) unit_spearman.png $(IRRIGATED) \
-        unit_galley.png unit_fishing_boat.png res_fish_boats.png
+        unit_galley.png unit_fishing_boat.png res_fish_boats.png \
+        unit_raider.png unit_merchant.png
 
 all: ../res/tiles.fci
 

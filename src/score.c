@@ -11,9 +11,11 @@
 #include "growth.h"
 #include "input.h"
 #include "map.h"
+#include "picture.h"
 #include "screen.h"
 #include "trade.h"
 #include "unit.h"
+#include "view.h"
 
 #pragma clang section text="r5text" rodata="r5rodata"
 
@@ -87,13 +89,54 @@ static void put_year(byte x, byte y)
     screen_putsxy(x + length(number(game_year)) + 1, y, "BC", COLOR_WHITE);
 }
 
+// Whether the human's score is above every other people still standing.
+static byte highest(void)
+{
+    byte p;
+    word mine;
+
+    figures(PLAYER_HUMAN);
+    mine = figure[FIGURES - 1];
+    for (p = 0; p < PLAYERS; ++p) {
+        if (p == PLAYER_HUMAN || !player_alive(p)) continue;
+        figures(p);
+        if (figure[FIGURES - 1] >= mine) return 0;
+    }
+    return 1;
+}
+
+// Until a key or a click.
+static void wait_key(void)
+{
+    byte key;
+    do {
+        screen_wait_raster(SCREEN_ROW_LINE(SCREEN_ROWS - 1));
+        key = input_poll();
+    } while (!key);
+}
+
+// **The end's picture** (src/picture.h), in the map window, with the
+// panel cleared but for a line or two, before the table.
+static void end_picture(byte alive, byte best)
+{
+    screen_clear();
+    view_init();
+    picture_show(!alive ? PICTURE_DEFEAT
+                 : best ? PICTURE_HEGEMONY : PICTURE_SURVIVAL);
+    screen_putsxy(1, 10, "The end of the", COLOR_WHITE);
+    screen_putsxy(1, 11, "Bronze Age", COLOR_WHITE);
+    screen_putsxy(1, 13, "Press a key", COLOR_LIGHTGREY);
+    wait_key();
+    picture_end();
+}
+
 void score_screen(byte how)
 {
-    byte p, i, x, y, key, alive = player_alive(PLAYER_HUMAN), best = 1;
-    word mine = 0;
+    byte p, i, x, y, alive = player_alive(PLAYER_HUMAN), best = highest();
 
     sprite_hide(2);             // the minimap's outline, which is gone
     sprite_hide(3);
+    if (how == SCORE_END) end_picture(alive, best);
     screen_clear();
     screen_putsxy(PEOPLE_LEFT, 2,
                   how == SCORE_END ? "The end of the Bronze Age,"
@@ -116,8 +159,6 @@ void score_screen(byte how)
 
     for (i = 0; i < FIGURES; ++i)
         put_right(column_right[i], TABLE_TOP, heading[i], COLOR_LIGHTGREY);
-    figures(PLAYER_HUMAN);
-    mine = figure[FIGURES - 1];
     for (p = 0; p < PLAYERS; ++p) {
         y = TABLE_TOP + 2 + 2 * p;
         screen_putsxy(PEOPLE_LEFT, y, player_people(p),
@@ -134,7 +175,6 @@ void score_screen(byte how)
             continue;
         }
         figures(p);
-        if (p != PLAYER_HUMAN && figure[FIGURES - 1] >= mine) best = 0;
         for (i = 0; i < FIGURES; ++i)
             put_right(column_right[i], y, number(figure[i]),
                       i == FIGURES - 1 ? COLOR_YELLOW : COLOR_LIGHTGREEN);
@@ -161,12 +201,5 @@ void score_screen(byte how)
     }
     screen_putsxy(0, EXIT_ROW, "Esc or Return to go on", COLOR_LIGHTGREY);
     screen_putsxy(EXIT_LEFT, EXIT_ROW, EXIT_TEXT, BUTTON_EXIT);
-
-    for (;;) {
-        screen_wait_raster(SCREEN_ROW_LINE(SCREEN_ROWS - 1));
-        key = input_poll();
-        if (key == KEY_ESC || key == KEY_RUNSTOP || key == KEY_RETURN
-            || key == KEY_SPACE || key == KEY_CLICK)
-            return;
-    }
+    wait_key();
 }

@@ -2,8 +2,13 @@
 // under these names here.
 #define ai_turn ai_turn_r1
 #define ai_barbarians ai_barbarians_r1
+// And for src/aibuild.c (aiint.h).
+#define guards_wanted ai_guards_wanted_r1
+#define find_far_site ai_find_far_site_r1
+#define work_site ai_work_site_r1
 
 #include "ai.h"
+#include "aiint.h"
 #include "city.h"
 #include "combat.h"
 #include "game.h"
@@ -11,19 +16,12 @@
 #include "improve.h"
 #include "map.h"
 #include "boat.h"
+#include "emporium.h"
 #include "path.h"
 #include "sheet.h"
 #include "unit.h"
 
 #pragma clang section text="r1text" rodata="r1rodata"
-
-// A computer player stops building units, settlers apart, at AI_UNIT_BASE
-// plus AI_UNITS_A_CITY for each city, up to AI_UNIT_MAX -- a guard and a
-// builder a city and a few to explore -- so that three of them and the
-// barbarians cannot fill the MAX_UNITS slots every player shares.
-#define AI_UNIT_BASE 3
-#define AI_UNITS_A_CITY 2
-#define AI_UNIT_MAX 12
 
 // Expansion, after Civilization's production rules: a city builds a
 // settler -- one at a time, and not counted against the unit cap, since it
@@ -32,11 +30,10 @@
 // or the player has no settler at all, and has a site within SETTLE_RANGE
 // hexagons: grassland, plains, floodplain or hills, SITE_LAND land
 // neighbours or more, and at least CITY_SPACING hexagons from every city.
-// No more than AI_CITY_CAP cities; MAX_CITIES is shared with the human.
+// No more than AI_CITY_CAP cities (aiint.h).
 #define SETTLE_RANGE 6
 #define CITY_SPACING 4
 #define SITE_LAND 3
-#define AI_CITY_CAP 6
 
 // Odds, as combat_worth() takes them: a computer player's warrior attacks
 // when its attack is at least 3/4 of the defence, a barbarian at 1/4 --
@@ -364,21 +361,6 @@ static byte home(byte u)
     return best;
 }
 
-// Whether city c has fish next to it that no fishing boat works yet.
-static byte fish_to_work(byte c)
-{
-    byte dir, nx, ny;
-    for (dir = 0; dir < 6; ++dir)
-        if (map_neighbour(city_ax[c], city_ay[c], dir, &nx, &ny)
-            && map_resource_at(nx, ny) == RES_FISH
-            && !(map_tile[ny][nx] & MAP_IRRIGATED))
-            return 1;
-    return 0;
-}
-
-// A player builds a galley once it has this many cities, and cedar.
-#define GALLEY_CITIES 3
-
 // How many of p's units other than u are fortified in city c.
 static byte guards(byte p, byte u, byte c)
 {
@@ -396,17 +378,12 @@ static byte guards(byte p, byte u, byte c)
 // within THREAT_RANGE, its "defend" policy.
 #define THREAT_RANGE 3
 
-// Warriors a player keeps exploring, not guarding: one, and one more for
-// every three cities. Without them the guards take every warrior built,
-// and in 100 turns of autoplay the player had seen 139 of 1100 hexagons of
-// a continent everybody shared, and met nobody.
-#define EXPLORERS(CITIES) (1 + (CITIES) / 3)
 #define RECALL_RANGE 4
 
 // **None before the barbarians come** (BARB_FIRST_TURN) unless an enemy is
 // near: until then nobody attacks, and the warrior every people starts
 // with explores instead of standing in its first city.
-static byte guards_wanted(byte c)
+byte guards_wanted(byte c)
 {
     byte n = 1 + (city_size[c] >> 2);
     // In the Crisis a city by the sea wants one more, for the Sea Peoples.
@@ -431,21 +408,6 @@ static byte spearman_in(byte c)
     return 0;
 }
 
-// With a spearman in city c, the warriors fortified there beyond the
-// guards it wants are disbanded: the spearman has replaced them, and the
-// unit cap and the places in the unit list are wanted for other things.
-static void retire(byte p, byte c)
-{
-    byte v;
-    if (!spearman_in(c)) return;
-    for (v = 0; v < MAX_UNITS; ++v)
-        if (guards(p, UNIT_NONE, c) > guards_wanted(c)
-            && unit_kind[v] == KIND_WARRIOR && unit_owner[v] == p
-            && unit_orders[v] == ORDERS_FORTIFY
-            && unit_ax[v] == city_ax[c] && unit_ay[v] == city_ay[c])
-            unit_remove(v);
-}
-
 // Attack a neighbouring enemy if the odds are `odds` or better (see
 // combat_worth()). Whether it did.
 static byte attack_near(byte u, byte odds)
@@ -463,12 +425,29 @@ static byte attack_near(byte u, byte odds)
 }
 
 // Towards the nearest enemy within `range`, or exploring if there is none.
+// **One that comes no nearer in FERRY_PATIENCE turns asks for the galley**
+// (ferry()), as a settler does: the enemy is over the water.
+static byte first_of(byte p, byte kind, byte work);
+#define FERRY_PATIENCE 6
+#define WANTS_FERRY 0xff
+
 static void hunt(byte u, word range)
 {
-    if (nearest(unit_owner[u], unit_ax[u], unit_ay[u]) <= range)
-        approach(u, near_x, near_y);
-    else
+    byte p = unit_owner[u];
+    word d = nearest(p, unit_ax[u], unit_ay[u]);
+
+    if (d > range) {
         explore(u);
+        return;
+    }
+    approach(u, near_x, near_y);
+    if (unit_kind[u] == KIND_NONE || p == PLAYER_BARBARIAN) return;
+    if (nearest(p, unit_ax[u], unit_ay[u]) < d)
+        unit_work[u] = 0;
+    else if (unit_work[u] < FERRY_PATIENCE)
+        ++unit_work[u];
+    else if (first_of(p, KIND_GALLEY, 0) != UNIT_NONE)
+        unit_work[u] = WANTS_FERRY;
 }
 
 // A hexagon round city c that wants improving and has nobody on it, into
@@ -477,7 +456,7 @@ static void hunt(byte u, word range)
 // there is none.
 static byte work_x, work_y;
 
-static byte work_site(byte c)
+byte work_site(byte c)
 {
     byte pass, dir, nx, ny, w;
 
@@ -541,9 +520,8 @@ static byte to_work(byte u, byte c)
 
 // A site for player p within reach of (fx, fy): SETTLE_RANGE, or with a
 // galley FERRY_RANGE, over the water.
-static byte first_of(byte p, byte kind, byte work);
 
-static byte find_far_site(byte p, byte fx, byte fy)
+byte find_far_site(byte p, byte fx, byte fy)
 {
     byte found = find_site(fx, fy);
     if (!found && first_of(p, KIND_GALLEY, 0) != UNIT_NONE) {
@@ -564,9 +542,11 @@ static byte find_far_site(byte p, byte fx, byte fy)
 // alongside and the settler boards it; the galley then sails for the
 // nearest site from the sea (find_site() from where it is), and next to
 // land within reach of it wakes the settler, who steps ashore and walks
-// on. One galley a people, and armies are not ferried yet.
-#define FERRY_PATIENCE 6
-#define WANTS_FERRY 0xff
+// on. **Armies too** (22 Oct 2026): a warrior or spearman that comes no
+// nearer the enemy it hunts asks in the same way (hunt()), and the galley
+// takes it to the nearest city of a people its owner is at war with
+// (enemy_city()), where it goes ashore and attacks as it would on land.
+// One galley a people.
 #define LANDING_RANGE 2
 
 static byte is_water(byte ax, byte ay)
@@ -616,7 +596,7 @@ static byte cargo(byte u)
     return n;
 }
 
-// Settler u, waiting for a ferry: aboard a galley next to it, or towards
+// Settler or soldier u, waiting for a ferry: aboard a galley next to it, or towards
 // the galley until it is on the coast. With the galley gone it gives up.
 static void ferry_wait(byte u)
 {
@@ -629,7 +609,7 @@ static void ferry_wait(byte u)
     }
     for (dir = 0; dir < 6; ++dir)
         if (map_neighbour(unit_ax[u], unit_ay[u], dir, &nx, &ny)
-            && unit_can_enter(unit_owner[u], KIND_SETTLER, nx, ny)
+            && unit_can_enter(unit_owner[u], unit_kind[u], nx, ny)
                    == ENTER_BOARD) {
             unit_move_to(u, nx, ny);        // aboard, and sentried
             unit_work[u] = 0;
@@ -675,16 +655,57 @@ static byte sail(byte u, byte tx, byte ty)
     return dir != DIR_NONE && step(u, dir);
 }
 
-// Galley u: with a settler aboard, to its site; without, to a settler
-// waiting for it; with nobody to ferry, exploring the coasts
-// (boat_explore()). A settler it
-// cannot reach is let go, to walk or to ask again later.
+// The nearest city to (ax, ay) of a people p is at war with, the rebels'
+// included, into (site_x, site_y). Whether there is one.
+static byte enemy_city(byte p, byte ax, byte ay)
+{
+    byte c;
+    word d, best = 0xffff;
+    for (c = 0; c < city_count; ++c) {
+        if (city_owner[c] == p || !at_war(p, city_owner[c])) continue;
+        d = distance(ax, ay, city_ax[c], city_ay[c]);
+        if (d < best) {
+            best = d;
+            site_x = city_ax[c];
+            site_y = city_ay[c];
+        }
+    }
+    return best != 0xffff;
+}
+
+// Where galley u's cargo is going, into (site_x, site_y): a settler's
+// site, or a soldier's enemy. Whether there is anywhere.
+static byte destination(byte u)
+{
+    byte v, p = unit_owner[u], ax = unit_ax[u], ay = unit_ay[u];
+    for (v = 0; v < MAX_UNITS; ++v)
+        if (unit_kind[v] == KIND_SETTLER && unit_ax[v] == ax
+            && unit_ay[v] == ay)
+            return find_far_site(p, ax, ay);
+    return enemy_city(p, ax, ay);
+}
+
+// p's first land unit waiting for the galley, or UNIT_NONE.
+static byte waiting(byte p)
+{
+    byte v;
+    for (v = 0; v < MAX_UNITS; ++v)
+        if (unit_kind[v] != KIND_NONE && !KIND_IS_SHIP(unit_kind[v])
+            && unit_owner[v] == p && unit_work[v] == WANTS_FERRY)
+            return v;
+    return UNIT_NONE;
+}
+
+// Galley u: with cargo aboard, to where it is going (destination());
+// without, to a settler or a soldier waiting for it; with nobody to
+// ferry, exploring the coasts (boat_explore()). One it cannot reach is
+// let go, to walk or to ask again later.
 static void ferry(byte u)
 {
     byte s, p = unit_owner[u], ax = unit_ax[u], ay = unit_ay[u];
 
     if (cargo(u)) {
-        if (find_far_site(p, ax, ay)) {
+        if (destination(u)) {
             if (distance(ax, ay, site_x, site_y) <= LANDING_RANGE
                 && next_to_land(ax, ay)) {
                 unit_wake_cargo(u);
@@ -696,8 +717,10 @@ static void ferry(byte u)
         boat_explore(u);
         return;
     }
-    s = first_of(p, KIND_SETTLER, WANTS_FERRY);
-    if (s == UNIT_NONE) {
+    s = waiting(p);
+    // Not until it is on the coast: the route to an inland hexagon fails,
+    // and would let it go before it got there.
+    if (s == UNIT_NONE || !next_to_water(unit_ax[s], unit_ay[s])) {
         boat_explore(u);
         return;
     }
@@ -765,9 +788,17 @@ static void move_unit(byte u)
         // its own guard, or every explorer would be called home as soon as
         // a city grew.
         if (attack_near(u, AI_ODDS)) return;
+        if (unit_work[u] == WANTS_FERRY) {
+            // Waiting for the galley, while there is still a war to go to.
+            if (enemy_city(unit_owner[u], ax, ay)) {
+                ferry_wait(u);
+                return;
+            }
+            unit_work[u] = 0;
+        }
         c = home(u);
         // A spearman also goes home to a city with none, to take the
-        // warriors' place (retire()).
+        // warriors' place (retire(), src/aibuild.c).
         if (c != CITY_NONE
             && distance(ax, ay, city_ax[c], city_ay[c]) <= RECALL_RANGE
             && (guards(unit_owner[u], u, c) < guards_wanted(c)
@@ -792,6 +823,10 @@ static void move_unit(byte u)
         // A fishing boat explores the coasts, which is how a people meets
         // the others across the water before it has cedar for a galley.
         boat_explore(u);
+        break;
+    case KIND_MERCHANT:
+        // To the coast by a good its people lacks, and an emporium there.
+        emporium_ai(u);
         break;
     case KIND_BUILDER:
         // 5. Copper and tin next to any of its people's cities first, for
@@ -832,9 +867,7 @@ static void move_unit(byte u)
 
 void ai_turn(byte p)
 {
-    byte c, u, cap, kind, guard;
-    byte cities = 0, settlers, builders, galleys, boats, explorers = 0;
-    byte units = unit_count_kind(p, KIND_NONE) - unit_count_kind(p, KIND_SETTLER);
+    byte c, u;
 
     if (!player_alive(p)) return;
     unit_begin_turn(p);
@@ -845,76 +878,8 @@ void ai_turn(byte p)
     for (c = 0; c < city_count; ++c)
         if (city_owner[c] == p) seen(p, city_ax[c], city_ay[c]);
 
-    for (c = 0; c < city_count; ++c)
-        if (city_owner[c] == p) ++cities;
-    cap = AI_UNIT_BASE + AI_UNITS_A_CITY * cities;
-    if (cap > AI_UNIT_MAX) cap = AI_UNIT_MAX;
-    settlers = unit_count_kind(p, KIND_SETTLER);
-    builders = unit_count_kind(p, KIND_BUILDER);
-    galleys = unit_count_kind(p, KIND_GALLEY);
-    boats = unit_count_kind(p, KIND_BOAT);
-    for (u = 0; u < MAX_UNITS; ++u)
-        if (unit_kind[u] == KIND_WARRIOR && unit_owner[u] == p
-            && unit_orders[u] != ORDERS_FORTIFY)
-            ++explorers;
-
-    // What each city builds, decided afresh every turn, after Civilization:
-    // 1. guards first, while it has fewer than guards_wanted() -- with
-    // none at all even over the cap; then explorers, warriors that are not
-    // guarding, up to EXPLORERS(); 2. a settler from a city with a citizen
-    // and food to spare, or from the first with a citizen if there is no
-    // settler about, and a site in reach -- settlers out and cities together no more than
-    // AI_CITY_CAP; then up to the cap 3. a builder for each city that has
-    // hexagons to improve, and 4. warriors to explore and fight. Changing
-    // keeps the shields, so nothing is lost by it. With bronze the guards
-    // are spearmen, defence 2 to a warrior's 1.
-    guard = player_bronze(p) ? KIND_SPEARMAN : KIND_WARRIOR;
-    for (c = 0; c < city_count; ++c) {
-        if (city_owner[c] != p) continue;
-        retire(p, c);
-        u = guards(p, UNIT_NONE, c);
-        city_work(c);
-        if (u < guards_wanted(c) && (u == 0 || units < cap)) {
-            kind = guard;
-        } else if (guard == KIND_SPEARMAN && !spearman_in(c)) {
-            // Bronze come to a city guarded by warriors: one spearman, over
-            // the cap if need be, since the warriors it replaces go once it
-            // is in (retire()).
-            kind = KIND_SPEARMAN;
-        } else if (explorers < EXPLORERS(cities) && units < cap) {
-            kind = KIND_WARRIOR;
-            ++explorers;
-        } else if (cities + settlers < AI_CITY_CAP && city_size[c] >= 2
-                   && (work_food > 2 * city_size[c] + 1 || !settlers)
-                   && find_far_site(p, city_ax[c], city_ay[c])) {
-            kind = KIND_SETTLER;
-            ++settlers;
-        } else if (!boats && city_coastal(c)) {
-            // One fishing boat, to explore the coasts, over the cap if need
-            // be: usually the first city's first build after its warrior.
-            kind = KIND_BOAT;
-            ++boats;
-        } else if (!galleys && cities >= GALLEY_CITIES && city_coastal(c)
-                   && player_has(p, RES_CEDAR)) {
-            // One galley, to explore the coasts, over the cap if need be.
-            kind = KIND_GALLEY;
-            ++galleys;
-        } else if (boats < 2 && city_size[c] >= 2 && fish_to_work(c)) {
-            // A second boat, to work the fish (boat_explore()): over the
-            // cap, since it is used up once it gets there. Not from a city
-            // of size 1, which would rather grow and send a settler.
-            kind = KIND_BOAT;
-            ++boats;
-        } else if (units >= cap) {
-            kind = KIND_NONE;
-        } else if (builders < cities && work_site(c)) {
-            kind = KIND_BUILDER;
-            ++builders;
-        } else {
-            kind = KIND_WARRIOR;
-        }
-        city_build[c] = kind;
-    }
+    // What each city builds: src/aibuild.c, in region 2.
+    ai_build(p);
 
     for (u = 0; u < MAX_UNITS; ++u) {
         if (unit_kind[u] == KIND_NONE || unit_owner[u] != p) continue;
@@ -932,7 +897,7 @@ static byte empty_land(byte ax, byte ay)
 
 void ai_barbarians(word turn)
 {
-    byte u, ax, ay, tries, dir, nx, ny;
+    byte u, c, ax, ay, tries, dir, nx, ny;
 
     unit_begin_turn(PLAYER_BARBARIAN);
     if (turn >= BARB_FIRST_TURN && !(rnd() & BARB_CHANCE)
@@ -955,8 +920,25 @@ void ai_barbarians(word turn)
         }
     }
 
+    // **The rebels' cities** (src/crisis.c, a people's collapse or a
+    // revolt) keep a guard: they build a warrior while nobody is fortified
+    // in them, the first barbarian in one stays as its guard, and a guard
+    // stays put. The rest go raiding as barbarians do.
+    for (c = 0; c < city_count; ++c)
+        if (city_owner[c] == PLAYER_BARBARIAN)
+            city_build[c] = guards(PLAYER_BARBARIAN, UNIT_NONE, c)
+                            ? KIND_NONE : KIND_WARRIOR;
     for (u = 0; u < MAX_UNITS; ++u) {
         if (unit_owner[u] != PLAYER_BARBARIAN) continue;
+        c = city_at(unit_ax[u], unit_ay[u]);
+        if (c != CITY_NONE && unit_kind[u] != KIND_NONE
+            && !KIND_IS_SHIP(unit_kind[u])) {
+            if (unit_orders[u] == ORDERS_FORTIFY) continue;
+            if (!guards(PLAYER_BARBARIAN, u, c)) {
+                unit_orders[u] = ORDERS_FORTIFY;
+                continue;
+            }
+        }
         while (unit_kind[u] != KIND_NONE && unit_moves[u]) move_unit(u);
     }
 }

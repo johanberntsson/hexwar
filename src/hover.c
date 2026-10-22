@@ -65,6 +65,7 @@ void game_draw_hover(void)
             // Short, so that "Canaanite Builder  Mountains+mine 127,31"
             // still fits in the 40 columns.
             if (x) line_add(x == MAP_MINED ? "+mine"
+                            : x == MAP_EMPORIUM ? "+emporium"
                             : MAP_TERRAIN(ax, ay) == TILE_SHALLOW_OCEAN ? "+boats"
                             : "+irr");
             // What it yields, food/shields/trade, where there is room:

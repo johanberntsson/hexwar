@@ -1,16 +1,16 @@
 --- OPEN ---
 
-NEXT (agreed 22 Oct 2026; CLAUDE.md "Where to start next time"):
-1. Room in region 1 (38 bytes free): move part of ai.c that runs once a turn -- probably
-   what each city builds -- into a region of its own, checked byte-identical by autoplay
-2. The end screens' pictures (screens/): converted, and shown in place of the map view
-3. The computer players' collapse (milestone 10, below)
-4. Tune the Crisis from play: it is mild
-5. Milestone 9's rest: ferrying armies, merchant fleets and emporia
-6. Help/Military Units
-Room: resident 704 bytes, region 0 0.8 KB, region 1 38 bytes, region 2 2.6 KB, region 3
-2.3 KB, region 4 1.9 KB, region 5 4.0 KB, highram 1.7 KB; the tile sheet has about 18 KB,
-a dozen units (make in tiles/ says). All of 22 Oct 2026's work runs on a real MEGA65
+NEXT (22 Oct 2026, after items 1-6 of the last list were done; CLAUDE.md "Where to start
+next time"):
+1. Try on a real MEGA65: the boot splash and the end pictures, the collapse and the rebels'
+   cities, the raider, ferried armies, merchant ships and emporia, Help/Military Units
+2. Tune from play: the Crisis, the collapse, how often the AI builds merchant ships
+3. Room: region 4 has 0.2 KB -- move the menus (src/menu.c) out of it; resident 392 bytes
+4. The rest of 9 and 10 below: AI galleys against the Sea Peoples, a deal ending when its
+   good is lost, trade carried by merchant ships; then monuments and the legacy victory
+Room: resident 392 bytes, region 0 0.4 KB, region 1 178 bytes, region 2 1.6 KB, region 3
+2.2 KB, region 4 0.2 KB, region 5 2.7 KB, highram 1.4 KB; the tile sheet 12 KB, about
+eight units (make in tiles/ says)
 
 The AI ferries settlers now, but rarely: most peoples reach AI_CITY_CAP (6) on their own land
 before they have a galley. Raise the cap (7-8, MAX_CITIES is 32 shared) if overseas cities
@@ -27,16 +27,21 @@ peoples within 7 hexagons), and in 300 turns of autoplay on seed 1 only the Egyp
 and Canaanites fought. A computer player accepts a ceasefire the turn the human declares
 war on it if it is the weaker.
 
+Need cultural building and monument/wonders for the lasting legacy win. This also means
+wonders and Help/Wonders screen with descriptions. The Lion Gate, Pyramids etc
+(if it fits the time period - the oldest pyramids are probably too old anyway)
+
+Need city advisor screen (list of cities and basic stats (production etc). POssible to go into
+a city screen by selecting on city from this advisor screen.
+
+Need a financial adviros screen that shows main stats - income and expenses
+
+Evenually need to adjust game/AI for the difficulty levels (probably need to cheat
+on highter levels to make the game challenging)
 
 There's no visual feedback who wins or loses when attacking or being attacked
 
-Add more help texts: Help/Military Units, as Help/Terrain Types (a submenu, and a page each,
-res/text/pedia_*.txt with a picture of the tile). The terrain pages are placeholders
-
-If there's space on the disk, try adding some larger pictures for the start screen, and win/fail
-- The pictures are in screens/ (intro, defeat, win_survival, win_legacy, win_hegemony; PNG,
-  1280x800). Not used yet: they need converting for the MEGA65 and a way to show one in
-  place of the map view (CLAUDE.md, Assets). The win/defeat ones are for milestone 10's end
+The Civilopedia's pages (Help/Terrain Types, Help/Military Units) are placeholders
 
 --- IDEAS, not yet decided implement or not --
 
@@ -127,7 +132,15 @@ Milestone 9: trade
   fishes; a coastal city of size 2+ with unworked fish builds another, over the cap. In
   300 turns every fish next to a city was worked (1-2 a map: few cities are by fish)
 - Maybe: find_site() could value fish more, so that more cities are founded by it
-- Later: ferrying armies, physical trade fleets, emporia
+- DONE (22 Oct 2026): AI ferrying of armies: a warrior or spearman that comes no nearer the
+  enemy in 6 turns asks for the galley, which takes it to the nearest enemy city. In 400
+  turns of autoplay 27 boarded on seed 1, 2 on seed 7
+- DONE (22 Oct 2026): merchant ships (alltiles' cargo ship, a coastal city, cost 30, 3
+  moves) found emporia (b, Orders/Found Emporium) on an empty coast by trade goods; the
+  owner owns the goods round it, for bronze, trade and score. Drawn as the improvement bits'
+  fourth value (alltiles' bazaar); burnt by an enemy standing on it. The AI builds one at a
+  time without bronze and makes for copper or tin it lacks. 3-6 emporia a 400-turn game
+- Later: trade deals carried by merchant ships (vision.md's physical fleets) and escorts
 
 Milestone 10: the end game -- the Bronze Age Collapse (DRAFT, vision.md sections 4 and 5)
 A game is 400 turns, as Civ 1's: growth and rivalry first, then the Crisis, then the end.
@@ -139,7 +152,11 @@ A game is 400 turns, as Civ 1's: growth and rivalry first, then the Crisis, then
   spearmen, off the richest coastal cities; the barbarians' AI moves them), shocks
   (drought, earthquake, plague, revolt), pleas from rulers losing cities, trade deals lost
   at sea, AI coastal guards. The unit list is 96 now (64 was full by the Crisis)
-- To tune: the Crisis is mild -- in 400-turn autoplays one people of eleven fell (seed 1,
+- DONE (22 Oct 2026): the raider, the Sea Peoples' own unit (attack 3, defence 1,
+  alltiles' swordsman), and raids 3 in 16 rising to 8. Warriors with attack 1 almost never
+  took a guarded city. 400 turns: one people of eight fell, one broke up, citizens down a
+  tenth to a half. A revolt now puts the city in the rebels' hands
+- Was: the Crisis is mild -- in 400-turn autoplays one people of eleven fell (seed 1,
   the Hittites) and citizens fell a quarter to a half. Knobs: SEA_CAP (20), the raid rate,
   the fleet size, in src/crisis.c. Fixed on the way: AI cities built spearmen over the cap
   without end (35 on seed 7), since spearman_in() counted one that only passed through
@@ -148,16 +165,19 @@ A game is 400 turns, as Civ 1's: growth and rivalry first, then the Crisis, then
   no longer owns the good, or a raid cuts its route; shocks weighted by region and growing
   towards the end; a revolting city going over to the rebels (barbarians own no cities,
   so a revolt is rebels by the city for now)
-- Collapse of the computer players: a people that loses its capital or half its cities
-  may break up (cities to the barbarians, Civ 1's civil war), so the map ends in a dark age
+- DONE (22 Oct 2026): collapse of the computer players, Civ 1's civil war: a people that
+  loses its capital (its first city) with 3 or more cities left loses the cities furthest
+  from its largest, a third of its citizens, to the rebels -- barbarian-owned cities, which
+  keep a guard and can be taken back. Not done: half its cities lost as a second trigger
 - DONE (22 Oct 2026): the end at turn 400, or when the human's people is the last left, or
   is out; the final screen (src/score.c, region 5) with each people's cities, citizens,
   goods, deals and score (1 a citizen, 2 a city, 2 a good, 3 a deal) and the outcome:
   defeat, survival victory, or hegemony victory with the highest score. Game over now goes
   to the title, not to BASIC. Retire shows the same screen, and World/Score during the game
-- Still to do for the end: screens/' pictures before the final screen (defeat,
-  win_survival, win_hegemony; win_legacy needs monuments, vision.md 5B, a milestone of its
-  own). The survival bonus left out: everybody standing would get it, and the fallen score
+- DONE (22 Oct 2026): screens/' pictures, in the map window with their own palette: the
+  intro as a splash at boot while the sheet and map load, and defeat, win_survival or
+  win_hegemony before the final score (src/picture.c, res/*.pic from screens/Makefile).
+  win_legacy needs monuments, vision.md 5B, a milestone of its own. The survival bonus left out: everybody standing would get it, and the fallen score
   next to nothing anyway
 - Memory: the Crisis goes in region 5 with the score (6.2 KB free), once a turn from
   end_turn(), like diplomacy_turn(); its state saved (SAVE_VERSION). The AI's part (Sea

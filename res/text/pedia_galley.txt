@@ -1,0 +1,12 @@
+# The Civilopedia's page on the Galley: Help/Military Units. A placeholder.
+# The markup is described in tools/mktext.py.
+{at 42 4}{head}GALLEY
+{at 42 6}{grey}Military Unit
+{at 6 9}{head}Galley
+{text}  Attack: 1
+  Defence: 1
+  Moves: 3
+  Cost: 40 shields
+  Needs: cedar, and a city by the shallows
+{at 6 17}{text}Sails the shallows and carries two land units: step onto it to board.
+They are woken when it stops next to land.

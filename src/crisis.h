@@ -32,6 +32,9 @@
 // cities at the end of the last turn, for the pleas. Saved.
 extern byte crisis_drought;
 extern byte crisis_cities[PLAYERS];
+// Bit p: p's capital stood at the last turn's end, so that losing it is
+// seen once (the collapse). Saved; 0 for a new game.
+extern byte crisis_capitals;
 
 // A turn of it, before the cities grow: does nothing before the omens.
 void crisis_turn(void);

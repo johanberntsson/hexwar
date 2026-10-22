@@ -13,6 +13,7 @@
 #include "civ.h"
 #include "combat.h"
 #include "crisis.h"
+#include "emporium.h"
 #include "diplomacy.h"
 #include "growth.h"
 #include "improve.h"
@@ -184,6 +185,8 @@ void game_init(void)
     game_turn = 1;
     game_year = START_YEAR;
     crisis_drought = 0;
+    crisis_capitals = 0;
+    emporium_count = 0;
     for (ax = 0; ax < PLAYERS; ++ax) crisis_cities[ax] = 0;
     dirty = 1;
     hover_dirty = 1;

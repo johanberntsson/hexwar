@@ -7,6 +7,8 @@
 
 #include "sheet.h"
 #include "minimap.h"
+#include "picture.h"
+#include "region.h"
 #include "screen.h"
 #include "unit.h"
 #include "view.h"
@@ -20,9 +22,6 @@
 #define FCI_OPTIONS 7
 #define FCI_NUM_COLORS 8
 #define FCI_PALETTE 9
-// Bit 1 of the options byte: the first sixteen palette entries are the
-// system's and must not be overwritten. res/tiles.fci has it set.
-#define FCI_OPT_RESERVED_SYS_PALETTE 0x02
 
 // One source character as read from the file, and widened to two. The 128
 // bytes come out contiguous, which is the whole reason for doing it this
@@ -38,9 +37,11 @@ HIGH_BSS byte sheet_row_lo[TILE_COUNT * TILE_ROWS];
 HIGH_BSS byte sheet_row_hi[TILE_COUNT * TILE_ROWS];
 
 // **Where a tile row waits** while its four source characters come in, as
-// eight expanded ones: the start of the tile store's first row, which
-// nothing shows yet -- view_clear() clears it before the first game.
-#define STAGING TILE_STORE
+// eight expanded ones: code slot 1 (src/region.h), region 1's, which is
+// not called before a game starts and is copied in afresh when it is.
+// Not the tile store, which shows the title's picture meanwhile
+// (src/picture.h), nor slot 2, where the picture's code is.
+#define STAGING SLOT_BASE(1)
 
 // The areas the packed rows go into, in order (src/sheet.h): the bank, and
 // the first and the end address in it. tools/mktiles.py has the same
@@ -156,22 +157,26 @@ static byte read_sheet(int fd)
 {
     static byte header[FCI_PALETTE];
     byte rgb[3];
-    byte num_colors, first, i, row, col;
+    byte num_colors, i, row, col;
 
     if (_Stub_read(fd, header, sizeof header) != sizeof header) return 0;
     if (header[0] != FCI_MAGIC0) return 0;
     if (header[FCI_ROWS] != SHEET_ROWS) return 0;
     if (header[FCI_COLUMNS] != SHEET_COLUMNS) return 0;
 
-    // Entries 0-15 are the system's when the reserved flag is set, and
-    // res/tiles.fci sets it; they are in the file as zeros and skipped.
-    // Entry 0 is the transparent index either way.
+    // Entries 0-15 are the system's: res/tiles.fci has the reserved flag
+    // set and them as zeros, and picture_end() puts back only 16 up.
+    // Entry 0 is the transparent index either way. **The palette goes to
+    // attic RAM, not to the VIC**: the title's picture is up while the
+    // sheet loads, in its own colours, and picture_end() puts these in
+    // place once it has gone -- and again after every other picture.
     num_colors = header[FCI_NUM_COLORS];
-    first = (header[FCI_OPTIONS] & FCI_OPT_RESERVED_SYS_PALETTE) ? 16 : 0;
     i = 0;
     do {
         if (_Stub_read(fd, rgb, 3) != 3) return 0;
-        if (i >= first) screen_set_palette_entry(i, rgb[0], rgb[1], rgb[2]);
+        lpoke(PALETTE_ATTIC + i, rgb[0]);
+        lpoke(PALETTE_ATTIC + 256 + i, rgb[1]);
+        lpoke(PALETTE_ATTIC + 512 + i, rgb[2]);
     } while (i++ != num_colors);   // num_colors is a byte; do not wrap
 
     // **Upper case, because that is what the tools write** -- Calypsi

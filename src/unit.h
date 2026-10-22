@@ -23,9 +23,11 @@
 #define KIND_WARRIOR 2
 #define KIND_BUILDER 3
 #define KIND_SPEARMAN 4         // bronze: needs copper and tin (growth.h)
-#define KIND_GALLEY 5           // cedar and a coastal city; carries GALLEY_HOLD
-#define KIND_BOAT 6             // a fishing boat: a coastal city; carries nobody
-#define KINDS 7
+#define KIND_RAIDER 5           // the Sea Peoples' only, never built (crisis.c)
+#define KIND_GALLEY 6           // cedar and a coastal city; carries GALLEY_HOLD
+#define KIND_BOAT 7             // a fishing boat: a coastal city; carries nobody
+#define KIND_MERCHANT 8         // a coastal city; founds an emporium (emporium.h)
+#define KINDS 9
 
 // **The ships are the kinds from KIND_GALLEY on**: they sail the shallows
 // and their own cities, and everything else is a land unit, which on the
@@ -86,6 +88,7 @@ extern const byte unit_kind_moves[];
 extern const byte unit_kind_cost[];     // shields to build one
 extern const byte unit_kind_attack[];   // 0: cannot attack
 extern const byte unit_kind_defence[];
+extern const byte unit_kind_tile[];      // TILE_* (help.c draws it too)
 
 // No units at all, for a new game.
 void unit_reset(void);

@@ -13,12 +13,15 @@
 // under these names here.
 #define title_show title_show_r0
 #define title_run title_run_r0
+#define title_splash title_splash_r0
 
 #include "title.h"
 #include "civ.h"
 #include "input.h"
+#include "picture.h"
 #include "screen.h"
 #include "text.h"
+#include "view.h"
 
 #pragma clang section text="r0text" rodata="r0rodata"
 
@@ -227,6 +230,35 @@ static byte new_game(void)
             return 1;
         }
     }
+}
+
+// The panel's column, which the picture leaves free: a line in its middle.
+static void panel_line(byte row, const char *s, byte colour)
+{
+    byte x;
+    for (x = 0; x < VIEW_LEFT; ++x) screen_putcxy(x, row, ' ', colour);
+    screen_putsxy((byte)((VIEW_LEFT - length(s)) / 2), row, s, colour);
+}
+
+#define SPLASH_ROW 12
+
+void title_splash(byte loaded)
+{
+    byte key;
+
+    if (!loaded) {
+        screen_clear();
+        view_init();
+        picture_show(PICTURE_INTRO);
+        panel_line(SPLASH_ROW, "Loading...", TEXT_COLOUR);
+        return;
+    }
+    panel_line(SPLASH_ROW, "Press a key", COLOR_WHITE);
+    do {
+        screen_wait_raster(SCREEN_ROW_LINE(SCREEN_ROWS - 1));
+        key = input_poll();
+    } while (!key);
+    picture_end();
 }
 
 void title_show(void)

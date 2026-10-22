@@ -1,0 +1,12 @@
+# The Civilopedia's page on the Warrior: Help/Military Units. A placeholder.
+# The markup is described in tools/mktext.py.
+{at 42 4}{head}WARRIOR
+{at 42 6}{grey}Military Unit
+{at 6 9}{head}Warrior
+{text}  Attack: 1
+  Defence: 1
+  Moves: 1
+  Cost: 10 shields
+  Needs: nothing
+{at 6 17}{text}Guards a city (f to fortify) and explores the land.
+Every people starts with one beside its settler.

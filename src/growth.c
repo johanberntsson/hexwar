@@ -10,6 +10,7 @@
 #include "growth.h"
 #include "city.h"
 #include "crisis.h"
+#include "emporium.h"
 #include "map.h"
 #include "sheet.h"
 #include "trade.h"
@@ -54,6 +55,14 @@ static const byte resource_trade[RES_COUNT] = {
 byte player_owns(byte p, byte r)
 {
     byte c, dir, nx, ny, need = map_res_improved_by[r];
+
+    // Round one of its emporia, improved or not (src/emporium.h).
+    for (c = 0; c < emporium_count; ++c)
+        if (emporium_owner[c] == p)
+            for (dir = 0; dir < 6; ++dir)
+                if (map_neighbour(emporium_ax[c], emporium_ay[c], dir, &nx, &ny)
+                    && map_resource_at(nx, ny) == r)
+                    return 1;
 
     for (c = 0; c < city_count; ++c) {
         if (city_owner[c] != p) continue;

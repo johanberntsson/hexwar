@@ -176,6 +176,7 @@ stub:       .macro  name, target, region
             stub    help_screen, help_screen_r0, 0
             stub    title_show, title_show_r0, 0
             stub    title_run, title_run_r0, 0
+            stub    title_splash, title_splash_r0, 0
             stub    save_write, save_write_r0, 0
             stub    save_read, save_read_r0, 0
             stub    game_init, game_init_r0, 0
@@ -193,15 +194,19 @@ stub:       .macro  name, target, region
             stub    city_toggle, city_toggle_r1, 1
             stub    hex_yield, hex_yield_r1, 1
             stub    player_has, player_has_r1, 1
+            stub    ai_guards_wanted, ai_guards_wanted_r1, 1
+            stub    ai_find_far_site, ai_find_far_site_r1, 1
+            stub    ai_work_site, ai_work_site_r1, 1
 
-; Region 2, slot 2: the city screen, Top Five Cities and the builders'
-; improvements.
+; Region 2, slot 2: the city screen, Top Five Cities, the builders'
+; improvements and what the computer players' cities build.
             stub    city_screen, city_screen_r2, 2
             stub    top_cities_screen, top_cities_screen_r2, 2
             stub    improve_can, improve_can_r2, 2
             stub    improve_best, improve_best_r2, 2
             stub    improve_start, improve_start_r2, 2
             stub    improve_turn, improve_turn_r2, 2
+            stub    ai_build, ai_build_r2, 2
 
 ; Region 3, slot 2: diplomacy.
             stub    diplomacy_reset, diplomacy_reset_r3, 3
@@ -211,8 +216,8 @@ stub:       .macro  name, target, region
             stub    diplomacy_greet, diplomacy_greet_r3, 3
             stub    diplomacy_screen, diplomacy_screen_r3, 3
 
-; Region 4, slot 2: trade, routes over the sea, the ships' exploring, and
-; the menus.
+; Region 4, slot 2: trade, routes over the sea, the ships' exploring, the
+; merchant ships and emporia, and the menus.
             stub    trade_reset, trade_reset_r4, 4
             stub    trade_turn, trade_turn_r4, 4
             stub    trade_agree, trade_agree_r4, 4
@@ -220,11 +225,16 @@ stub:       .macro  name, target, region
             stub    sea_route, sea_route_r4, 4
             stub    boat_explore, boat_explore_r4, 4
             stub    boat_order, boat_order_r4, 4
+            stub    emporium_order, emporium_order_r4, 4
+            stub    emporium_ai, emporium_ai_r4, 4
             stub    menu_orders, menu_orders_r4, 4
             stub    menu_draw, menu_draw_r4, 4
             stub    menu_click, menu_click_r4, 4
             stub    menu_key, menu_key_r4, 4
 
-; Region 5, slot 2: the Crisis, the score and the end of the game.
+; Region 5, slot 2: the Crisis, the score and the end of the game, and
+; the pictures.
             stub    score_screen, score_screen_r5, 5
             stub    crisis_turn, crisis_turn_r5, 5
+            stub    picture_show, picture_show_r5, 5
+            stub    picture_end, picture_end_r5, 5

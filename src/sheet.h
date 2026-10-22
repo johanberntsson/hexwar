@@ -45,7 +45,7 @@
 #define SHEET_HIGH_END 0x1F000UL
 
 // The sheet as it is in the file.
-#define SHEET_COLUMNS 144
+#define SHEET_COLUMNS 156
 #define SHEET_ROWS 4
 
 // A tile is 4x4 characters in the file and 8x4 once expanded.
@@ -90,21 +90,24 @@
 #define TILE_OVERLAY_FIRST 16
 #define TILE_IRRIGATION 16
 #define TILE_MINE 17
+#define TILE_EMPORIUM 18        // both bits: an emporium (src/emporium.h)
 // The resources, from here on in RES_* order (src/map.h): resource r is
 // tile TILE_RESOURCE_FIRST - 1 + r. All in bank 1.
-#define TILE_RESOURCE_FIRST 18
+#define TILE_RESOURCE_FIRST 19
 // Copper and tin once mined, drawn instead of the resource (RES_TILE in
 // src/map.h); the bronze unit; and cattle, olives and wine once irrigated,
 // the same way.
-#define TILE_COPPER_MINE 27
-#define TILE_TIN_MINE 28
-#define TILE_SPEARMAN 29
-#define TILE_CATTLE_PASTURE 30
-#define TILE_OLIVES_GROVE 31
-#define TILE_WINE_VINEYARD 32
-#define TILE_GALLEY 33
-#define TILE_FISHING_BOAT 34
-#define TILE_FISH_BOATS 35       // fish worked: drawn instead of it, as above
+#define TILE_COPPER_MINE 28
+#define TILE_TIN_MINE 29
+#define TILE_SPEARMAN 30
+#define TILE_CATTLE_PASTURE 31
+#define TILE_OLIVES_GROVE 32
+#define TILE_WINE_VINEYARD 33
+#define TILE_GALLEY 34
+#define TILE_FISHING_BOAT 35
+#define TILE_FISH_BOATS 36       // fish worked: drawn instead of it, as above
+#define TILE_RAIDER 37          // the Sea Peoples (src/crisis.c)
+#define TILE_MERCHANT 38        // the merchant ship (src/emporium.h)
 
 // The FCI on the disk. Capitals, because that is how diskutil.rb writes the
 // host name tiles.fci -- see MAP_FILE_NAME.
@@ -125,10 +128,11 @@ extern byte sheet_row_bank[TILE_COUNT * TILE_ROWS];
 extern byte sheet_row_lo[TILE_COUNT * TILE_ROWS];
 extern byte sheet_row_hi[TILE_COUNT * TILE_ROWS];
 
-// Read SHEET_FILE_NAME, upload its palette, and build the expanded sheet.
+// Read SHEET_FILE_NAME, keep its palette in attic RAM for picture_end()
+// (src/picture.h) to put in place, and build the expanded sheet.
 // Returns 0 if the file cannot be read, is not an FCI of the shape declared
-// above, or does not fit the areas. Before view_clear(): a row is staged
-// in the tile store's first row while its extent is found.
+// above, or does not fit the areas. **At boot only, before region 1 is
+// first called into slot 1**: a row is staged there while its extent is found.
 byte sheet_load(void);
 
 #endif // SEVENSHIPS_SHEET_H

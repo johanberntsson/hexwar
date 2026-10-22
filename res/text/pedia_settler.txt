@@ -1,0 +1,12 @@
+# The Civilopedia's page on the Settler: Help/Military Units. A placeholder.
+# The markup is described in tools/mktext.py.
+{at 42 4}{head}SETTLER
+{at 42 6}{grey}Military Unit
+{at 6 9}{head}Settler
+{text}  Attack: 0
+  Defence: 1
+  Moves: 1
+  Cost: 30 shields
+  Needs: a city of size 2, and takes a citizen
+{at 6 17}{text}Founds a city (b), on land at least four hexagons from any other.
+The peoples of the Bronze Age spread along the coasts.

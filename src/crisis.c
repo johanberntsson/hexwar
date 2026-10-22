@@ -26,12 +26,12 @@
 
 HIGH_BSS byte crisis_drought;
 HIGH_BSS byte crisis_cities[PLAYERS];
+HIGH_BSS byte crisis_capitals;
 
 #define RUMOUR_TURN 200
 #define WARNING_TURN 215
 #define DROUGHT_TURNS 8         // and up to 7 more
 #define SEA_CAP 20              // barbarian units, the Sea Peoples' limit
-#define SPEARMEN_TURN 300       // the raiders come with bronze from here
 #define LANDING_NEAR 3          // a fleet appears this far from its city
 #define LANDING_FAR 6           // ... and no further
 
@@ -116,7 +116,8 @@ static byte target(void)
     for (c = 0; c < city_count; ++c) {
         if (!city_coastal(c)) continue;
         score = city_size[c] + (rnd() & 3) + 1;
-        if (trade_partners[city_owner[c]]) score += 3;
+        if (city_owner[c] < PLAYERS && trade_partners[city_owner[c]])
+            score += 3;
         if (score > best_score) {
             best_score = score;
             best = c;
@@ -154,25 +155,103 @@ static byte landing(byte c)
     return best != 0;
 }
 
-// A fleet: a galley a ship, and two raiders aboard each.
+// A fleet: a galley a ship, and two raiders aboard each (KIND_RAIDER).
 static void raid(void)
 {
-    byte c = target(), ships, kind, n;
+    byte c = target(), ships, n;
 
     if (c == CITY_NONE) return;
     ships = 1 + (byte)((game_turn - GAME_CRISIS_TURN) / 80);
-    kind = game_turn >= SPEARMEN_TURN ? KIND_SPEARMAN : KIND_WARRIOR;
     for (n = 0; n < ships; ++n) {
         if (unit_count_kind(PLAYER_BARBARIAN, KIND_NONE) + 3 > SEA_CAP
             || !landing(c)
             || unit_create(KIND_GALLEY, PLAYER_BARBARIAN, sea_x, sea_y)
                    == UNIT_NONE)
             break;
-        unit_create(kind, PLAYER_BARBARIAN, sea_x, sea_y);
-        unit_create(kind, PLAYER_BARBARIAN, sea_x, sea_y);
+        unit_create(KIND_RAIDER, PLAYER_BARBARIAN, sea_x, sea_y);
+        unit_create(KIND_RAIDER, PLAYER_BARBARIAN, sea_x, sea_y);
     }
     if (n && city_owner[c] == PLAYER_HUMAN)
         tell("Ships of the enemy have been seen off ", c, ".");
+}
+
+// --------------------------------------------------------------- collapse
+
+// p's capital: the first city it founded -- the first name on its list --
+// while it is still p's. CITY_NONE once it has been taken or burnt.
+static byte capital(byte p)
+{
+    byte c;
+    for (c = 0; c < city_count; ++c)
+        if (city_founder[c] == p && city_name[c] == 0 && city_owner[c] == p)
+            return c;
+    return CITY_NONE;
+}
+
+// City c goes over to the rebels -- the barbarians, who hold it now -- and
+// so do p's units in it.
+static void rebel(byte p, byte c)
+{
+    byte u;
+    for (u = 0; u < MAX_UNITS; ++u)
+        if (unit_kind[u] != KIND_NONE && unit_owner[u] == p
+            && unit_ax[u] == city_ax[c] && unit_ay[u] == city_ay[c])
+            unit_owner[u] = PLAYER_BARBARIAN;
+    city_capture(c, PLAYER_BARBARIAN);
+}
+
+// **A people that has lost its capital breaks up**, as in Civilization,
+// whose computer players split in two when their capital is taken and
+// they have more than four cities (OpenCivOne's Actions.cs and
+// Secession.cs): the cities furthest from the seat that is left, until a
+// third of the citizens, go over -- there to a new people, here, with no
+// player to spare, to the rebels. The seat is the largest city left, as
+// the old capital may be ashes. With fewer than COLLAPSE_CITIES left,
+// which is Civilization's five scaled to these peoples' six, nothing.
+#define COLLAPSE_CITIES 3
+
+static void collapse(byte p)
+{
+    byte c, seat = CITY_NONE, n = 0, far;
+    word total = 0, gone = 0, d, best;
+
+    for (c = 0; c < city_count; ++c) {
+        if (city_owner[c] != p) continue;
+        ++n;
+        total += city_size[c];
+        if (seat == CITY_NONE || city_size[c] > city_size[seat]) seat = c;
+    }
+    if (n < COLLAPSE_CITIES) return;
+    if (!QUIET && ((diplomacy_known[PLAYER_HUMAN] >> p) & 1)) {
+        popup_begin();
+        popup_add("Civil war: the ");
+        popup_add(player_people(p));
+        popup_add(" have lost their capital, and ");
+    }
+    while (3 * gone < total) {
+        far = CITY_NONE;
+        best = 0;
+        for (c = 0; c < city_count; ++c) {
+            if (city_owner[c] != p) continue;
+            d = distance(city_ax[c], city_ay[c],
+                         city_ax[seat], city_ay[seat]);
+            if (d > best) {
+                best = d;
+                far = c;
+            }
+        }
+        if (far == CITY_NONE) break;
+        gone += city_size[far];
+        rebel(p, far);
+        if (!QUIET && ((diplomacy_known[PLAYER_HUMAN] >> p) & 1)) {
+            popup_add(city_name_of(far));
+            popup_add(", ");
+        }
+    }
+    if (!QUIET && ((diplomacy_known[PLAYER_HUMAN] >> p) & 1)) {
+        popup_add("have gone over to the rebels.");
+        popup_show();
+    }
 }
 
 // ------------------------------------------------------------------ shocks
@@ -190,7 +269,7 @@ static void shrink(byte c, byte by)
 
 static void shock(void)
 {
-    byte c = any_city(), dir, nx, ny, u;
+    byte c = any_city(), nx, ny, u, dir;     // dir: also the old owner
 
     if (c == CITY_NONE) return;
     switch (rnd() & 3) {
@@ -217,18 +296,17 @@ static void shock(void)
             tell("Plague in ", c, ".");
         return;
     }
-    // A revolt, by a city nobody guards.
-    if (unit_at(city_ax[c], city_ay[c]) != UNIT_NONE) return;
-    for (dir = u = 0; dir < 6 && u < 2; ++dir)
-        if (map_neighbour(city_ax[c], city_ay[c], dir, &nx, &ny)
-            && unit_can_enter(PLAYER_BARBARIAN, KIND_WARRIOR, nx, ny)
-                   == ENTER_OK
-            && !(map_tile[ny][nx] & MAP_OCCUPIED)
-            && unit_create(KIND_WARRIOR, PLAYER_BARBARIAN, nx, ny)
-                   != UNIT_NONE)
-            ++u;
-    if (u && city_owner[c] == PLAYER_HUMAN)
-        tell("Revolt: rebels have taken up arms by ", c, ".");
+    // A revolt: a city nobody guards goes over to the rebels, who hold it
+    // with a warrior of their own.
+    if (unit_at(city_ax[c], city_ay[c]) != UNIT_NONE
+        || city_owner[c] == PLAYER_BARBARIAN)
+        return;
+    dir = city_owner[c];
+    city_capture(c, PLAYER_BARBARIAN);
+    u = unit_create(KIND_WARRIOR, PLAYER_BARBARIAN, city_ax[c], city_ay[c]);
+    if (u != UNIT_NONE) unit_orders[u] = ORDERS_FORTIFY;
+    if (dir == PLAYER_HUMAN)
+        tell("Revolt: rebels have taken ", c, ".");
 }
 
 // ------------------------------------------------------------------- a turn
@@ -242,6 +320,19 @@ void crisis_turn(void)
         p = correspondent();
         if (p < PLAYERS) letter(TEXT_CRISIS_WARNING, p);
     }
+
+    // A people that has lost its capital since the last turn breaks up;
+    // whenever it happens, not only in the Crisis.
+    for (p = PLAYER_FIRST_AI; p < PLAYERS; ++p) {
+        n = (byte)(1 << p);
+        if (capital(p) != CITY_NONE) {
+            crisis_capitals |= n;
+        } else if (crisis_capitals & n) {
+            crisis_capitals &= (byte)~n;
+            collapse(p);
+        }
+    }
+
     if (game_turn < GAME_CRISIS_TURN) return;
     if (game_turn == GAME_CRISIS_TURN) {
         p = correspondent();
@@ -264,7 +355,7 @@ void crisis_turn(void)
     }
 
     if (crisis_drought) --crisis_drought;
-    // More often as it goes on: 2 turns in 16 at first, 7 by the end.
-    if ((rnd() & 15) < 2 + (game_turn - GAME_CRISIS_TURN) / 35) raid();
+    // More often as it goes on: 3 turns in 16 at first, 8 by the end.
+    if ((rnd() & 15) < 3 + (game_turn - GAME_CRISIS_TURN) / 30) raid();
     if (!(rnd() & 15)) shock();
 }

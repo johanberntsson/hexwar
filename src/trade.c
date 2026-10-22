@@ -9,6 +9,7 @@
 #include "civ.h"
 #include "combat.h"
 #include "diplomacy.h"
+#include "emporium.h"
 #include "game.h"
 #include "gameint.h"
 #include "growth.h"
@@ -179,6 +180,7 @@ void trade_turn(void)
         ended = 1;
     }
     if (ended) recount();
+    emporium_turn();
 
     // What each computer player asks for, from each player it is at peace
     // with and does not trade with yet, one turn in eight, staggered.

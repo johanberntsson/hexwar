@@ -1,0 +1,12 @@
+# The Civilopedia's page on the Fishing Boat: Help/Military Units. A placeholder.
+# The markup is described in tools/mktext.py.
+{at 42 4}{head}FISHING BOAT
+{at 42 6}{grey}Military Unit
+{at 6 9}{head}Fishing Boat
+{text}  Attack: 0
+  Defence: 1
+  Moves: 2
+  Cost: 20 shields
+  Needs: a city by the shallows
+{at 6 17}{text}Sails the shallows. On fish it can fish (i), and is used up: the fish
+then gives a food more to the city that works it.

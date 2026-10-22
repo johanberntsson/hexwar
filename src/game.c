@@ -15,6 +15,7 @@
 #include "improve.h"
 #include "ai.h"
 #include "boat.h"
+#include "emporium.h"
 #include "city.h"
 #include "cityscreen.h"
 #include "topcities.h"
@@ -361,6 +362,10 @@ static void found_city(void)
     byte u = unit_active;
     byte c;
 
+    if (unit_kind[u] == KIND_MERCHANT) {
+        emporium_order(u);
+        return;
+    }
     if (unit_kind[u] != KIND_SETTLER) {
         message("Only settlers", "found cities");
         return;
@@ -507,6 +512,8 @@ static void set_orders_menu(void)
             second = MENU_MINE;
         } else if (kind == KIND_BOAT) {
             command = MENU_FISH;
+        } else if (kind == KIND_MERCHANT) {
+            command = MENU_EMPORIUM;
         }
     }
     menu_orders(command, second);
@@ -551,6 +558,7 @@ static void menu_command(byte command)
         message(save_write() ? "Game saved" : "Could not save", "");
         break;
     case MENU_FOUND_CITY:
+    case MENU_EMPORIUM:
         unit_key('b');
         break;
     case MENU_FORTIFY:
@@ -579,7 +587,9 @@ static void menu_command(byte command)
         open_help(TEXT_HELP);
         break;
     default:
-        if (command >= MENU_TERRAIN)
+        if (command >= MENU_UNIT)
+            open_help(TEXT_PEDIA_SETTLER + (command - MENU_UNIT - KIND_SETTLER));
+        else if (command >= MENU_TERRAIN)
             open_help(TEXT_PEDIA_HILLS + (command - MENU_TERRAIN));
         break;
     }

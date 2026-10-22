@@ -55,11 +55,12 @@ make clean
 Needs `cc6502`/`as6502`/`ln6502` (Calypsi 5.18+), Python 3, Ruby (for
 `tools/diskutil.rb`, which builds the d81 with an interleave that reads
 faster from a real floppy) and `xemu-xmega65`. Pillow only if the tile art
-changes, since `res/tiles.fci` is checked in.
+or the pictures change, since `res/tiles.fci` and `res/*.pic` are
+checked in.
 
-**The program reads its texts, its code region, its tile sheet and its
-map from drive 8** (`TEXT.PAK`, `SEVENSHIPS.R1`, `TILES.FCI`,
-`SEVENSHIPS.MAP`, in that order), so it needs the d81 mounted: `make run`
+**The program reads its texts, its code regions, the title's picture,
+its tile sheet and its map from drive 8** (`TEXT.PAK`, `SEVENSHIPS.R1`
+to `.R5`, `INTRO.PIC`, `TILES.FCI`, `SEVENSHIPS.MAP`, in that order), so it needs the d81 mounted: `make run`
 does that, and a bare `-prg` boot stops at `cannot read TEXT.PAK`.
 
 There are no tests. Verification is running it — see **Verifying a change**.
@@ -205,12 +206,12 @@ buffers at the default `$FF80000` and corrupts the display.
 
 | Address | Size | Contents |
 |---|---|---|
-| `$2001-$5FFF`, `$8000-$9FFF` | 24 KB | the resident program: code, data, BSS, C stack. 704 bytes free, nearly all at `$5D4F-$5FFF` |
-| `$6000-$7FFF` | 8 KB | the code window (`src/region.h`); as loaded, region 0 — the title, setup and help screens (and the Civilopedia's pages), save and load, the sheet's and the map's loaders, the owners' flags, the end of a turn and a game's start (`src/turn.c`), the computer players' starts (`src/aiplace.c`), the hover readout (`src/hover.c`). 0.8 KB free |
-| `$13000-$14FFF` | 8 KB | code slot 1: region 1, from `SEVENSHIPS.R1` by way of attic: the computer players and their ferrying, the cities' yields and growth, bronze. 38 bytes free |
-| `$15000-$16FFF` | 8 KB | code slot 2, shared: region 2 (the city screen, Top Five Cities, the builders' improvements; 2.7 KB free) region 3 (diplomacy; 2.3 KB free) region 4 (trade, the ships' routes, exploring and fishing, the menus; 1.9 KB free) or region 5 (the Crisis, the score and the end, `src/crisis.c`, `src/score.c`; 4.0 KB free), whichever was called last |
-| `$17000-$1EFFF` | 32 KB | the packed tile sheet's second area, where regions 3 to 6 would have been: whatever rows did not fit bank 5's; with bank 5's, 18 KB free (`tools/mktiles.py` says) |
-| `$A000-$BFFF` | 8 KB | `highram`, under the BASIC ROM, banked out by `src/bank.s`: `map_tile`, the unit and city arrays, the sprite blocks, the AI's headings, the staging buffers of the texts and the regions, the texts' line buffers, the sheet loader's buffers, the saved VIC registers, the AI's exploration memory, the resource list, the sheet's row tables, the peoples' relations and attitudes and the letters' names, the trade deals; about 1.7 KB free — `HIGH_BSS` in `src/mega65.h` moves a variable there, and **the startup does not clear it** |
+| `$2001-$5FFF`, `$8000-$9FFF` | 24 KB | the resident program: code, data, BSS, C stack. 392 bytes free, nearly all at `$5E89-$5FFF` |
+| `$6000-$7FFF` | 8 KB | the code window (`src/region.h`); as loaded, region 0 — the title, setup and help screens (and the Civilopedia's pages), save and load, the sheet's and the map's loaders, the owners' flags, the end of a turn and a game's start (`src/turn.c`), the computer players' starts (`src/aiplace.c`), the hover readout (`src/hover.c`), the boot splash (`title_splash()`). 0.4 KB free |
+| `$13000-$14FFF` | 8 KB | code slot 1: region 1, from `SEVENSHIPS.R1` by way of attic: the computer players and their ferrying, the cities' yields and growth, bronze. 178 bytes free |
+| `$15000-$16FFF` | 8 KB | code slot 2, shared: region 2 (the city screen, Top Five Cities, the builders' improvements, what the computer players' cities build, `src/aibuild.c`; 1.6 KB free) region 3 (diplomacy; 2.2 KB free) region 4 (trade, the ships' routes, exploring and fishing, merchant ships and emporia, the menus; 0.2 KB free) or region 5 (the Crisis and the collapse, the score and the end, the pictures, `src/crisis.c`, `src/score.c`, `src/picture.c`; 2.7 KB free), whichever was called last. **Slot 1 is also the sheet loader's staging area at boot** (`STAGING` in `src/sheet.c`), before region 1 is first called |
+| `$17000-$1EFFF` | 32 KB | the packed tile sheet's second area, where regions 3 to 6 would have been: whatever rows did not fit bank 5's; with bank 5's, 12 KB free (`tools/mktiles.py` says) |
+| `$A000-$BFFF` | 8 KB | `highram`, under the BASIC ROM, banked out by `src/bank.s`: `map_tile`, the unit and city arrays, the sprite blocks, the AI's headings, the staging buffers of the texts and the regions, the texts' line buffers, the sheet loader's buffers, the saved VIC registers, the AI's exploration memory, the resource list, the sheet's row tables, the peoples' relations and attitudes and the letters' names, the trade deals, the emporia, the pictures' staging buffer; about 1.4 KB free — `HIGH_BSS` in `src/mega65.h` moves a variable there, and **the startup does not clear it** |
 | `$1600-$1EFF` | 2304 | `zpsave` (56 bytes, BASIC's zero page during the run), then `lowfree`: the popup's 400-byte text and the scratch buffers of the view and the minimap, and the sea routes' search (`src/path.c`), 990 bytes free — `LOW_FREE` in `src/mega65.h` moves a variable there |
 | `$12000` | 4000 | screen RAM, 80x25 cells of 2 bytes |
 | `$40000-$56FFF` | 94208 | the view's tile store, 23 rows of 4096: 3840 for the window, then 256 holding four of the minimap's characters (all 80 of them, rows 0-19) or, in rows 20-22, two of the owners' flags (92 slots) |
@@ -241,7 +242,7 @@ attic RAM instead and does not count. **The sheet is not something the VIC sees,
 ever a DMA source, copied into the tile store, so it needs chip RAM but
 not bank 5 — which is what step 1b uses. **Since 22 Oct 2026 it is
 packed** (step 1c), and `make` in `tiles/` says how much room is left —
-18 KB with 35 tiles, about a dozen units. Take these in order when
+12 KB with 39 tiles, about eight units. Take these in order when
 another tile or another full-colour surface needs room:
 
 1. **The tile store's row padding** — *done* (19 Oct 2026). Each of the
@@ -278,7 +279,8 @@ another tile or another full-colour surface needs room:
    exactly what `view_draw_tile()` copied anyway — so a unit or a
    resource, a small picture in the middle of its tile, takes a third to
    three quarters of 2 KB, and the 34 tiles took 49 KB, not 68.
-   `sheet_load()` stages each tile row in the tile store's first row,
+   `sheet_load()` stages each tile row in code slot 1 (the tile store's
+   first row until 22 Oct 2026, when the title's picture took the store),
    finds its extent, and copies those characters to the next free place,
    bank 5's area and then bank 1's (`area_bank[]` and the rest in
    `src/sheet.c`, `AREAS` in `tools/mktiles.py`, which must agree), and
@@ -527,11 +529,19 @@ entry in each of `dispatch.s`'s per-region tables (`slot_of`,
 `region_stamp[]`'s initialiser in `src/region.c`, and its file in the
 Makefile's `REGION_FILES`; `packprg.py` needs nothing. Attic's bank 1
 holds eight regions as the tables stand. **Resident space is what to
-watch now**: 704 bytes (22 Oct 2026, after milestone 10's Crisis; the
-hover readout's move to region 0 gave back 625; the slot
-copying cost 140, and each stub is 13), against 0.8 KB in region 0, **38
-bytes in region 1**, 2.6 KB in region 2, 2.3 KB in region 3, 1.9 KB in
-region 4 and 4.0 KB in region 5.
+watch now**: 392 bytes (22 Oct 2026, after the pictures, the collapse,
+the raider, emporia and Help → Military Units; it was 704 after the
+Crisis; the hover readout's move to region 0 gave back 625; the slot
+copying cost 140, and each stub is 13), against 0.4 KB in region 0, **178
+bytes in region 1**, 1.6 KB in region 2, 2.2 KB in region 3, **0.2 KB in
+region 4** and 2.7 KB in region 5. **What a computer player's cities
+build went to region 2** (`src/aibuild.c`, 22 Oct 2026), which gave
+region 1 800 bytes: it calls `improve_best()` for every city, through
+`work_site()`, so it sits beside it in region 2, and ai.c's helpers it
+needs (`ai_guards_wanted()`, `ai_find_far_site()`, `ai_work_site()`,
+`src/aiint.h`) come through stubs, since region 1 is slot 1's alone and
+a call there copies nothing; `guards()` and `spearman_in()` are small
+enough to copy. Checked as byte-identical through 300 turns of autoplay.
 `src/menu.c` moved from region 0 to region 4 the same day, when region 0
 was down to 188 bytes. **Region 1 is nearly full too**: its next room
 is more of `ai.c` moving out (as `ai_place()` went to `src/aiplace.c`
@@ -808,8 +818,10 @@ grassland shields. **7, resources, and 7b, bronze, are done** (20 Oct
 **Trade**), with the exploring that makes contact happen
 (see **Exploring**) and the owners' flags that say whose a unit is,
 the galley and the fishing boat (**Galleys**), and **10, the end game**
-but for the computer players' collapse and the pictures (22 Oct 2026;
-see **The end** and **The Crisis**).
+(22 Oct 2026; see **The end**, **The Crisis**, **The collapse** and
+**Pictures**). Then the same day the rest of 9 in a first form: the
+computer players ferry armies, and merchant ships found emporia
+(**Emporia**); and Help → Military Units.
 **Confirmed on a real MEGA65** (21 Oct 2026): all of 20 Oct 2026's
 later work — the resources and the improved resources drawn from bank 1
 at `$17000` up, the map loader in region 0, the owners' flags, contact by
@@ -825,34 +837,32 @@ hover readout from region 0, the calendar, the score and the end
 screen, and the Crisis — omens, Sea Peoples, shocks — with the 96-unit
 list.
 
-**Where to start next time** (agreed with the user, 22 Oct 2026):
-1. **Room in region 1**, the AI's, which has 38 bytes: move a part of
-   `ai.c` that runs once a turn into a region of its own, as
-   `ai_place()` (`src/aiplace.c`) and the hover readout
-   (`src/hover.c`) went. The likely part is what each city builds (the
-   production rules in `ai_turn()`), which runs once a city a turn, but
-   it calls many of `ai.c`'s static helpers and `work_site()` →
-   `improve_best()` in region 2: count the slot copies a turn it costs
-   (a region in slot 2 calling another in slot 2 copies twice), and
-   check with a long autoplay that the game is byte-identical
-   (**Comparing a build against the last one**). Everything left for
-   the AI waits for this.
-2. **The end screens' pictures** (`screens/`, **Assets**): scaled and
-   quantised for the MEGA65, and shown in place of the map view, which
-   is rebuilt afterwards (a 640x200 picture is 125 KB, more than the
-   tile store), or a piece at a time from attic.
-3. **The computer players' collapse** (TODO.txt, milestone 10): a people
-   that loses its capital or half its cities breaks up.
-4. **Tuning the Crisis** from play: it is mild (**The Crisis**).
-5. Milestone 9's rest: ferrying armies, merchant fleets and emporia.
-6. Help → Military Units, as Terrain Types.
+**Where to start next time** (22 Oct 2026, end of the session that
+did TODO's items 1-6; not yet agreed with the user):
+1. **Try on a real MEGA65** what has only been run headlessly: the boot
+   splash and the end pictures (disk speed, the palette coming back),
+   the collapse and the rebels' cities, the raider, ferried armies,
+   merchant ships and emporia, Help → Military Units.
+2. **Tune from play**: the Crisis (the raider made it bite, and the
+   runs differ a lot from one setting to the next), the collapse,
+   how often the computer players build merchant ships.
+3. **Room**: region 4 has 0.2 KB, so the menus (`src/menu.c`) are the
+   next to move out of it (to region 3 or a new region 6: the menus are
+   per click, and nothing in a loop calls them); resident space is 392
+   bytes.
+4. What is left of 9 and 10 (TODO.txt): computer players' galleys
+   fighting the Sea Peoples, a deal ending when the good is lost, trade
+   deals carried by merchant ships rather than letters alone; then the
+   legacy victory, which needs monuments, a milestone of its own.
 
-The tile sheet is packed and has about a dozen units' room left (**When
+The tile sheet is packed and has about eight units' room left (**When
 bank 5 fills up**, step 1c).
 
-**The title screen comes first** (`src/title.c`): `title_show()` puts the
-title up once the texts are read and before the sheet and the map are,
-and `title_run()` runs the menu — Start
+**The title's picture comes first** (`title_splash()` in `src/title.c`,
+22 Oct 2026; see **Pictures**): it goes up in the map window once the
+texts and the regions are read, the sheet and the map load behind it,
+and it waits for a key. Then **the title screen** (`src/title.c`):
+`title_show()` puts the title text up, and `title_run()` runs the menu — Start
 Game, Load Saved Game, Quit — after
 `input_init()`. Start Game goes on to two more screens, the people and the
 difficulty level, and Esc on either goes back one. All three are the one
@@ -918,8 +928,18 @@ terrain order from `TEXT_PEDIA_HILLS`, drawn in a frame by
 text, and a picture of three hexagons of the terrain, the middle one
 raised, drawn into the tile store under the window's own cells as the
 city screen's patch is (`draw_picture()` in `src/help.c`; it has to stay
-inside the map window, an `#error`); all of these take over the screen and
-`draw_screen()` puts the map back, as after HELP. **Debug exists only
+inside the map window, an `#error`); and **Military Units** (22 Oct
+2026), a third submenu the same way (`UNITS`), of all eight kinds in
+alphabetical order by `unit_kind_name[]`, each opening its page,
+`pedia_settler.txt` to `pedia_merchant.txt` in `KIND_*` order from
+`TEXT_PEDIA_SETTLER` (the commands are `MENU_UNIT` + kind, after the
+terrains'; an `#error` keeps them in step), with the unit drawn on the
+middle hexagon of grassland, a ship's on the shallows. **A new kind
+needs a page** at the end of that run in the Makefile's `TEXTS`, and
+an entry in `unit_order[]`; the pages are placeholders, so **a change
+to a unit's numbers has to be made on its page as well**. All of these
+take over the screen and `draw_screen()` puts the map back, as after
+HELP. **Debug exists only
 with `DEBUG_MENU`**, which the Makefile defines unless `DEBUG=0`, and
 `make release` defaults to `DEBUG=0` (and refuses `DEBUG=1`). Without it
 the bar is Game, Orders, Advisors, World, Help, `autoplay()` is not compiled, and
@@ -1006,7 +1026,7 @@ of the city that wants something and has nobody on it — those the city
 works first (`work_site()`) — and waits next to the city when none does.
 **What a city builds follows Civilization 1's production rules** (milestone
 6; `GameEngine.cs` in OpenCivOne has the original), decided afresh every
-turn in `ai_turn()`: 1. a warrior while it has fewer fortified guards than
+turn in `ai_build()` (`src/aibuild.c`, region 2, called from `ai_turn()`): 1. a warrior while it has fewer fortified guards than
 `guards_wanted()` — one, one more for every four citizens, and one more
 with an enemy within `THREAT_RANGE` (3), Civilization's "defend" policy;
 none at all before `BARB_FIRST_TURN` with no enemy near, so that the
@@ -1116,10 +1136,17 @@ name when captured, which is why `city_founder[]` and not `city_owner[]`
 picks the name list.
 
 **The barbarians are `PLAYER_BARBARIAN`** (= `PLAYERS`, 4), an owner with
-units but no cities, outside `PLAYERS` so the peoples' arrays stay four
+units, and since 22 Oct 2026 the rebels' cities (**The collapse**),
+outside `PLAYERS` so the peoples' arrays stay four
 long; anything indexed by owner (the minimap's colours,
 `player_adjective()`/`player_people()` in `src/civ.c`) has a fifth entry
-or a test. `ai_barbarians()` runs after the computer players: from turn
+or a test — **and so does anything indexed by a city's owner**
+(`rivals()` and `scan()` in `src/diplomacy.c`, `target()` in
+`src/crisis.c`). A rebels' city builds a warrior while nobody guards
+it, and the first barbarian in it stays as its guard
+(`ai_barbarians()`); the rest raid. Moving into an empty one takes it,
+as any city, and the peoples' warriors hunt them as they hunt any
+enemy. `ai_barbarians()` runs after the computer players: from turn
 `BARB_FIRST_TURN` (30; it was 15 until production came from worked
 hexagons and halved), one turn in eight on average, two warriors appear
 on empty land at least `BARB_SPACING` (6) hexagons from every unit and
@@ -1456,8 +1483,18 @@ until it reaches the galley, the cell that reached it being the first
 step, again for every step; a visited bitmap (320 bytes) and a 128-cell
 queue in `LOW_FREE`. The greedy `approach()` it replaced got stuck
 behind every peninsula. With nobody to ferry the galley explores the
-coasts as the fishing boat does (`boat_explore()`, below). Armies are
-not ferried yet. Counted with throwaway
+coasts as the fishing boat does (`boat_explore()`, below). **Armies
+too** (22 Oct 2026): a warrior or spearman that comes no nearer the
+enemy it hunts in `FERRY_PATIENCE` turns asks the same way (`hunt()`),
+waits on the coast, boards, and the galley takes it to the nearest city
+of a people its owner is at war with, the rebels included
+(`destination()`, `enemy_city()`); woken next to land, it attacks or
+walks on by its ordinary rules. **The galley comes only once the one
+waiting is on the coast** (`waiting()` and the test after it in
+`ferry()`): a route to an inland hexagon fails, and let it go at once,
+so that at first 50 soldiers asked and none boarded in 400 turns on seed
+7. Measured with throwaway counters in 400 turns: 27 boarded on seed 1,
+2 on seed 7, none on seed 3. Counted with throwaway
 counters in 300 turns on seed 3: two settlers asked, boarded and went
 ashore; on seeds 1 and 7 none asked, since most peoples reach
 `AI_CITY_CAP` (6) on their own land first — raising the cap is the lever
@@ -1512,6 +1549,39 @@ the city screen's CHANGE list; and with a boat on the fish at (21,4) on
 seed 1, `i`: "Fishing boats at work", the boat gone, the fishing boats
 drawn with no overlay, and "Shallows+Fish+boats 4/0/2".
 
+**Emporia** (milestone 9, 22 Oct 2026, vision.md §3; `src/emporium.c`,
+region 4): **a merchant ship** (`KIND_MERCHANT`, `alltiles/`' cargo
+ship: a coastal city, cost 30, move 3, attack 0, defence 1, the
+shallows, no hold; Civilization's caravan by sea) **founds an emporium**
+with `b` or Orders → Found Emporium (`emporium_order()`, from
+`found_city()` in `src/game.c`) on the land next to it with the most
+trade goods round it, and is used up. The place must be land with
+nobody on it, no resource and no improvement, next to the shallows and
+`EMPORIUM_SPACING` (2) from every city, with at least one good round
+it. **Its people owns the goods on the six hexagons round it**, improved
+or not (`player_owns()` in `src/growth.c`, which reads the list
+directly rather than calling region 4 from region 1, since
+`player_has()` runs in loops from slot 2's regions): tin and copper for
+bronze, cedar for the galley, the rest for trade and the score. **On the
+map it is the fourth value of the improvement bits, both set**
+(`MAP_EMPORIUM`), drawn by the overlay tile after the mine
+(`TILE_EMPORIUM`, `alltiles/`' bazaar cut to lines 8-23; every tile
+after it moved up one); no builder can change it (`improve_can()`
+refuses both bits already), the earthquake spares it, and the readout
+says "+emporium". Whose it is, is a list (`emporium_owner/ax/ay[]`, 16,
+`HIGH_BSS`, saved). **An enemy standing on it at the end of a turn
+burns it** (`emporium_turn()`, from `trade_turn()`): a raider, a
+barbarian, or a people at war with the owner — the network fracture.
+**The computer players** build one merchant ship at a time, over the
+cap, without bronze, with two cities and a coastal one of size 2
+(`src/aibuild.c`); it sails by `sea_route()` to the nearest place next to
+a good its people lacks, copper and tin counted four hexagons nearer, by
+way of the resource list rather than the whole map (`emporium_ai()`),
+and explores as a boat does with nowhere to go. In 400 turns of
+autoplay: 6, 4 and 3 emporia standing at the end on seeds 1, 3 and 7.
+Trade deals are still letters; merchant fleets carrying them, and
+escorts, are for later.
+
 **The end** (milestone 10, its first part; `src/score.c`, region 5).
 **The calendar** is vision.md's (`GAME_SLOW_TURN` and the rest in
 `src/game.h`): 1600 BC, two years a turn to 1250 BC at turn 176, then
@@ -1528,8 +1598,9 @@ point a citizen, two a city, two a good and three a deal, after
 Civilization's; peoples not yet met are "not yet met" until the end,
 those out "fallen". The outcome: fallen is defeat; standing at the end a
 survival victory, and with the highest score a hegemony victory
-(vision.md §5; legacy wants monuments). The pictures in `screens/` are
-for these and not shown yet. World → Score shows the same table and the
+(vision.md §5; legacy wants monuments). **Before the final score, the
+outcome's picture** (`end_picture()`: defeat, survival or hegemony; see
+**Pictures**) is shown in the map window until a key. World → Score shows the same table and the
 turns left. Checked headlessly: World → Score at the start; a throwaway
 build ending after turn 60, through 100 turns of autoplay (the panel
 "Game over", three greetings, then the screen: "The end of the Bronze
@@ -1543,10 +1614,12 @@ a ruler the human has met, and at 226 (`GAME_CRISIS_TURN`) Ammurapi's
 letter, "Seven ships of the enemy came" (or, with nobody met, fugitives'
 news) — `res/text/crisis_*.txt`, popups. **The Sea Peoples are
 barbarians** (`PLAYER_BARBARIAN`): a fleet is a barbarian galley a ship
-with two warriors aboard (spearmen from turn 300), one ship and up to
-three late on, appearing on empty shallows 3-6 hexagons from the
-richest coastal city (size, a little chance, more for a trading
-people), 2 turns in 16 at first and 7 by the end, up to `SEA_CAP` (20)
+with two **raiders** aboard (`KIND_RAIDER`, attack 3, defence 1, built
+by nobody, `alltiles/`' swordsman; warriors and then spearmen until 22
+Oct 2026, whose attack of 1 almost never took a guarded city), one ship
+and up to three late on, appearing on empty shallows 3-6 hexagons from
+the richest coastal city (size, a little chance, more for a trading
+people), 3 turns in 16 at first and 8 by the end, up to `SEA_CAP` (20)
 barbarian units in all. **Nothing new moves them**: `ai_barbarians()`
 already attacks whatever is next to a unit and hunts within 24, a
 galley through the shallows, and the warriors aboard attack from the
@@ -1554,8 +1627,10 @@ ship or step ashore, and burn a city by moving into it once it is empty.
 **Shocks**, one turn in 16: drought (`crisis_drought` turns, 8-15, in
 which `yield()` takes a food from grassland, plains and desert), an
 earthquake (a city a citizen smaller and an improvement next to it
-gone), plague (the largest city a third smaller), a revolt (two
-barbarian warriors next to a city nobody guards). **Pleas**: a ruler the
+gone, though never an emporium), plague (the largest city a third
+smaller), a revolt (a city nobody guards goes over to the rebels, with a
+barbarian warrior fortified in it; until 22 Oct 2026 two warriors
+appeared next to it and burnt it the next turn). **Pleas**: a ruler the
 human has met writes when it has lost a city since the last turn
 (`crisis_cities[]`), a letter a turn. **Network fracture**: in the
 Crisis a trade deal is lost at sea one turn in 32 (`trade_turn()`; the
@@ -1563,8 +1638,8 @@ panel says so if it was the human's), and bronze already ends with the
 copper or tin it came from. **The computer players** want a guard more
 in every coastal city from turn 226 (`guards_wanted()`). The human hears
 of all of it by popup when it is theirs or everyone's, and not during
-Play 50 Turns (`diplomacy_auto`). `crisis_drought` and `crisis_cities`
-are saved (`SAVE_VERSION` 11). **The unit list went from 64 to 96**
+Play 50 Turns (`diplomacy_auto`). `crisis_drought`, `crisis_cities` and
+`crisis_capitals` are saved (`SAVE_VERSION` 12). **The unit list went from 64 to 96**
 (`MAX_UNITS`): by the Crisis it was full and almost no fleet could be
 created (0 ships in 175 turns on seed 7); the redraw's `unit_at()` walks
 it for every occupied hexagon, 0.13 ms more in a busy view (17.12 → 17.25
@@ -1574,9 +1649,61 @@ Hittites fell on seed 1 (6 cities to 0), the Mycenaeans lost one on seed
 7, nobody else lost a city, and citizens fell by a quarter to a half
 (seed 7: 96 at turn 400 without the Crisis, 69 with it). Milder than
 TODO.txt's "half survive": `SEA_CAP`, the raid rate in `crisis_turn()`
-and the fleets' size are the knobs. **Watch the automatic end of turn when
+and the fleets' size are the knobs. **With the raider** (22 Oct 2026,
+measured the same way against turn 226): with the raids also 3 in 16 to
+8, ships every 60 turns, `SEA_CAP` 24 and shocks 1 in 8, five of the
+eight computer peoples fell, and on seed 3 the human was the last
+standing by turn 286 — too much; with the old rates, one fell; as it
+is now, one fell (the Egyptians on seed 7), one broke up (the
+Egyptians on seed 1, five cities to the rebels) and seed 3 lost half its
+citizens. The runs differ a lot from one setting to the next, so the
+rest is for play. **Watch the automatic end of turn when
 scripting**: a key meant to end the turn may instead close the first
 popup of the next.
+
+**The collapse** (milestone 10, 22 Oct 2026; `collapse()` in
+`src/crisis.c`, at any time, not only in the Crisis): **a computer
+player that loses its capital breaks up**, as Civilization's do
+(OpenCivOne's `Actions.cs` and `Secession.cs`: a capital taken from a
+people of more than four cities splits it, a new people getting the
+cities furthest from the old capital until a third of the citizens).
+With no player to spare, those cities go over to the rebels, the
+barbarians, with the units in them (`rebel()`). The capital is the
+first name on the founder's list (`city_name[]` 0) while its founder
+holds it; `crisis_capitals` notes whose stood at the last turn's end, so
+the loss, by capture or by fire, is seen once. The seat that is left is
+the largest city, from which "furthest" is measured, and with fewer than
+`COLLAPSE_CITIES` (3, Civilization's five scaled to six-city peoples)
+nothing happens. A popup tells the human of a people met.
+
+**Pictures** (22 Oct 2026; `src/picture.c`, region 5): the title's at
+boot (`title_splash()`, **The title's picture**) and the outcome's at
+the end (`end_picture()` in `src/score.c`). **They fill the map window
+and use its tile store as the framebuffer**: 60x23 characters at a byte
+a pixel is exactly the store's window, so nothing has to make room, and
+the store's row padding (the minimap, the flags) is not touched. A
+picture is a file of its own on the disk (`INTRO.PIC` and the rest, 87
+KB each; the d81 has room for them), read through a 128-byte `HIGH_BSS`
+buffer straight into the store, palette first, and shows as it comes
+in. `screens/Makefile`, a manual step like `tiles/`, runs
+`tools/mkpic.py` over `screens/*.png` and leaves `res/*.pic`, which are
+checked in: cropped round the middle to the window's shape on the glass
+(480:368, a pixel being twice as tall as wide), scaled to 480x184 and
+quantised with dithering to palette entries 26-255, the tiles' — **the
+system's 0-15 and the minimap's 16-25 stay**, since the panel and the
+minimap are still up. **`picture_end()` puts the tiles' palette back**
+from a copy in attic RAM (`PALETTE_ATTIC`, `$800F000`), which
+`sheet_load()` writes **instead of** setting the palette at boot: the
+title's picture is up while the sheet loads, and its colours must stand
+until the key. So a `NO_TITLE` build calls `picture_end()` itself, and
+**the sheet's rows are staged in code slot 1**, not the store. **A
+picture's file name has to be copied out of the region before the
+open**: the KERNAL's disk code reads it with its own map, which sees
+region 0 at `$6000`, and the first try failed to find `INTRO.PIC` for
+that reason (the loaders in region 0 pass literals and get away with
+it). `win_legacy.png` is not converted: no legacy victory yet. Checked
+headlessly: the splash, the tiles' colours after it, and the survival
+picture and score at the end of a throwaway five-turn game.
 
 **Popups** (`src/popup.c`) are a box of word-wrapped text over the middle
 of the map window, closed by a click anywhere, fire, Return, space or Esc.
@@ -1865,10 +1992,11 @@ that fakes it, the same idea as `START_OFF_X`. **`make FAKE_KEYS=...` does
 that here** (`src/input.c`): a list of `{frame, x, y, key}` entries, in frame
 order, each moving the arrow to sprite position `(x, y)` (0,0 leaves it) and
 returning `key` from `input_poll()` on that frame. `KEY_CLICK` is a mouse
-click. **The title and new-game screens come first and count frames
-too**, and so does the opening popup, so a script starts with four
-Returns — Start Game, Mycenaeans, Scribe, and closing the popup: `make
-FAKE_KEYS='{10,0,0,13},{12,0,0,13},{14,0,0,13},{16,0,0,13},{30,0,0,42},{60,0,0,13},{90,0,0,98}'`
+click. **The splash, the title and new-game screens come first and
+count frames too**, and so does the opening popup, so a script starts
+with five Returns (four until the splash, 22 Oct 2026) — the splash,
+Start Game, Mycenaeans, Scribe, and closing the popup: `make
+FAKE_KEYS='{10,0,0,13},{12,0,0,13},{14,0,0,13},{16,0,0,13},{18,0,0,13},{30,0,0,42},{60,0,0,13},{90,0,0,98}'`
 starts the game, moves the settler east, ends the turn and founds a city,
 and a screenshot shows the result. Menu item *i* is at sprite y `92 + 16i`
 (`{40,160,108,KEY_CLICK}` clicks the second), and **an item the arrow
@@ -1988,17 +2116,19 @@ in xemu by building once with `input_real_hw = 1` forced in
 
 ## Assets
 
-`res/tiles.fci` is 140x4 characters — 35 4x4 tiles side by side, in the
+`res/tiles.fci` is 156x4 characters — 39 4x4 tiles side by side, in the
 order `tiles/Makefile` lists the PNGs: ten terrains (hills, grass, mountain, ocean, shallow ocean, tundra, plains, forest,
 desert, floodplain), then the city, a selection ring
 (the tile-select cursor),
 three units (settler, warrior, builder), the black hexagon of unexplored
-land, the overlays, irrigation and mine, the nine resources (see
+land, the overlays, irrigation, mine and emporium (**Emporia**), the nine resources (see
 **Resources**), mined copper and tin, the spearman, irrigated
 cattle, olives and wine (see **Bronze**), and the galley and the
 fishing boat (see **Galleys**, `alltiles/`' `unit_galley.png` and
 `unit_work_boat.png` as they are), and fish worked by one
-(`tile_fish_improved.png`, as `res_fish_boats`);
+(`tile_fish_improved.png`, as `res_fish_boats`), and the Sea Peoples'
+raider and the merchant ship (`alltiles/`' `unit_swordsman.png` and
+`unit_cargo_ship.png`, as `unit_raider` and `unit_merchant`);
 `TILE_*` in `src/sheet.h`. Where each tile goes is the loader's business
 (**When bank 5 fills up**, step 1c). `res_cattle`, `res_copper` and `res_tin` are `alltiles/`'
 cattle, copper and iron cut to lines 8-23, `res_olives` and `res_wine` its
@@ -2028,15 +2158,13 @@ collection to pick from.
 the user's): `intro.png` (1260x1000) for the start, and `defeat.png`,
 `win_survival.png`, `win_legacy.png` and `win_hegemony.png` (1280x800)
 for the end of milestone 10, one for each of vision.md's three victories
-and the loss. **Nothing uses them yet.** They are source art, RGBA and
-far larger than the screen: shown, they would have to be scaled to the
-display (640x200 at H640/V200, or a mode of their own), quantised, and
-stored on the disk as full-colour characters or a bitmap of their own,
-loaded into memory the view does not need while they are up -- a 640x200
-picture is 125 KB at a byte a pixel, more than banks 4 and 5's tile
-store, so it would replace the map view while it is shown and the view
-be set up again afterwards, or be read a piece at a time from attic.
-The d81 has room (800 KB, under 100 KB used).
+and the loss. **All but `win_legacy.png` are shown** (22 Oct 2026, see
+**Pictures**): `make` in `screens/` (Pillow, like `tiles/`) makes
+`res/*.pic` from them, which are checked in, and a preview of each in
+`screens/build/`. The full screen, 640x200, would be 125 KB, more than
+the tile store, so they fill the map window, 480x184; the big titles
+in the art stay readable, the small captions under them barely. The d81
+has room (800 KB, about 500 KB used with the four).
 
 **The sheet is read off the disk** (`TILES.FCI`, by `sheet_load()`), a
 character at a time, each widened and sent to bank 5 as it arrives, so none

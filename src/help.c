@@ -17,6 +17,7 @@
 #include "screen.h"
 #include "sheet.h"
 #include "text.h"
+#include "unit.h"
 #include "view.h"
 
 #pragma clang section text="r0text" rodata="r0rodata"
@@ -47,12 +48,20 @@ static void draw_picture(byte t)
 
 void help_screen(byte id)
 {
-    byte key;
+    byte key, k;
 
     sprite_hide(2);             // the minimap's outline, which is gone
     sprite_hide(3);
     if (id >= TEXT_PEDIA_HILLS && id < TEXT_PEDIA_HILLS + TERRAIN_COUNT)
         draw_picture(id - TEXT_PEDIA_HILLS);
+    // A unit's page (Help/Military Units): on grassland, a ship on the
+    // shallows.
+    k = id - TEXT_PEDIA_SETTLER + KIND_SETTLER;
+    if (id >= TEXT_PEDIA_SETTLER && k < KINDS) {
+        draw_picture(KIND_IS_SHIP(k) ? TILE_SHALLOW_OCEAN : TILE_GRASS);
+        view_draw_tile(PICTURE_LEFT - VIEW_LEFT + 4, PICTURE_TOP - VIEW_TOP,
+                       unit_kind_tile[k]);
+    }
     screen_clear();
     if (id != TEXT_HELP) {      // a page, framed as Civilization's are
         screen_box(0, 0, SCREEN_COLUMNS - 1, SCREEN_ROWS - 1, COLOR_GREEN);

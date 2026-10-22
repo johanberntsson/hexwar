@@ -1,0 +1,12 @@
+# The Civilopedia's page on the Spearman: Help/Military Units. A placeholder.
+# The markup is described in tools/mktext.py.
+{at 42 4}{head}SPEARMAN
+{at 42 6}{grey}Military Unit
+{at 6 9}{head}Spearman
+{text}  Attack: 1
+  Defence: 2
+  Moves: 1
+  Cost: 20 shields
+  Needs: bronze -- copper and tin
+{at 6 17}{text}The best defender of the age, the phalanx of Civilization.
+Without tin of its own a people must trade for it, or found an emporium.

@@ -1,0 +1,13 @@
+# The Civilopedia's page on the Raider: Help/Military Units. A placeholder.
+# The markup is described in tools/mktext.py.
+{at 42 4}{head}RAIDER
+{at 42 6}{grey}Military Unit
+{at 6 9}{head}Raider
+{text}  Attack: 3
+  Defence: 1
+  Moves: 1
+  Cost: 30 shields
+  Built by nobody: the Sea Peoples' own
+{at 6 17}{text}The Sea Peoples come by galley from 1200 BC, two to a ship,
+and burn the cities they take.
+Keep a strong guard in every city by the sea.

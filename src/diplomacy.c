@@ -198,9 +198,10 @@ static void rivals(void)
 
     for (i = 0; i < city_count; ++i) {
         p = city_owner[i];
+        if (p >= PLAYERS) continue;             // the rebels' (crisis.c)
         for (j = (byte)(i + 1); j < city_count; ++j) {
             q = city_owner[j];
-            if (p == q || !((diplomacy_known[p] >> q) & 1)
+            if (p == q || q >= PLAYERS || !((diplomacy_known[p] >> q) & 1)
                 || distance(city_ax[i], city_ay[i], city_ax[j], city_ay[j])
                        > RIVAL_RANGE)
                 continue;
@@ -290,7 +291,7 @@ static void scan(byte all)
     }
     for (i = 0; i < city_count; ++i) {
         p = city_owner[i];
-        if (all || p == PLAYER_HUMAN)
+        if (p < PLAYERS && (all || p == PLAYER_HUMAN))
             look_round(p, 1, city_ax[i], city_ay[i]);
     }
 }

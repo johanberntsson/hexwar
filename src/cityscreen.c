@@ -283,7 +283,7 @@ static void draw_choice(byte i, byte selected)
 
     screen_fill(x, LIST_ROW + i, BUILD_RIGHT - x - 1, colour);
     screen_putsxy(x + 1, LIST_ROW + i, unit_kind_name[kind], colour);
-    screen_putsxy(x + 12, LIST_ROW + i, number(unit_kind_cost[kind]), colour);
+    screen_putsxy(x + 14, LIST_ROW + i, number(unit_kind_cost[kind]), colour);
 }
 
 static byte choice_under_pointer(void)
@@ -312,6 +312,7 @@ static void change(byte c)
     buildable_n = 3;
     if (copper && tin) buildable[buildable_n++] = KIND_SPEARMAN;
     if (cedar && coast) buildable[buildable_n++] = KIND_GALLEY;
+    if (coast) buildable[buildable_n++] = KIND_BOAT;
 
     for (i = 0; i < BUILDABLE; ++i)
         if (buildable[i] == city_build[c]) sel = i;
@@ -319,7 +320,7 @@ static void change(byte c)
     blank_box(BUILD_LEFT, BUILD_RIGHT);
     screen_putsxy(TEXT_LEFT(BUILD_LEFT), HEADING_ROW, "Build what?",
                   COLOR_WHITE);
-    screen_putsxy(TEXT_LEFT(BUILD_LEFT) + 12, LIST_ROW - 1, "shields",
+    screen_putsxy(TEXT_LEFT(BUILD_LEFT) + 14, LIST_ROW - 1, "shields",
                   COLOR_LIGHTGREY);
     for (i = 0; i < BUILDABLE; ++i) draw_choice(i, sel);
     row = LIST_ROW + BUILDABLE + 1;

@@ -210,12 +210,14 @@ stub:       .macro  name, target, region
             stub    diplomacy_greet, diplomacy_greet_r3, 3
             stub    diplomacy_screen, diplomacy_screen_r3, 3
 
-; Region 4, slot 2: trade, routes over the sea, and the menus.
+; Region 4, slot 2: trade, routes over the sea, the ships' exploring, and
+; the menus.
             stub    trade_reset, trade_reset_r4, 4
             stub    trade_turn, trade_turn_r4, 4
             stub    trade_agree, trade_agree_r4, 4
             stub    trade_propose, trade_propose_r4, 4
             stub    sea_route, sea_route_r4, 4
+            stub    boat_explore, boat_explore_r4, 4
             stub    menu_orders, menu_orders_r4, 4
             stub    menu_draw, menu_draw_r4, 4
             stub    menu_click, menu_click_r4, 4

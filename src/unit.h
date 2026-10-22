@@ -20,7 +20,13 @@
 #define KIND_BUILDER 3
 #define KIND_SPEARMAN 4         // bronze: needs copper and tin (growth.h)
 #define KIND_GALLEY 5           // cedar and a coastal city; carries GALLEY_HOLD
-#define KINDS 6
+#define KIND_BOAT 6             // a fishing boat: a coastal city; carries nobody
+#define KINDS 7
+
+// **The ships are the kinds from KIND_GALLEY on**: they sail the shallows
+// and their own cities, and everything else is a land unit, which on the
+// water is aboard a galley.
+#define KIND_IS_SHIP(K) ((K) >= KIND_GALLEY)
 
 // **A galley** (milestone 9, Civilization's trireme) sails the shallows
 // and its own cities, never the open sea or land, and carries GALLEY_HOLD
@@ -29,6 +35,11 @@
 // it does, goes wherever the galley goes from the water, and is woken by
 // unit_wake_cargo() when the galley stops next to land.
 #define GALLEY_HOLD 2
+
+// **A fishing boat** (milestone 9; Civilization IV's work boat) sails as a
+// galley does but carries nobody: it needs no cedar, and the computer
+// players build one early to explore the coasts (boat_explore(), boat.h),
+// which is how distant peoples meet before anyone has a galley.
 
 // Standing orders: what a unit does instead of asking for any.
 #define ORDERS_NONE 0
@@ -97,15 +108,15 @@ byte unit_count_kind(byte owner, byte kind);
 byte unit_at(byte ax, byte ay);
 
 // Whether a unit of `kind` and `owner` may step onto (ax, ay): a land unit
-// not into water but onto its own galley with room (ENTER_BOARD, which the
-// computer players never do yet), a galley only onto the shallows or its
-// own city; and not onto another player's unit or city, which is an attack
-// (combat.h) -- except a land unit's onto a ship.
+// not into water but onto its own galley with room (ENTER_BOARD), a ship
+// only onto the shallows or its own city; and not onto another player's
+// unit or city, which is an attack (combat.h) -- except a land unit's onto
+// a ship.
 #define ENTER_OK 0
 #define ENTER_WATER 1           // a land unit, and no galley to board
 #define ENTER_FOREIGN 2
 #define ENTER_BOARD 3
-#define ENTER_LAND 4            // a galley, and land or the open sea
+#define ENTER_LAND 4            // a ship, and land or the open sea
 byte unit_can_enter(byte owner, byte kind, byte ax, byte ay);
 
 // Galley u has stopped: wake the units aboard if it is next to land.

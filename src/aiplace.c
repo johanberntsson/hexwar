@@ -64,11 +64,14 @@ void ai_place(void)
     for (ax = 0; ax < SEEN_X; ++ax) {
         for (p = 0; p < PLAYERS; ++p) ai_seen[p][ax] = 0;
         ai_land[ax] = 0;
+        ai_sea[ax] = 0;
     }
     for (ay = 0; ay < MAP_ROWS; ++ay)
         for (ax = 0; ax < MAP_COLUMNS; ++ax) {
             t = MAP_TERRAIN(ax, ay);
-            if (t != TILE_OCEAN && t != TILE_SHALLOW_OCEAN)
+            if (t == TILE_SHALLOW_OCEAN)
+                ai_sea[ax / SEEN_COLUMNS] |= (byte)(1 << (ay / SEEN_ROWS));
+            else if (t != TILE_OCEAN)
                 ai_land[ax / SEEN_COLUMNS] |= (byte)(1 << (ay / SEEN_ROWS));
         }
 

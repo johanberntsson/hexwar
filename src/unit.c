@@ -16,16 +16,18 @@ HIGH_BSS byte unit_work[MAX_UNITS];
 byte unit_active = UNIT_NONE;
 byte unit_hidden;
 
-// The spearman is Civilization's phalanx, the galley its trireme.
+// The spearman is Civilization's phalanx, the galley its trireme, the
+// fishing boat Civilization IV's work boat.
 const char *const unit_kind_name[] = {
-    "", "Settler", "Warrior", "Builder", "Spearman", "Galley"
+    "", "Settler", "Warrior", "Builder", "Spearman", "Galley", "Fishing Boat"
 };
-const byte unit_kind_moves[] = { 0, 1, 1, 1, 1, 3 };
-const byte unit_kind_cost[] = { 0, 30, 10, 20, 20, 40 };
-const byte unit_kind_attack[] = { 0, 0, 1, 0, 1, 1 };
-const byte unit_kind_defence[] = { 0, 1, 1, 1, 2, 1 };
+const byte unit_kind_moves[] = { 0, 1, 1, 1, 1, 3, 2 };
+const byte unit_kind_cost[] = { 0, 30, 10, 20, 20, 40, 20 };
+const byte unit_kind_attack[] = { 0, 0, 1, 0, 1, 1, 0 };
+const byte unit_kind_defence[] = { 0, 1, 1, 1, 2, 1, 1 };
 static const byte unit_kind_tile[] = {
-    0, TILE_SETTLER, TILE_WARRIOR, TILE_BUILDER, TILE_SPEARMAN, TILE_GALLEY
+    0, TILE_SETTLER, TILE_WARRIOR, TILE_BUILDER, TILE_SPEARMAN, TILE_GALLEY,
+    TILE_FISHING_BOAT
 };
 
 #define IS_WATER(T) ((T) == TILE_OCEAN || (T) == TILE_SHALLOW_OCEAN)
@@ -79,14 +81,14 @@ void unit_move_to(byte u, byte ax, byte ay)
     if (unit_kind[u] == KIND_GALLEY) {
         if (water(old_x, old_y))
             for (v = 0; v < MAX_UNITS && n < GALLEY_HOLD; ++v)
-                if (unit_kind[v] != KIND_NONE && unit_kind[v] != KIND_GALLEY
+                if (unit_kind[v] != KIND_NONE && !KIND_IS_SHIP(unit_kind[v])
                     && unit_ax[v] == old_x && unit_ay[v] == old_y
                     && unit_owner[v] == unit_owner[u]) {
                     unit_ax[v] = ax;
                     unit_ay[v] = ay;
                     ++n;
                 }
-    } else if (water(ax, ay)) {
+    } else if (!KIND_IS_SHIP(unit_kind[u]) && water(ax, ay)) {
         unit_orders[u] = ORDERS_FORTIFY;
     }
     unit_ax[u] = ax;
@@ -137,7 +139,7 @@ void unit_wake_cargo(byte u)
         if (map_neighbour(x, y, dir, &nx, &ny) && !water(nx, ny)) break;
     if (dir == 6) return;
     for (v = 0; v < MAX_UNITS; ++v)
-        if (unit_kind[v] != KIND_NONE && unit_kind[v] != KIND_GALLEY
+        if (unit_kind[v] != KIND_NONE && !KIND_IS_SHIP(unit_kind[v])
             && unit_ax[v] == x && unit_ay[v] == y
             && unit_orders[v] == ORDERS_FORTIFY)
             unit_orders[v] = ORDERS_NONE;
@@ -150,7 +152,7 @@ byte unit_can_enter(byte owner, byte kind, byte ax, byte ay)
     byte c, u, galleys = 0, aboard = 0;
 
     c = city_at(ax, ay);
-    if (kind == KIND_GALLEY) {
+    if (KIND_IS_SHIP(kind)) {
         if (terrain != TILE_SHALLOW_OCEAN
             && (c == CITY_NONE || city_owner[c] != owner))
             return ENTER_LAND;
@@ -162,7 +164,7 @@ byte unit_can_enter(byte owner, byte kind, byte ax, byte ay)
                 && unit_ay[u] == ay) {
                 if (unit_owner[u] != owner) return ENTER_WATER;
                 if (unit_kind[u] == KIND_GALLEY) galleys += GALLEY_HOLD;
-                else ++aboard;
+                else if (!KIND_IS_SHIP(unit_kind[u])) ++aboard;
             }
         return aboard < galleys ? ENTER_BOARD : ENTER_WATER;
     }
@@ -220,7 +222,7 @@ byte unit_overlay(byte ax, byte ay, byte *tiles)
     // At sea the galley is drawn, not those aboard, unless one of them
     // has the orders.
     if (c == CITY_NONE && u != UNIT_NONE && u != unit_active
-        && unit_kind[u] != KIND_GALLEY && water(ax, ay))
+        && !KIND_IS_SHIP(unit_kind[u]) && water(ax, ay))
         for (v = 0; v < MAX_UNITS; ++v)
             if (unit_kind[v] == KIND_GALLEY && unit_ax[v] == ax
                 && unit_ay[v] == ay)

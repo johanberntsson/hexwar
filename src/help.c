@@ -39,10 +39,7 @@ static void draw_picture(byte t)
     for (r = 0; r < PICTURE_ROWS; ++r)
         lfill(TILE_STORE + VIEW_ROW_STRIDE * (PICTURE_TOP - VIEW_TOP + r)
               + 64UL * (PICTURE_LEFT - VIEW_LEFT), 0, 64 * PICTURE_COLUMNS);
-    // view_draw_tile() changes the source bank only for a tile in bank 1,
-    // which no terrain is, and view_redraw() starts with a blit_begin() of
-    // its own.
-    blit_begin(0x00, SHEET_EXPANDED_BANK, 0x00, 0x00);
+    view_blit_begin();
     view_draw_tile(PICTURE_LEFT - VIEW_LEFT, PICTURE_TOP - VIEW_TOP + 3, t);
     view_draw_tile(PICTURE_LEFT - VIEW_LEFT + 4, PICTURE_TOP - VIEW_TOP, t);
     view_draw_tile(PICTURE_LEFT - VIEW_LEFT + 8, PICTURE_TOP - VIEW_TOP + 3, t);

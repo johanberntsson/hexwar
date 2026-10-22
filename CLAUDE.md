@@ -205,16 +205,16 @@ buffers at the default `$FF80000` and corrupts the display.
 
 | Address | Size | Contents |
 |---|---|---|
-| `$2001-$5FFF`, `$8000-$9FFF` | 24 KB | the resident program: code, data, BSS, C stack. 304 bytes free, nearly all at `$5EE1-$5FFF` |
-| `$6000-$7FFF` | 8 KB | the code window (`src/region.h`); as loaded, region 0 — the title, setup and help screens (and the Civilopedia's pages), save and load, the sheet's and the map's loaders, the owners' flags, the end of a turn and a game's start (`src/turn.c`), the computer players' starts (`src/aiplace.c`). 1.8 KB free |
-| `$13000-$14FFF` | 8 KB | code slot 1: region 1, from `SEVENSHIPS.R1` by way of attic: the computer players and their ferrying, the cities' yields and growth, bronze. 312 bytes free |
-| `$15000-$16FFF` | 8 KB | code slot 2, shared: region 2 (the city screen, Top Five Cities, the builders' improvements; 2.7 KB free) region 3 (diplomacy; 2.3 KB free) or region 4 (trade, the galleys' routes and the menus; 3.5 KB free), whichever was called last |
-| `$17000-$1EFFF` | 32 KB | the tile sheet's tiles 18-33, where regions 3 to 6 would have been: the resources, the improved resources, the spearman, the galley; **full** |
-| `$A000-$BFFF` | 8 KB | `highram`, under the BASIC ROM, banked out by `src/bank.s`: `map_tile`, the unit and city arrays, the sprite blocks, the AI's headings, the staging buffers of the texts and the regions, the texts' line buffers, the sheet loader's buffers, the saved VIC registers, the AI's exploration memory, the resource list, the peoples' relations and attitudes and the letters' names, the trade deals; about 2.5 KB free — `HIGH_BSS` in `src/mega65.h` moves a variable there, and **the startup does not clear it** |
+| `$2001-$5FFF`, `$8000-$9FFF` | 24 KB | the resident program: code, data, BSS, C stack. 278 bytes free, nearly all at `$5EF9-$5FFF` |
+| `$6000-$7FFF` | 8 KB | the code window (`src/region.h`); as loaded, region 0 — the title, setup and help screens (and the Civilopedia's pages), save and load, the sheet's and the map's loaders, the owners' flags, the end of a turn and a game's start (`src/turn.c`), the computer players' starts (`src/aiplace.c`). 1.6 KB free |
+| `$13000-$14FFF` | 8 KB | code slot 1: region 1, from `SEVENSHIPS.R1` by way of attic: the computer players and their ferrying, the cities' yields and growth, bronze. 273 bytes free |
+| `$15000-$16FFF` | 8 KB | code slot 2, shared: region 2 (the city screen, Top Five Cities, the builders' improvements; 2.7 KB free) region 3 (diplomacy; 2.3 KB free) or region 4 (trade, the ships' routes and exploring, the menus; 2.8 KB free), whichever was called last |
+| `$17000-$1EFFF` | 32 KB | the packed tile sheet's second area, where regions 3 to 6 would have been: whatever rows did not fit bank 5's; with bank 5's, 18 KB free (`tools/mktiles.py` says) |
+| `$A000-$BFFF` | 8 KB | `highram`, under the BASIC ROM, banked out by `src/bank.s`: `map_tile`, the unit and city arrays, the sprite blocks, the AI's headings, the staging buffers of the texts and the regions, the texts' line buffers, the sheet loader's buffers, the saved VIC registers, the AI's exploration memory, the resource list, the sheet's row tables, the peoples' relations and attitudes and the letters' names, the trade deals; about 2.1 KB free — `HIGH_BSS` in `src/mega65.h` moves a variable there, and **the startup does not clear it** |
 | `$1600-$1EFF` | 2304 | `zpsave` (56 bytes, BASIC's zero page during the run), then `lowfree`: the popup's 400-byte text and the scratch buffers of the view and the minimap, and the sea routes' search (`src/path.c`), 990 bytes free — `LOW_FREE` in `src/mega65.h` moves a variable there |
 | `$12000` | 4000 | screen RAM, 80x25 cells of 2 bytes |
 | `$40000-$56FFF` | 94208 | the view's tile store, 23 rows of 4096: 3840 for the window, then 256 holding four of the minimap's characters (all 80 of them, rows 0-19) or, in rows 20-22, two of the owners' flags (92 slots) |
-| `$57000-$5FFFF` | 36864 | the x-expanded tile sheet's tiles 0-17, 2 KB each: all the room there is |
+| `$57000-$5FFFF` | 36864 | the packed, x-expanded tile sheet's first area: the tiles' rows, only the characters with pixels, as they come off the disk (`src/sheet.h`) |
 | `$8000000` | ~3 KB | attic RAM: the texts, `TEXT.PAK`'s body (`src/text.h`) |
 | `$8010000` | 8 KB a region | attic RAM: code regions 1 and up as read from the disk, region r at `REGION_ATTIC(r)` (`src/region.h`); the rest of the 8 MB free |
 | `$FF81000` | 4000 | colour RAM |
@@ -237,12 +237,12 @@ minimap's characters, so **nothing may write a row past byte 3840** —
 
 Bank 5 is chip RAM the *VIC* has to see — tiles, the minimap, anything
 else drawn as full-colour characters. Data the CPU alone reads goes to
-attic RAM instead and does not count. It has room for 18 tiles of sheet
-since the map went to 128x20 and the whole minimap into the tile store's
-padding (20 Oct 2026), all used. **The sheet is not something the VIC sees, though**: it is only
+attic RAM instead and does not count. **The sheet is not something the VIC sees, though**: it is only
 ever a DMA source, copied into the tile store, so it needs chip RAM but
-not bank 5 — which is what step 1b uses. Take these in order when another
-tile or another full-colour surface needs room:
+not bank 5 — which is what step 1b uses. **Since 22 Oct 2026 it is
+packed** (step 1c), and `make` in `tiles/` says how much room is left —
+18 KB with 35 tiles, about a dozen units. Take these in order when
+another tile or another full-colour surface needs room:
 
 1. **The tile store's row padding** — *done* (19 Oct 2026). Each of the
    23 rows has 256 bytes after its 3840, 92 character slots in all, and a
@@ -271,6 +271,32 @@ tile or another full-colour surface needs room:
    overlays drew from bank 1 and scrolling was still fast (they are back in
    bank 5 since it grew to 18 tiles; the resources are bank 1's now); and
    region 2, at `$15000`, with city growth.
+
+   1c. **Packing the sheet** — *done* (22 Oct 2026, for the fishing
+   boat, when all 34 tiles' 2 KB were used). Each tile row keeps only
+   its expanded characters from the first with a pixel to the last —
+   exactly what `view_draw_tile()` copied anyway — so a unit or a
+   resource, a small picture in the middle of its tile, takes a third to
+   three quarters of 2 KB, and the 34 tiles took 49 KB, not 68.
+   `sheet_load()` stages each tile row in the tile store's first row,
+   finds its extent, and copies those characters to the next free place,
+   bank 5's area and then bank 1's (`area_bank[]` and the rest in
+   `src/sheet.c`, `AREAS` in `tools/mktiles.py`, which must agree), and
+   notes each row's bank and address (`sheet_row_bank/lo/hi[]`, 3 bytes
+   a row in `HIGH_BSS`). `view_draw_tile()` reads those a row at a time
+   and changes the DMA's source bank when a row is in the other one. **A
+   new area of chip RAM is an entry in those two tables**, as long as no
+   row crosses a 64 KB bank. `mktiles.py` packs the sheet as the loader
+   will and stops if it does not fit, so a sheet too big is a build
+   error, not a boot one. Checked headlessly against the build before:
+   the tile store after 50 turns of autoplay (terrain, resources,
+   improvements, units, cities and flags) byte-identical, and the game
+   state with it. **The redraw got faster, not slower**: timed with CIA2
+   round `view_redraw()` (the Show Map window at `START_OFF_X=90
+   START_OFF_Y=60`, not `-sleepless`), 17.0 ms before and 16.4 after —
+   the per-row lookups cost 0.5 ms, and leaving out the `cut << 6` that
+   Calypsi makes a loop of six calls, on rows with nothing clipped, saved
+   1.1.
 2. **The C64 ROM, which C65 mode never runs.** A dump of the running game
    shows C64 BASIC at `$2A000` (`CBMBASIC` at `$2A004`) and the GO64
    KERNAL at `$2E000`, 16 KB together. Using them keeps the C65 KERNAL,
@@ -501,10 +527,10 @@ entry in each of `dispatch.s`'s per-region tables (`slot_of`,
 `region_stamp[]`'s initialiser in `src/region.c`, and its file in the
 Makefile's `REGION_FILES`; `packprg.py` needs nothing. Attic's bank 1
 holds eight regions as the tables stand. **Resident space is what to
-watch now**: 304 bytes (22 Oct 2026, after Game → Options and Help →
-Terrain Types, which took the terrain names out of `game.c`; the slot
-copying cost 140, and each stub is 13), against 1.8 KB in region 0, 312 in
-region 1, 2.6 KB in region 2, 2.3 KB in region 3 and 3.5 KB in region 4.
+watch now**: 278 bytes (22 Oct 2026, after the fishing boat; Help →
+Terrain Types took the terrain names out of `game.c`; the slot
+copying cost 140, and each stub is 13), against 1.6 KB in region 0, 273 in
+region 1, 2.6 KB in region 2, 2.3 KB in region 3 and 2.8 KB in region 4.
 `src/menu.c` moved from region 0 to region 4 the same day, when region 0
 was down to 188 bytes. **Region 1 is nearly full too**: its next room
 is more of `ai.c` moving out (as `ai_place()` went to `src/aiplace.c`
@@ -652,7 +678,8 @@ padded row stride took a redraw from **32.2 ms to 12.8 ms**.
 notes, for every row of every tile, the first expanded character with a
 non-zero pixel and how many from there to the last (`sheet_row_lead`,
 `sheet_row_width` in `HIGH_BSS`), and `view_draw_tile()` copies just those,
-skipping a row with none. The result is the same — the characters left out
+skipping a row with none — and since 22 Oct 2026 the sheet keeps only
+those (**When bank 5 fills up**, step 1c). The result is the same — the characters left out
 are all transparent — but a unit or an overlay, a small picture in the middle
 of its tile, costs one or two short jobs instead of four of 512 bytes. **Keep
 overlay art inside pixel lines 8-23** of its 32, the middle two character
@@ -786,8 +813,9 @@ milestone 8's diplomacy, "well enough", so its tuning is still open
 
 **Where to start next time**: TODO.txt — milestone 10's end game is
 drafted there; the merchant fleets and emporia and ferrying armies are
-what is left of milestone 9. **The tile sheet is full** (34 of 34): another tile needs room
-first (**When bank 5 fills up**).
+what is left of milestone 9, and the fishing boat's work on fish
+(**Galleys**). The tile sheet is packed and has about a dozen units'
+room left (**When bank 5 fills up**, step 1c).
 
 **The title screen comes first** (`src/title.c`): `title_show()` puts the
 title up once the texts are read and before the sheet and the map are,
@@ -1168,7 +1196,7 @@ rest. **Roads need a bit**, and the map byte has none left: terrain is
 down to four bits (`MAP_TERRAIN_MASK` 0x0f, ten of sixteen values used).
 
 **Resources** (milestone 7, vision.md §2) are nine, `RES_*` in
-`src/map.h`, tiles 18-26 in bank 1, in this order:
+`src/map.h`, tiles 18-26, in this order:
 
 | | where | adds |
 |---|---|---|
@@ -1358,7 +1386,7 @@ hexagon is aboard the galley there**, `GALLEY_HOLD` (2) to a galley:
 `ENTER_BOARD` for a step onto one's own galley with room, which the
 human's moves take as a move and the computer's `!= ENTER_OK` tests
 refuse, `ENTER_WATER` otherwise — a land unit never attacks a ship —
-and `ENTER_LAND` for a galley onto land, the open sea or another's city
+and `ENTER_LAND` for a ship onto land, the open sea or another's city
 ("Galleys keep to the shallows"). Boarding sentries the unit
 (`ORDERS_FORTIFY`, set in `unit_move_to()`), a galley moving off the
 water takes those aboard with it (from a city it takes nobody), and
@@ -1387,8 +1415,9 @@ region 4): a breadth-first search from the target out over the shallows
 until it reaches the galley, the cell that reached it being the first
 step, again for every step; a visited bitmap (320 bytes) and a 128-cell
 queue in `LOW_FREE`. The greedy `approach()` it replaced got stuck
-behind every peninsula. With nobody to ferry the galley explores
-(`explore()`). Armies are not ferried yet. Counted with throwaway
+behind every peninsula. With nobody to ferry the galley explores the
+coasts as the fishing boat does (`boat_explore()`, below). Armies are
+not ferried yet. Counted with throwaway
 counters in 300 turns on seed 3: two settlers asked, boarded and went
 ashore; on seeds 1 and 7 none asked, since most peoples reach
 `AI_CITY_CAP` (6) on their own land first — raising the cap is the lever
@@ -1401,6 +1430,29 @@ throwaway start (a warrior and a galley at (28,9) on seed 1, the blink
 turned off for the screenshots): boarding, the galley drawn over its
 cargo, three moves east with the warrior aboard, and landing on the
 next turn.
+
+**Fishing boats** (milestone 9, `KIND_BOAT`, Civilization IV's work
+boat, the user's idea, since cedar is rare and galleys came too late to
+bring distant peoples together) need only a coastal city: cost 20, move
+2, attack 0, defence 1, the galley's waters and **no hold** — a land
+unit never boards one. The ships are the kinds from `KIND_GALLEY` on
+(`KIND_IS_SHIP()` in `src/unit.h`), which is what the galley's cargo
+rules test, so that a boat is never taken along as cargo. **The computer
+players** build one each, over the unit cap, in a coastal city after
+its guards and explorers — usually the first city's second build — and
+it explores (`boat_explore()`, `src/boat.c`, region 4): to the nearest
+8x4 block with shallows that its people has not seen (`ai_seen`, and
+`ai_sea`, set by `ai_place()` beside `ai_land`), by `sea_route()`; a
+block out of reach, or reached, counts as seen. Its work on fish is
+still to come (TODO.txt). Measured (a throwaway record of the turn each
+pair first met, 300 turns of autoplay, the human's side played by the
+AI): seed 1 went from three pairs of six met (turns 43-54) to all six
+(23-109), seed 3 from one (58) to all six (34-131), seed 7 from one to
+three (53-93) — the Hittites there are on land the shallows do not
+reach. Checked headlessly with a throwaway start (a boat on the shallows
+by the settler): drawn with its flag, "Ships keep to the shallows" for
+a step onto land, "Cannot swim" for the warrior stepping onto it; and
+the city screen's CHANGE list.
 
 **Popups** (`src/popup.c`) are a box of word-wrapped text over the middle
 of the map window, closed by a click anywhere, fire, Return, space or Esc.
@@ -1811,18 +1863,18 @@ in xemu by building once with `input_real_hw = 1` forced in
 
 ## Assets
 
-`res/tiles.fci` is 136x4 characters — 34 4x4 tiles side by side, in the
+`res/tiles.fci` is 140x4 characters — 35 4x4 tiles side by side, in the
 order `tiles/Makefile` lists the PNGs: ten terrains (hills, grass, mountain, ocean, shallow ocean, tundra, plains, forest,
 desert, floodplain), then the city, a selection ring
 (the tile-select cursor),
 three units (settler, warrior, builder), the black hexagon of unexplored
 land, the overlays, irrigation and mine, the nine resources (see
 **Resources**), mined copper and tin, the spearman, irrigated
-cattle, olives and wine (see **Bronze**), and the galley (see
-**Galleys**, `alltiles/`' `unit_galley.png` as it is);
-`TILE_*` in `src/sheet.h`.
-**Tiles 18 and up go in bank 1** (see **When bank 5 fills up**, step 1b):
-the resources. `res_cattle`, `res_copper` and `res_tin` are `alltiles/`'
+cattle, olives and wine (see **Bronze**), and the galley and the
+fishing boat (see **Galleys**, `alltiles/`' `unit_galley.png` and
+`unit_work_boat.png` as they are);
+`TILE_*` in `src/sheet.h`. Where each tile goes is the loader's business
+(**When bank 5 fills up**, step 1c). `res_cattle`, `res_copper` and `res_tin` are `alltiles/`'
 cattle, copper and iron cut to lines 8-23, `res_olives` and `res_wine` its
 orange trees recoloured, and `res_grain`, `res_fish`, `res_cedar` and
 `res_dye` placeholders drawn for them; `res_copper_mine`, `res_tin_mine`,
@@ -1901,13 +1953,11 @@ A new tile needs all of these, and nothing checks that they agree:
    indexed by terrain. Terrain
    values are tile numbers, so a new terrain has to come before the
    non-terrain tiles or the map layer grows a lookup table (see `map_tile`).
-5. room: each tile is 2 KB expanded, and the sheet must stop at the end
-   of bank 5 (an `#error` in `src/sheet.h`): from `$57000`, **18 tiles in
-   bank 5 and 16 more in bank 1** (`SHEET_LOW_TILES`, `SHEET_HIGH`), all
-   34 used since the galley. The tile store's own `#error` in `src/view.c` keeps the store
-   and the sheet apart, and `src/sheet.h` has one for the total. Past 34:
-   see **When bank 5 fills up**; code regions no longer need bank 1's
-   room beyond the two slots, so more of it could be tiles at a slot's
-   cost.
+5. room: the sheet is packed (**When bank 5 fills up**, step 1c), so a
+   tile takes only the characters its rows have pixels in — a terrain
+   2 KB, a unit about 1.5 — and `make` in `tiles/` says what is left,
+   and stops if the sheet does not fit. Then see **When bank 5 fills
+   up**: a new area of chip RAM is an entry in `src/sheet.c`'s tables
+   and `AREAS` in `tools/mktiles.py`.
 6. for an overlay: art inside pixel lines 8-23, or it costs the redraw
    twice as much (see **Drawing**).

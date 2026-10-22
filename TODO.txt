@@ -1,18 +1,18 @@
 --- OPEN ---
 
 NEXT: what is left of milestone 9 -- ferrying armies (an AI at war with a people over the
-water), merchant fleets and emporia -- or milestone 10, the end game (drafted below). The
-tile sheet is full (34 of 34): a new tile needs room first (CLAUDE.md "When bank 5 fills
-up"). Room is short everywhere but regions 2-4: resident 376 bytes, region 0 440, region 1
-312 (more of ai.c can move out, as ai_place() did)
+water), merchant fleets and emporia, the fishing boat's work on fish -- or milestone 10,
+the end game (drafted below). The tile sheet is packed and has about 18 KB free, a dozen
+units (make in tiles/ says). Room is short in the resident program and region 1: resident
+278 bytes, region 0 1.6 KB, region 1 273 (more of ai.c can move out, as ai_place() did),
+region 2 2.6 KB, region 3 2.3 KB, region 4 2.8 KB
 
 The AI ferries settlers now, but rarely: most peoples reach AI_CITY_CAP (6) on their own land
 before they have a galley. Raise the cap (7-8, MAX_CITIES is 32 shared) if overseas cities
 are wanted sooner.
 
-Galleys on seed 3 did not bring the peoples together in 300 turns: an exploring galley rarely
-ends up next to anybody. Galleys sail the shallows only; seed 7 has a landmass the shallows
-do not reach.
+Seed 7 has a landmass the shallows do not reach: its people (the Hittites) meets nobody in
+300 turns, even with fishing boats. Needs open-sea ships, or a map change.
 
 Trade to tune once played: AIs only ask one turn in eight; goods are few (most peoples
 own one or two), so deals are rare -- two in 300 turns of autoplay on seed 1.
@@ -22,12 +22,11 @@ peoples within 7 hexagons), and in 300 turns of autoplay on seed 1 only the Egyp
 and Canaanites fought. A computer player accepts a ceasefire the turn the human declares
 war on it if it is the weaker.
 
-Peoples on separate landmasses never meet before there are boats (map seeds 3 and 7).
-Place them two to a continent, more land (MAP_LAND), or leave it for milestone 9's ships
 
 There's no visual feedback who wins or loses when attacking or being attacked
 
-Add more help texts, like Help/Terrain Types/Grassland, Plain etc. The same for Help/Military Units
+Add more help texts: Help/Military Units, as Help/Terrain Types (a submenu, and a page each,
+res/text/pedia_*.txt with a picture of the tile). The terrain pages are placeholders
 
 If there's space on the disk, try adding some larger pictures for the start screen, and win/fail
 - The pictures are in screens/ (intro, defeat, win_survival, win_legacy, win_hegemony; PNG,
@@ -66,7 +65,7 @@ Milestone 6: yields and city growth -- DONE but for roads (20 Oct 2026)
   a builder per city, unit cap 3 + 2 a city (max 12), 6 cities. Barbarians from turn 30
 - DONE: Civ 1's grassland shield pattern (half the grassland and floodplain, not drawn);
   the hover readout shows food/shields/trade. All four peoples now survive seed 1
-- Roads: still to do. They need tiles (the sheet is full but for one) and a map bit
+- Roads: still to do. They need tiles (there is room now) and a map bit
   (a 320-byte bitmap would do at 128x20)
 - Per-continent policy (attack/defend/transport) when there are boats and wars
 
@@ -86,7 +85,8 @@ Milestone 7: resources -- DONE (20 Oct 2026)
   autoplays one people of four had bronze on seed 1, none on seeds 3 and 7
 - DONE: improved resources have their own tiles in code region 3's room (now the
   sheet's): irrigated cattle (pasture), olives and wine (orchard recoloured). One tile
-  left. Fish's improved tile (boats) waits for a work boat
+  left. Fish's improved tile (alltiles' tile_fish_improved) waits for the fishing boat's
+  work (milestone 9)
 
 Milestone 8: basic diplomacy -- DONE (21 Oct 2026)
 - DONE: contact between all the peoples (adjacency); war, ceasefire (16 turns, then war)
@@ -111,6 +111,15 @@ Milestone 9: trade
 - DONE (21 Oct 2026): AI ferrying of settlers: a settler that cannot walk to its site asks
   for the galley, boards, and is landed near the site; galleys route along the shallows by a
   breadth-first search (src/path.c); with a galley the AI looks 16 hexagons for a site
+- DONE (22 Oct 2026): the fishing boat (Civ 4's work boat): a coastal city, no resources,
+  cost 20, 2 moves, the galley's waters, carries nobody. Each computer player builds one
+  early and explores the coasts with it (src/boat.c, region 4: the nearest unseen 8x4
+  block with shallows, by sea_route()); galleys with nobody to ferry explore the same way.
+  First contact, 300 turns of autoplay, pairs of six met: seed 1 3 -> 6 (turns 23-109),
+  seed 3 1 -> 6 (34-131), seed 7 1 -> 3 (53-93)
+- Next: the fishing boat works fish (Civ 4: used up, fish becomes fishing boats, more food;
+  alltiles' tile_fish_improved; MAP_IRRIGATED on the shallows could mean it, but the
+  irrigation overlay must not be drawn on water). The AI builds more boats for its fish
 - Later: ferrying armies, physical trade fleets, emporia
 
 Milestone 10: the end game -- the Bronze Age Collapse (DRAFT, vision.md sections 4 and 5)
@@ -153,6 +162,16 @@ A game is 400 turns, as Civ 1's: growth and rivalry first, then the Crisis, then
   peoples survive the Crisis about half the time, and that the score screen is right
 
 --- DONE ---
+
+The tile sheet is packed (22 Oct 2026): a tile row keeps only its characters with pixels,
+so 34 tiles took 49 KB rather than 68; rows go into bank 5 then bank 1, each row's bank and
+address in a table (CLAUDE.md "When bank 5 fills up", step 1c). tools/mktiles.py checks it
+fits. The redraw went from 17.0 to 16.4 ms
+
+Game/Options/End of Turn (Civ 1's: unticked, the turn ends by itself once the last unit has
+its orders; a turn nobody had orders in still waits). Debug/Show Map has a tick too.
+Help/Terrain Types: a submenu of the ten terrains and a page for each with a picture
+(res/text/pedia_*.txt). The menus moved to region 4
 
 Made room before milestone 8 (21 Oct 2026): the code regions are kept in attic RAM and
 copied by DMA into one of two slots in bank 1 when called (slot 1 region 1, slot 2 regions

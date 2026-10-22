@@ -54,6 +54,11 @@ TERRAIN_COLOURS = [
     (150, 210, 80),     # floodplain
 ]
 FIRST = RESERVED + len(TERRAIN_COLOURS)
+
+# The areas src/sheet.c packs the expanded sheet into, in bytes, in the
+# order it fills them: bank 5 above the tile store, then bank 1 (SHEET_* in
+# src/sheet.h). Keep in step with area_room[] there.
+AREAS = [0x60000 - 0x57000, 0x1F000 - 0x17000]
 MAX_COLOURS = 256 - FIRST
 
 
@@ -69,6 +74,44 @@ def load(spec):
         else:
             im.alpha_composite(layer)
     return im
+
+
+def packed_rows(index, width):
+    """The bytes each tile row takes once packed, in the order
+    src/sheet.c lays them down: row 0 of every tile, then row 1. A row
+    keeps its expanded characters from the first with a pixel to the last,
+    64 bytes each; a source character is two of them, its left and right
+    halves."""
+    sizes = []
+    for row in range(TILE // 8):
+        for t in range(width // TILE):
+            used = []
+            for half in range(2 * TILE // 8):       # expanded characters
+                x0 = TILE * t + 4 * half
+                used.append(any(index[(8 * row + y) * width + x0 + x]
+                                for y in range(8) for x in range(4)))
+            if any(used):
+                first = used.index(True)
+                last = len(used) - 1 - used[::-1].index(True)
+                sizes.append(64 * (last - first + 1))
+    return sizes
+
+
+def check_room(sizes):
+    """Fill the areas as src/sheet.c does, and say how much is left."""
+    area, left = 0, AREAS[0]
+    for size in sizes:
+        if size > left:
+            area += 1
+            if area == len(AREAS):
+                sys.exit(f"mktiles: the packed sheet does not fit ({sum(sizes)} "
+                         f"bytes): make room first (CLAUDE.md, \"When bank 5 "
+                         f"fills up\")")
+            left = AREAS[area]
+        left -= size
+    free = left + sum(AREAS[area + 1:])
+    print(f"mktiles: {sum(sizes)} bytes packed, {free} free "
+          f"(a unit takes about 1500)")
 
 
 def main():
@@ -112,6 +155,8 @@ def main():
     it = iter(mapped)
     for p in pixels:
         index.append(FIRST + next(it) if p[3] >= 128 else 0)
+
+    check_room(packed_rows(index, width))
 
     cols = width // 8
     rows = TILE // 8

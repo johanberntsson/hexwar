@@ -10,6 +10,7 @@
 #include "growth.h"
 #include "improve.h"
 #include "map.h"
+#include "boat.h"
 #include "path.h"
 #include "sheet.h"
 #include "unit.h"
@@ -72,6 +73,7 @@ HIGH_BSS byte ai_heading[MAX_UNITS];
 #endif
 HIGH_BSS byte ai_seen[PLAYERS][SEEN_X];
 HIGH_BSS byte ai_land[SEEN_X];
+HIGH_BSS byte ai_sea[SEEN_X];   // the same for shallows, for the ships
 
 // An explorer that has come no nearer its block in this many turns gives
 // it up as out of reach -- over the water -- and counts it as seen.
@@ -592,7 +594,7 @@ static byte cargo(byte u)
     byte v, n = 0;
     if (!is_water(unit_ax[u], unit_ay[u])) return 0;
     for (v = 0; v < MAX_UNITS; ++v)
-        if (unit_kind[v] != KIND_NONE && unit_kind[v] != KIND_GALLEY
+        if (unit_kind[v] != KIND_NONE && !KIND_IS_SHIP(unit_kind[v])
             && unit_ax[v] == unit_ax[u] && unit_ay[v] == unit_ay[u])
             ++n;
     return n;
@@ -658,7 +660,8 @@ static byte sail(byte u, byte tx, byte ty)
 }
 
 // Galley u: with a settler aboard, to its site; without, to a settler
-// waiting for it; with nobody to ferry, exploring the coasts. A settler it
+// waiting for it; with nobody to ferry, exploring the coasts
+// (boat_explore()). A settler it
 // cannot reach is let go, to walk or to ask again later.
 static void ferry(byte u)
 {
@@ -674,19 +677,19 @@ static void ferry(byte u)
             }
             if (sail(u, site_x, site_y)) return;
         }
-        explore(u);
+        boat_explore(u);
         return;
     }
     s = first_of(p, KIND_SETTLER, WANTS_FERRY);
     if (s == UNIT_NONE) {
-        explore(u);
+        boat_explore(u);
         return;
     }
     if (distance(ax, ay, unit_ax[s], unit_ay[s]) == 1 && is_water(ax, ay)) {
         unit_moves[u] = 0;                  // alongside: it boards
     } else if (!sail(u, unit_ax[s], unit_ay[s])) {
         unit_work[s] = 0;                   // out of reach
-        explore(u);
+        boat_explore(u);
     }
 }
 
@@ -766,6 +769,11 @@ static void move_unit(byte u)
         // people on an island meets the others.
         ferry(u);
         break;
+    case KIND_BOAT:
+        // A fishing boat explores the coasts, which is how a people meets
+        // the others across the water before it has cedar for a galley.
+        boat_explore(u);
+        break;
     case KIND_BUILDER:
         // 5. Copper and tin next to any of its people's cities first, for
         // bronze (strategic_site()). Then improve the hexagons round its
@@ -806,7 +814,7 @@ static void move_unit(byte u)
 void ai_turn(byte p)
 {
     byte c, u, cap, kind, guard;
-    byte cities = 0, settlers, builders, galleys, explorers = 0;
+    byte cities = 0, settlers, builders, galleys, boats, explorers = 0;
     byte units = unit_count_kind(p, KIND_NONE) - unit_count_kind(p, KIND_SETTLER);
 
     if (!player_alive(p)) return;
@@ -825,6 +833,7 @@ void ai_turn(byte p)
     settlers = unit_count_kind(p, KIND_SETTLER);
     builders = unit_count_kind(p, KIND_BUILDER);
     galleys = unit_count_kind(p, KIND_GALLEY);
+    boats = unit_count_kind(p, KIND_BOAT);
     for (u = 0; u < MAX_UNITS; ++u)
         if (unit_kind[u] == KIND_WARRIOR && unit_owner[u] == p
             && unit_orders[u] != ORDERS_FORTIFY)
@@ -861,6 +870,11 @@ void ai_turn(byte p)
                    && find_far_site(p, city_ax[c], city_ay[c])) {
             kind = KIND_SETTLER;
             ++settlers;
+        } else if (!boats && city_coastal(c)) {
+            // One fishing boat, to explore the coasts, over the cap if need
+            // be: usually the first city's first build after its warrior.
+            kind = KIND_BOAT;
+            ++boats;
         } else if (!galleys && cities >= GALLEY_CITIES && city_coastal(c)
                    && player_has(p, RES_CEDAR)) {
             // One galley, to explore the coasts, over the cap if need be.

@@ -4,8 +4,8 @@
 // **FCI** (Full Colour Image) is the format tools/png2fci.py writes. A header
 // of nine bytes, a palette of RGB triples, the marker "IMG", and then the
 // pixels as a row-major grid of 8x8 characters, 64 bytes each, one byte of
-// palette index per pixel. res/tiles.fci is 132x4 characters: 33
-// 4x4-character tiles side by side, in the order tiles/Makefile lists them.
+// palette index per pixel. res/tiles.fci is 4 characters tall and 4 a tile
+// across, the tiles side by side in the order tiles/Makefile lists them.
 // tools/mktiles.py writes it.
 //
 // **Palette index 0 is transparent.** The DMAgic's transparent copy is told to
@@ -16,14 +16,20 @@
 
 #include "mega65.h"
 
-// Where the x-expanded sheet is built. **Each tile is 2 KB in one piece**,
-// its four rows of eight characters one after the other, 512 bytes a row, so
-// a tile's address is its base plus row * 512 wherever it is. The first
-// SHEET_LOW_TILES are in bank 5, just above the view's tile store,
-// $57000-$5FFFF, the rest of the bank since the minimap moved into the
-// store's padding; the rest are in bank 1 at $17000-$1EFFF, where code
-// regions 3 to 6 would have gone (src/region.h). CLAUDE.md, "When bank 5
-// fills up", has why there.
+// Where the x-expanded sheet is built. **It is packed a tile row at a
+// time** (22 Oct 2026): of each row's eight expanded characters only those
+// from the first with a pixel to the last are kept (sheet_row_lead and
+// sheet_row_width below), which is all view_draw_tile() ever copied anyway.
+// A terrain row is all eight, 512 bytes, but a unit, a resource or an
+// overlay is a small picture in the middle of its tile, so the 34 tiles of
+// 22 Oct 2026 took 49 KB rather than 68. sheet_load() lays the rows down
+// one after another as they come off the disk -- the file's row 0 of every
+// tile, then row 1 -- in the first area until the next row does not fit,
+// then the next, and notes each row's bank and address. **The areas** are
+// bank 5 above the view's tile store, $57000-$5FFFF, and bank 1 at
+// $17000-$1EFFF, where code regions 3 to 6 would have gone (src/region.h);
+// CLAUDE.md, "When bank 5 fills up", has why there, and another area is an
+// entry in sheet.c's table. tools/mktiles.py checks that the sheet fits.
 //
 // **Not attic RAM, where it used to be.** Search And Rescue measured DMA *out
 // of* attic RAM on a real MEGA65 at 16.1 cycles a byte against 2.2 chip to
@@ -31,18 +37,15 @@
 // which would have brought the tearing back on the machine. xemu runs attic
 // at chip speed, so it never showed. Bank 1 is chip RAM as well. Every
 // source address is 16 bits in its bank, which is what view_draw_tile()
-// wants; it changes the DMA's source bank only when a tile is in the other.
-#define SHEET_EXPANDED 0x57000UL
+// wants; it changes the DMA's source bank only when a row is in the other.
+// **No row may cross into the next bank**: each area ends at or below one.
+#define SHEET_EXPANDED 0x57000UL        // area 0, to the end of bank 5
 #define SHEET_EXPANDED_BANK 0x05
-#define SHEET_EXPANDED_ADDR 0x7000u
-#define SHEET_LOW_TILES 18
-#define SHEET_HIGH 0x17000UL
-#define SHEET_HIGH_BANK 0x01
-#define SHEET_HIGH_ADDR 0x7000u
-#define SHEET_HIGH_TILES 16
+#define SHEET_HIGH 0x17000UL            // area 1, to $1EFFF
+#define SHEET_HIGH_END 0x1F000UL
 
 // The sheet as it is in the file.
-#define SHEET_COLUMNS 136
+#define SHEET_COLUMNS 140
 #define SHEET_ROWS 4
 
 // A tile is 4x4 characters in the file and 8x4 once expanded.
@@ -53,12 +56,6 @@
 #define TILE_ROW_BYTES (64U * TILE_EXPANDED_COLUMNS)       // 512
 #define TILE_BYTES (TILE_ROW_BYTES * TILE_ROWS)             // 2048
 
-#if SHEET_EXPANDED + 2048UL * SHEET_LOW_TILES > 0x60000UL
-#error "the low part of the sheet runs past bank 5"
-#endif
-#if TILE_COUNT > SHEET_LOW_TILES + SHEET_HIGH_TILES
-#error "more tiles than the sheet has room for"
-#endif
 
 // Tile numbers, in the order tiles/Makefile appends the PNGs into the sheet.
 // **The terrains come first**, because a terrain value is its tile number
@@ -98,44 +95,39 @@
 #define TILE_RESOURCE_FIRST 18
 // Copper and tin once mined, drawn instead of the resource (RES_TILE in
 // src/map.h); the bronze unit; and cattle, olives and wine once irrigated,
-// the same way. One tile left in bank 1 after them.
+// the same way.
 #define TILE_COPPER_MINE 27
 #define TILE_TIN_MINE 28
 #define TILE_SPEARMAN 29
 #define TILE_CATTLE_PASTURE 30
 #define TILE_OLIVES_GROVE 31
 #define TILE_WINE_VINEYARD 32
-#define TILE_GALLEY 33          // the last there is room for
+#define TILE_GALLEY 33
+#define TILE_FISHING_BOAT 34
 
 // The FCI on the disk. Capitals, because that is how diskutil.rb writes the
 // host name tiles.fci -- see MAP_FILE_NAME.
 #define SHEET_FILE_NAME "TILES.FCI"
-
-#if SHEET_EXPANDED_ADDR + 2048UL * SHEET_LOW_TILES > 0x10000UL \
-    || SHEET_HIGH_ADDR + 2048UL * SHEET_HIGH_TILES > 0x10000UL
-#error "each part of the expanded sheet must fit in its bank for view_draw_tile"
-#endif
 
 // **Where each tile row has pixels**, worked out by sheet_load(): the first
 // expanded character with any (lead) and how many from there to the last
 // (width), 0 for a row with none. Indexed by tile * TILE_ROWS + row.
 // view_draw_tile() copies only that much, which is what keeps an overlay or a
 // unit -- a small picture in the middle of its tile -- cheap enough for the
-// redraw: CLAUDE.md, "Tearing". In HIGH_BSS; sheet_load() sets all of it.
+// redraw: CLAUDE.md, "Tearing". **And where the row is**: the bank and the
+// 16-bit address of its first kept character, the lead, in two bytes for
+// Calypsi's sake. A row with no pixels takes no room and has no address.
+// In HIGH_BSS; sheet_load() sets all of it.
 extern byte sheet_row_lead[TILE_COUNT * TILE_ROWS];
 extern byte sheet_row_width[TILE_COUNT * TILE_ROWS];
+extern byte sheet_row_bank[TILE_COUNT * TILE_ROWS];
+extern byte sheet_row_lo[TILE_COUNT * TILE_ROWS];
+extern byte sheet_row_hi[TILE_COUNT * TILE_ROWS];
 
 // Read SHEET_FILE_NAME, upload its palette, and build the expanded sheet.
-// Returns 0 if the file cannot be read or is not an FCI of the shape declared
-// above.
+// Returns 0 if the file cannot be read, is not an FCI of the shape declared
+// above, or does not fit the areas. Before view_clear(): a row is staged
+// in the tile store's first row while its extent is found.
 byte sheet_load(void);
-
-// Address of tile `tile` in the expanded sheet. The eight characters of
-// each of its rows are TILE_ROW_BYTES contiguous bytes, which is what makes a
-// tile four DMA jobs rather than thirty-two.
-#define SHEET_TILE(TILE)                                                    \
-    ((TILE) < SHEET_LOW_TILES                                               \
-         ? SHEET_EXPANDED + (dword)TILE_BYTES * (TILE)                      \
-         : SHEET_HIGH + (dword)TILE_BYTES * ((TILE) - SHEET_LOW_TILES))
 
 #endif // SEVENSHIPS_SHEET_H

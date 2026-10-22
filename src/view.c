@@ -60,7 +60,7 @@ void view_wait_for_redraw(void)
 // The DMA's source bank as blit_begin() or view_draw_tile() last set it.
 static byte source_bank;
 
-static void begin(void)
+void view_blit_begin(void)
 {
     blit_begin(0x00, SHEET_EXPANDED_BANK, 0x00, 0x00);
     source_bank = SHEET_EXPANDED_BANK;
@@ -68,55 +68,36 @@ static void begin(void)
 
 void view_draw_tile(int x, int y, byte tile)
 {
-    byte r, bank, hi, k;
+    byte r, bank, lo, hi, k, cut;
     word src;
 
-    // The source is the expanded sheet, each part of which fits inside its
-    // bank -- so a source address is 16 bits and the megabyte never
-    // changes. The bank does, for a tile in bank 1: the overlays, which
-    // alternate with terrain, so it is one store when it changes and a
-    // compare when it does not.
-    // TILE_BYTES is 2048, so a tile's offset is tile * 8 in the high byte;
-    // the byte goes through a variable for the narrowing-cast bug.
-    if (tile < SHEET_LOW_TILES) {
-        bank = SHEET_EXPANDED_BANK;
-        hi = tile << 3;
-        src = SHEET_EXPANDED_ADDR + ((word)hi << 8);
-    } else {
-        bank = SHEET_HIGH_BANK;
-        hi = (tile - SHEET_LOW_TILES) << 3;
-        src = SHEET_HIGH_ADDR + ((word)hi << 8);
-    }
-    if (bank != source_bank) {
-        blit_source_bank(bank);
-        source_bank = bank;
-    }
-
+    // The source is the packed sheet (src/sheet.h), every row of which is
+    // inside one bank -- so a source address is 16 bits and the megabyte
+    // never changes. The bank does, for a row in bank 1, so it is one store
+    // when it changes and a compare when it does not.
     k = tile << 2;                  // TILE_ROWS a tile in sheet_row_*
-    for (r = 0; r < TILE_ROWS; ++r, ++k, src += TILE_ROW_BYTES) {
+    for (r = 0; r < TILE_ROWS; ++r, ++k) {
         int row = y + r;
-        // Only the characters of the row that have pixels: all eight in
-        // the middle of a terrain tile, two or three of a unit's, and none
-        // of an overlay's empty rows.
-        byte skip = sheet_row_lead[k];  // source characters not copied
+        // Only the characters of the row that have pixels, which are all
+        // the sheet keeps: all eight in the middle of a terrain tile, two
+        // or three of a unit's, and none of an overlay's empty rows.
         byte width = sheet_row_width[k];
-        int first = x + skip;       // leftmost column this row would touch
+        int first = x + sheet_row_lead[k];  // leftmost column it touches
 
         if (!width || row < 0 || row >= VIEW_ROWS) continue;
 
+        cut = 0;                    // characters clipped off the left
         if (first < 0) {
-            byte cut;
             if (first <= -(int)width) continue;
             cut = (byte)(-first);
-            skip += cut;
             width -= cut;
             first = 0;
         }
         if (first >= VIEW_COLUMNS) continue;
         if (first + width > VIEW_COLUMNS) width = (byte)(VIEW_COLUMNS - first);
 
-        // **One DMA job per tile row, not one per character.** The eight
-        // characters of a tile row are contiguous in the expanded sheet, and
+        // **One DMA job per tile row, not one per character.** The
+        // characters of a tile row are contiguous in the packed sheet, and
         // the cells they land on are contiguous in the store, so the whole row
         // is a single copy. The same change was worth four times the speed in
         // ~/commodore/mega65/hexgame (fc_displayTile).
@@ -124,7 +105,18 @@ void view_draw_tile(int x, int y, byte tile)
         // All four arguments are 8 or 16 bit. Nothing here takes a 32-bit
         // address apart, which is what made the old lcopy_transparent path
         // three times the cost of the DMA it was asking for.
-        blit(src + 64U * skip,
+        bank = sheet_row_bank[k];
+        if (bank != source_bank) {
+            blit_source_bank(bank);
+            source_bank = bank;
+        }
+        lo = sheet_row_lo[k];
+        hi = sheet_row_hi[k];
+        src = ((word)hi << 8) | lo;
+        // A shift by six is a loop of calls in Calypsi, and nearly every
+        // row has nothing clipped: 1 ms of the redraw (22 Oct 2026).
+        if (cut) src += (word)cut << 6;
+        blit(src,
              VIEW_ROW_BANK(row),
              VIEW_ROW_ADDR(row) + 64U * (word)first,
              (word)width * 64);
@@ -142,9 +134,9 @@ void view_draw_flag(int x, int y, byte owner)
     // Unsigned, so that one test each takes the negative ones out too.
     if ((word)x > VIEW_COLUMNS - 2 || (word)y >= VIEW_ROWS) return;
     row = (byte)y;
-    if (source_bank != SHEET_EXPANDED_BANK) {
-        blit_source_bank(SHEET_EXPANDED_BANK);
-        source_bank = SHEET_EXPANDED_BANK;
+    if (source_bank != VIEW_ROW_BANK(VIEW_FLAG_ROW)) {
+        blit_source_bank(VIEW_ROW_BANK(VIEW_FLAG_ROW));
+        source_bank = VIEW_ROW_BANK(VIEW_FLAG_ROW);
     }
     blit(flag_addr[owner], VIEW_ROW_BANK(row),
          VIEW_ROW_ADDR(row) + ((word)x << 6), 128);
@@ -243,7 +235,7 @@ void view_draw_patch(byte col, byte row, byte ax, byte ay, byte rings)
         lfill(TILE_STORE + VIEW_ROW_STRIDE * (row + i) + 64UL * col, 0,
               64 * VIEW_PATCH_COLUMNS);
 
-    begin();
+    view_blit_begin();
     for (i = 0; i < 7; ++i) {
         nx = ax;
         ny = ay;
@@ -295,7 +287,7 @@ void view_redraw(word off_x, word off_y)
 
     // Source: chip RAM, bank 5 (the expanded sheet); destination megabyte 0
     // (chip RAM); palette index 0 transparent.
-    begin();
+    view_blit_begin();
 
     // Which map cells can touch the window. A tile is 8 characters wide and
     // starts at 4*ax, and 4 rows tall starting at 3*hy, so anything beyond

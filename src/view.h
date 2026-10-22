@@ -90,6 +90,10 @@ void view_restore(byte col, byte row, byte columns, byte rows);
 // to happen before a redraw or the previous picture shows through the gaps.
 void view_clear(void);
 
+// Set the DMA up for view_draw_tile() and view_draw_flag(): first, before a
+// run of them. view_redraw() and view_draw_patch() do it themselves.
+void view_blit_begin(void);
+
 // Blit one 8x4-character tile at a position in *view* character coordinates,
 // clipped to the window. The position may be negative: a tile half off the
 // left edge draws its right-hand part, which is what a scrolled view needs.

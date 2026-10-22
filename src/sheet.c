@@ -33,6 +33,30 @@ HIGH_BSS static byte expanded_pair[128];
 
 HIGH_BSS byte sheet_row_lead[TILE_COUNT * TILE_ROWS];
 HIGH_BSS byte sheet_row_width[TILE_COUNT * TILE_ROWS];
+HIGH_BSS byte sheet_row_bank[TILE_COUNT * TILE_ROWS];
+HIGH_BSS byte sheet_row_lo[TILE_COUNT * TILE_ROWS];
+HIGH_BSS byte sheet_row_hi[TILE_COUNT * TILE_ROWS];
+
+// **Where a tile row waits** while its four source characters come in, as
+// eight expanded ones: the start of the tile store's first row, which
+// nothing shows yet -- view_clear() clears it before the first game.
+#define STAGING TILE_STORE
+
+// The areas the packed rows go into, in order (src/sheet.h): the bank, and
+// the first and the end address in it. tools/mktiles.py has the same
+// figures, to check at build time that the sheet fits.
+#define AREAS 2
+static const byte area_bank[AREAS] = { 0x05, 0x01 };
+static const word area_start[AREAS] = {
+    (word)SHEET_EXPANDED, (word)SHEET_HIGH
+};
+static const word area_room[AREAS] = {   // bytes
+    (word)(0x60000UL - SHEET_EXPANDED), (word)(SHEET_HIGH_END - SHEET_HIGH)
+};
+
+static byte area;               // the area being filled
+static word area_next;          // its next free address
+static word area_left;          // and the bytes left in it
 
 // Note which expanded characters of a tile row have a pixel in them, as the
 // row's characters go past left to right: the left half of a source
@@ -78,7 +102,7 @@ static void note_extent(byte row, byte col)
 // characters. After this there is no expansion step in the drawing path, no
 // shared scratch buffer to collide over, and a tile row is a single
 // contiguous copy.
-static void expand_char(byte row, byte col)
+static void expand_char(byte col)
 {
     byte y, x;
     for (y = 0; y < 8; ++y) {
@@ -90,18 +114,41 @@ static void expand_char(byte row, byte col)
             right[2 * x] = right[2 * x + 1] = src[4 + x];
         }
     }
-    byte tile = col / TILE_COLUMNS;
-    dword at = SHEET_TILE(tile);
-    lcopy((dword)(word)expanded_pair,
-          at + (word)row * TILE_ROW_BYTES + 128U * (col % TILE_COLUMNS),
+    lcopy((dword)(word)expanded_pair, STAGING + 128U * (col % TILE_COLUMNS),
           sizeof(expanded_pair));
+}
+
+// The tile row in the staging area is complete: copy its characters with
+// pixels to the next free place, and note where. 0 if the areas are full.
+static byte place_row(byte row, byte col)
+{
+    byte k = (byte)((col / TILE_COLUMNS) * TILE_ROWS + row);
+    byte width = sheet_row_width[k];
+    word size;
+
+    if (!width) return 1;
+    size = (word)width << 6;
+    if (size > area_left) {         // the rest of this area is wasted
+        if (++area == AREAS) return 0;
+        area_next = area_start[area];
+        area_left = area_room[area];
+    }
+    lcopy(STAGING + ((word)sheet_row_lead[k] << 6),
+          ((dword)area_bank[area] << 16) | area_next, size);
+    sheet_row_bank[k] = area_bank[area];
+    sheet_row_lo[k] = (byte)area_next;
+    sheet_row_hi[k] = (byte)(area_next >> 8);
+    area_next += size;
+    area_left -= size;
+    return 1;
 }
 
 // **The sheet comes off the disk rather than being linked in**, which gave
 // back the 6.5 KB it used to take of the 32 KB program region and stops that
 // growing with every tile. Nothing of the file is kept: the header and each
 // palette entry are read into a few bytes and used, and each character is
-// read, widened and sent to bank 5 before the next.
+// read and widened into the staging area, and each tile row packed from
+// there, before the next.
 //
 // **Every read is under 256 bytes**, for the reason in map_load(): the
 // Calypsi stub miscounts a request that ends the file on a page boundary.
@@ -133,11 +180,16 @@ static byte read_sheet(int fd)
     if (_Stub_read(fd, rgb, 3) != 3) return 0;
     if (rgb[0] != 'I' || rgb[1] != 'M' || rgb[2] != 'G') return 0;
 
+    area = 0;
+    area_next = area_start[0];
+    area_left = area_room[0];
     for (row = 0; row < SHEET_ROWS; ++row) {
         for (col = 0; col < SHEET_COLUMNS; ++col) {
             if (_Stub_read(fd, source_char, 64) != 64) return 0;
             note_extent(row, col);
-            expand_char(row, col);
+            expand_char(col);
+            if (col % TILE_COLUMNS == TILE_COLUMNS - 1 && !place_row(row, col))
+                return 0;
         }
     }
     return 1;

@@ -402,7 +402,7 @@ static void move_active(byte dir)
         return;
     }
     if (t == ENTER_LAND) {
-        message("Galleys keep", "to the shallows");
+        message("Ships keep", "to the shallows");
         return;
     }
     if (t == ENTER_FOREIGN) {

@@ -24,6 +24,7 @@
 {key}Tab{tab 10}{text}select a hexagon: cursor
 {tab 10}keys move, Return clicks
 {key}minimap{tab 10}{text}click to centre there
+{key}c{tab 10}{text}centre on the unit
 
 {head}The game
 {key}menu bar{tab 10}{text}click a title to open it

@@ -1968,7 +1968,7 @@ letters are free for other orders (`:` is also taken as `[`, its shifted
 form); the tiles are pointy-topped, so there is no N or S; a move onto
 another player's unit or city is an attack; `b` founds a
 city with a settler; `i` and `m` irrigate and mine with a builder; MEGA or CTRL with a menu title's first letter (`g o a w d h`) opens it; space skips the unit this turn, `w` asks again
-after the others, `f` fortifies; Return ends the turn; the cursor keys
+after the others, `f` fortifies, `c` centres the view on the active unit; Return ends the turn; the cursor keys
 scroll; ESC or RUN/STOP quits to BASIC, after asking with `popup_ask()`
 (Esc again is No). `w a s d` do not scroll.
 **HELP or F1 opens the help screen** (`src/help.c`, and what it says is

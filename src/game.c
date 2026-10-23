@@ -463,6 +463,9 @@ void unit_key(byte key)
         else improve(ORDERS_IRRIGATE);
         break;
     case 'm': improve(ORDERS_MINE); break;
+    case 'c':                               // bring it into the middle
+        centre_on(unit_ax[u], unit_ay[u]);
+        break;
     }
 }
 

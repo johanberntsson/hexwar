@@ -88,7 +88,7 @@ void boat_order(byte u)
     select_unit(u);
 }
 
-// Fish next to one of p's cities that is not worked and has nobody on it
+// Fish in the RING of one of p's cities that is not worked and has nobody on it
 // but u, the nearest to u, into (sea_x, sea_y). 0 if there is none.
 static byte fish_site(byte p, byte u)
 {
@@ -97,7 +97,7 @@ static byte fish_site(byte p, byte u)
 
     for (c = 0; c < city_count; ++c) {
         if (city_owner[c] != p) continue;
-        for (dir = 0; dir < 6; ++dir) {
+        for (dir = 0; dir < RING; ++dir) {
             if (!map_neighbour(city_ax[c], city_ay[c], dir, &nx, &ny)
                 || map_resource_at(nx, ny) != RES_FISH
                 || (map_tile[ny][nx] & MAP_IRRIGATED))

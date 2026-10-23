@@ -19,11 +19,14 @@ extern byte city_build[MAX_CITIES];     // the KIND_* it is building, or
 extern word city_shields[MAX_CITIES];   // towards it, of unit_kind_cost[]
 extern byte city_size[MAX_CITIES];      // citizens, 1 and up (src/growth.h)
 extern byte city_food[MAX_CITIES];      // in the food box, of GROWTH_BOX
-// The neighbours worked, bit DIR_* each, if the player has set them by hand
-// (CITY_MANUAL); otherwise 0, and src/growth.c picks them.
-extern byte city_worked[MAX_CITIES];
+// The hexagons of its RING worked (map.h), if the player has set them by
+// hand (CITY_MANUAL); otherwise 0, and src/growth.c picks them. Hexagon i
+// is bit i & 7 of city_worked[i >> 3][c], and CITY_MANUAL is in the third
+// byte, above the last two hexagons.
+#define CITY_WORKED_BYTES 3
+extern byte city_worked[CITY_WORKED_BYTES][MAX_CITIES];
 #define CITY_MANUAL 0x80
-#define CITY_WORKED 0x3f
+#define CITY_MANUAL_BYTE 2
 // Its buildings, CITY_TEMPLE and the rest (src/culture.h). Kept when the
 // city is captured.
 extern byte city_culture[MAX_CITIES];
@@ -47,7 +50,8 @@ byte city_coastal(byte c);
 // already or the list is full.
 byte city_found(byte owner, byte ax, byte ay);
 
-// City c is `owner`'s now, keeping its name, and starts on warriors.
+// City c is `owner`'s now, keeping its name, and starts on warriors; the
+// human sees its whole RING (map.h).
 void city_capture(byte c, byte owner);
 
 // City c is gone. **The last city takes its index**, so a loop over the

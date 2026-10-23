@@ -233,6 +233,11 @@ static void push_pointer(int dx, int dy)
     }
 }
 
+void input_point(word x, word y)
+{
+    push_pointer((int)x - (int)input_x, (int)y - (int)input_y);
+}
+
 void input_init(void)
 {
     word list = ((word)sprite_ram + 63) & 0xffc0;

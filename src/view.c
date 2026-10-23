@@ -216,68 +216,6 @@ static void draw_overlays(byte hy, int ty)
     if (hy == view_mark_hy) view_draw_tile(view_mark_x, ty, TILE_SELECT);
 }
 
-// The patch in painter's order, top row first, and where each tile goes in
-// it: the hexagon rows are 3 characters apart and the tiles in one are 8.
-// File scope, and 16-bit offsets: see the Calypsi notes in CLAUDE.md.
-static const byte patch_dir[7] = {
-    DIR_NW, DIR_NE, DIR_W, DIR_NONE, DIR_E, DIR_SW, DIR_SE
-};
-static const int patch_x[7] = { 4, 12, 0, 8, 16, 4, 12 };
-static const int patch_y[7] = { 0, 0, 3, 3, 3, 6, 6 };
-
-void view_draw_patch(byte col, byte row, byte ax, byte ay, byte rings)
-{
-    byte i, k, n, t, nx, ny;
-    byte cell_x[7], cell_y[7];
-    byte tiles[2];
-
-    for (i = 0; i < VIEW_PATCH_ROWS; ++i)
-        lfill(TILE_STORE + VIEW_ROW_STRIDE * (row + i) + 64UL * col, 0,
-              64 * VIEW_PATCH_COLUMNS);
-
-    view_blit_begin();
-    for (i = 0; i < 7; ++i) {
-        nx = ax;
-        ny = ay;
-        // Off the top or bottom of the map there is nothing, and black.
-        if (patch_dir[i] != DIR_NONE
-            && !map_neighbour(ax, ay, patch_dir[i], &nx, &ny)) {
-            cell_x[i] = 0xff;
-            continue;
-        }
-        cell_x[i] = nx;
-        cell_y[i] = ny;
-        t = map_tile[ny][nx] | map_show;
-        if (!(t & MAP_EXPLORED)) t = TILE_UNDISCOVERED;
-        view_draw_tile(col + patch_x[i], row + patch_y[i],
-                       t & MAP_TERRAIN_MASK);
-        if ((t & MAP_IMPROVEMENT)
-            && (t & MAP_TERRAIN_MASK) != TILE_SHALLOW_OCEAN)
-            view_draw_tile(col + patch_x[i], row + patch_y[i],
-                           MAP_OVERLAY_TILE(t));
-        if ((t & MAP_EXPLORED) && (n = map_resource_at(nx, ny)) != RES_NONE)
-            view_draw_tile(col + patch_x[i], row + patch_y[i],
-                           RES_TILE(n, t));
-    }
-    // The overlays after all the terrain, as view_redraw() does a row
-    // behind it. The active unit does not blink here, so it is always shown.
-    unit_hidden = 0;
-    for (i = 0; i < 7; ++i) {
-        if (cell_x[i] == 0xff) continue;
-        if (patch_dir[i] != DIR_NONE && ((rings >> patch_dir[i]) & 1))
-            view_draw_tile(col + patch_x[i], row + patch_y[i], TILE_SELECT);
-        t = map_tile[cell_y[i]][cell_x[i]] | map_show;
-        if ((t & (MAP_EXPLORED | MAP_OCCUPIED)) != (MAP_EXPLORED | MAP_OCCUPIED))
-            continue;
-        n = unit_overlay(cell_x[i], cell_y[i], tiles);
-        for (k = 0; k < n; ++k)
-            view_draw_tile(col + patch_x[i], row + patch_y[i], tiles[k]);
-        if (n)
-            view_draw_flag(col + patch_x[i], row + patch_y[i],
-                           unit_overlay_owner);
-    }
-}
-
 void view_redraw(word off_x, word off_y)
 {
     byte hy;

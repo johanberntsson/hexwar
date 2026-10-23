@@ -24,11 +24,16 @@ const byte map_res_improved[RES_COUNT] = {
     TILE_WINE_VINEYARD, 0, TILE_COPPER_MINE, TILE_TIN_MINE, 0, 0
 };
 
-// One step in each direction, in doubled coordinates; DIR_* order. File scope
+// One step in each direction, in doubled coordinates; DIR_* order, then the
+// outer ring clockwise from two steps east (RING in map.h). File scope
 // and 16 bit, because small static const arrays of int8_t inside a function
 // have been seen to compile to nothing with Calypsi 5.18 (CLAUDE.md).
-static const int dir_dhx[6] = { 2, 1, -1, -2, -1, 1 };
-static const int dir_dhy[6] = { 0, 1, 1, 0, -1, -1 };
+static const int dir_dhx[RING] = {
+    2, 1, -1, -2, -1, 1, 4, 3, 2, 0, -2, -3, -4, -3, -2, 0, 2, 3
+};
+static const int dir_dhy[RING] = {
+    0, 1, 1, 0, -1, -1, 0, 1, 2, 2, 2, 1, 0, -1, -2, -2, -2, -1
+};
 
 byte map_neighbour(byte ax, byte ay, byte dir, byte *nax, byte *nay)
 {

@@ -5,16 +5,17 @@
 // tables in growth.c), plus 1 food for irrigation and shields for a mine,
 // and a shield on half the grassland and floodplain, on Civilization's
 // fixed pattern.
-// **A city of size n works its own hexagon and the n best of its six
-// neighbours** -- best by three times the food, twice the shields and the
-// trade, so growth comes first, or by the food above all if that would
-// leave the city hungry -- picked afresh whenever they are asked for.
-// **Unless the player has picked them** on the city screen
-// (city_toggle()): then they are kept in city_worked[], with CITY_MANUAL,
-// and only growth (the best hexagon left) and shrinking (the worst goes)
-// change them. Citizens working nothing -- beyond the six, or taken off a
-// hexagon by hand -- are idle, and still eat. Cities are at least CITY_SPACING (4) apart,
-// so two never share a hexagon.
+// **A city of size n works its own hexagon and the n best of its RING**
+// (map.h: two rings, 18 hexagons, Civilization's fat cross) -- best by
+// three times the food, twice the shields and the trade, so growth comes
+// first, or by the food above all if that would leave the city hungry --
+// picked afresh whenever they are asked for. **Unless the player has
+// picked them** on the city screen (src/cityscreen.c): then they are kept in
+// city_worked[], with CITY_MANUAL, and only growth (the best hexagon left)
+// and shrinking (the worst goes) change them. Citizens working nothing --
+// beyond the eighteen, or taken off a hexagon by hand -- are idle, and
+// still eat. **A hexagon in reach of two cities is the nearer one's**, the
+// earlier in the list on a tie: the other cannot work it.
 //
 // **Every citizen eats 2 food**, and the rest goes into the food box, which
 // holds GROWTH_BOX(size); full, the city grows by one and the box empties.
@@ -27,20 +28,24 @@
 #define SEVENSHIPS_GROWTH_H
 
 #include "mega65.h"
+#include "map.h"
 
 #define GROWTH_BOX(SIZE) (((SIZE) + 1) * 10)
 #define GROWTH_MAX_SIZE 20      // GROWTH_BOX stays in a byte
 
-// What city_work() found: the neighbours worked, bit DIR_* set for each,
-// and the city's totals, its own hexagon included.
-extern byte work_mask;
+// What city_work() found, by the hexagons of the RING (map.h): which are
+// worked, whose each is (the city's own, another city's, or CITY_NONE off
+// the map) and where; and the city's totals, its own hexagon included.
+extern byte work_on[RING];
+extern byte work_owner[RING];
+extern byte work_ring_x[RING], work_ring_y[RING];
 extern byte work_food;
 extern byte work_shields;
 extern byte work_trade;
 extern byte work_idle;          // citizens working no hexagon
 
 // **Bronze** (milestone 7b, vision.md section 2): whether player p owns
-// resource r -- on one of its cities, or next to one and improved the way
+// resource r -- on one of its cities, or in its RING and improved the way
 // that resource is (mined copper and tin, irrigated cattle, olives and
 // wine; grain, fish, cedar and dye need nothing), a builder's work -- and
 // whether it has it, owned or received in trade (milestone 9, trade.h).
@@ -59,11 +64,6 @@ void hex_yield(byte ax, byte ay);
 // Pick the hexagons city c works and total what they yield, into the
 // globals above.
 void city_work(byte c);
-
-// The player clicked neighbour `dir` of city c on the city screen: a worked
-// hexagon is let go, its citizen idle, and an unworked one is taken if a
-// citizen is idle. Sets the city to CITY_MANUAL. 0 if nothing changed.
-byte city_toggle(byte c, byte dir);
 
 // One turn of food for city c, at the end of the turn. GROWTH_NONE, or
 // GROWTH_GREW or GROWTH_SHRANK if its size changed.

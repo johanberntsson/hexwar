@@ -1,9 +1,11 @@
 // What each of a computer player's cities builds, out of ai.c (22 Oct
 // 2026, to make room in region 1): once a turn a player, in region 2
-// beside improve_best(), which work_site() calls for every city, so that
+// beside improve_best(), which ai_work_site() calls for every city, so that
 // nothing is copied into slot 2 but this region once a player. ai.c's
 // helpers come through stubs (aiint.h).
 #define ai_build ai_build_r2
+#define ai_work_site ai_work_site_r2
+#define improve_best improve_best_r2
 
 #include "ai.h"
 #include "aiint.h"
@@ -14,6 +16,7 @@
 #include "treasury.h"
 #include "trade.h"
 #include "growth.h"
+#include "improve.h"
 #include "map.h"
 #include "sheet.h"
 #include "unit.h"
@@ -86,11 +89,37 @@ static byte at_war_with_people(byte p)
     return 0;
 }
 
-// Whether city c has fish next to it that no fishing boat works yet.
+HIGH_BSS byte ai_work_x, ai_work_y;
+
+byte ai_work_site(byte c)
+{
+    byte pass, i, nx, ny, w;
+
+    city_work(c);
+    for (pass = 0; pass < 3; ++pass) {
+        for (i = 0; i < RING; ++i) {
+            if (work_owner[i] != c || (pass == 1 && !work_on[i])) continue;
+            nx = work_ring_x[i];
+            ny = work_ring_y[i];
+            if (map_tile[ny][nx] & MAP_OCCUPIED) continue;
+            if (!pass) {
+                w = map_resource_at(nx, ny);
+                if (w != RES_COPPER && w != RES_TIN) continue;
+            }
+            if (improve_best(nx, ny) == ORDERS_NONE) continue;
+            ai_work_x = nx;
+            ai_work_y = ny;
+            return 1;
+        }
+    }
+    return 0;
+}
+
+// Whether city c has fish in its RING that no fishing boat works yet.
 static byte fish_to_work(byte c)
 {
     byte dir, nx, ny;
-    for (dir = 0; dir < 6; ++dir)
+    for (dir = 0; dir < RING; ++dir)
         if (map_neighbour(city_ax[c], city_ay[c], dir, &nx, &ny)
             && map_resource_at(nx, ny) == RES_FISH
             && !(map_tile[ny][nx] & MAP_IRRIGATED))

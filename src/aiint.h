@@ -35,9 +35,13 @@ byte ai_guards_wanted(byte c);
 // with a galley; whether there is one (ai.c's find_far_site()).
 byte ai_find_far_site(byte p, byte fx, byte fy);
 
-// Whether a hexagon round city c wants improving and has nobody on it
-// (ai.c's work_site()).
+// Whether a hexagon of city c's RING wants improving and has nobody on it,
+// and which, into ai_work_x and ai_work_y: copper or tin to mine first,
+// for bronze; then one the city works, as those are what an improvement
+// adds to; then any of the city's. In src/aibuild.c, region 2, beside
+// improve_best(), since region 1 is full; ai.c calls it through a stub.
 byte ai_work_site(byte c);
+extern byte ai_work_x, ai_work_y;
 
 // What each of p's cities builds this turn: src/aibuild.c, region 2.
 void ai_build(byte p);

@@ -20,7 +20,7 @@ HIGH_BSS byte city_build[MAX_CITIES];
 HIGH_BSS word city_shields[MAX_CITIES];
 HIGH_BSS byte city_size[MAX_CITIES];
 HIGH_BSS byte city_food[MAX_CITIES];
-HIGH_BSS byte city_worked[MAX_CITIES];
+HIGH_BSS byte city_worked[CITY_WORKED_BYTES][MAX_CITIES];
 HIGH_BSS byte city_culture[MAX_CITIES];
 
 // How many cities each player has named, so the next gets the next name.
@@ -70,10 +70,19 @@ byte city_found(byte owner, byte ax, byte ay)
     return c;
 }
 
+// **A city of the human's sees its whole reach**, the RING it works
+// (map.h), from the day it is founded or taken: the six neighbours'
+// neighbours are the rest of it.
 void city_capture(byte c, byte owner)
 {
+    byte i, nx, ny;
+
+    if (owner == PLAYER_HUMAN)
+        for (i = 0; i < RING_INNER; ++i)
+            if (map_neighbour(city_ax[c], city_ay[c], i, &nx, &ny))
+                map_explore(nx, ny);
     city_owner[c] = owner;
-    city_worked[c] = 0;
+    city_worked[0][c] = city_worked[1][c] = city_worked[2][c] = 0;
     city_build[c] = KIND_WARRIOR;
     city_shields[c] = 0;
     minimap_plot(city_ax[c], city_ay[c]);
@@ -93,7 +102,9 @@ void city_destroy(byte c)
     city_shields[c] = city_shields[last];
     city_size[c] = city_size[last];
     city_food[c] = city_food[last];
-    city_worked[c] = city_worked[last];
+    city_worked[0][c] = city_worked[0][last];
+    city_worked[1][c] = city_worked[1][last];
+    city_worked[2][c] = city_worked[2][last];
     city_culture[c] = city_culture[last];
     unit_mark(ax, ay);
 }

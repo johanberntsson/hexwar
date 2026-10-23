@@ -91,7 +91,7 @@ void view_restore(byte col, byte row, byte columns, byte rows);
 void view_clear(void);
 
 // Set the DMA up for view_draw_tile() and view_draw_flag(): first, before a
-// run of them. view_redraw() and view_draw_patch() do it themselves.
+// run of them. view_redraw() and the city screen's patch do it themselves.
 void view_blit_begin(void);
 
 // Blit one 8x4-character tile at a position in *view* character coordinates,
@@ -121,16 +121,6 @@ void view_redraw(word off_x, word off_y);
 extern byte view_mark_hy;
 extern int view_mark_x;
 
-// **The city screen's picture**: hexagon (ax, ay) and its six neighbours on
-// black, with the cities and units on them, in the VIEW_PATCH_COLUMNS x
-// VIEW_PATCH_ROWS of the store from window cell (col, row). The rest of the
-// store is left alone. It is no longer the map afterwards, so the caller
-// redraws the view before the window shows the map again -- which needs no
-// clear, since view_redraw() covers every byte. A neighbour whose bit DIR_*
-// is set in `rings` -- a city's worked hexagons -- gets the select ring.
-#define VIEW_PATCH_COLUMNS 24       // three tiles across
-#define VIEW_PATCH_ROWS 10          // three hexagon rows, and a tile's foot
-void view_draw_patch(byte col, byte row, byte ax, byte ay, byte rings);
 
 // Block until the beam has just left the bottom of the window, which is where
 // a redraw has to start if it is to stay ahead of it.

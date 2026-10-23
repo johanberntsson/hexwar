@@ -2,7 +2,6 @@
 // under these names here.
 #define city_work city_work_r1
 #define city_grow city_grow_r1
-#define city_toggle city_toggle_r1
 #define hex_yield hex_yield_r1
 #define player_has player_has_r1
 #define player_owns player_owns_r1
@@ -17,7 +16,6 @@
 
 #pragma clang section text="r1text" rodata="r1rodata"
 
-byte work_mask;
 byte work_food;
 byte work_shields;
 byte work_trade;
@@ -68,7 +66,7 @@ byte player_owns(byte p, byte r)
     for (c = 0; c < city_count; ++c) {
         if (city_owner[c] != p) continue;
         if (map_resource_at(city_ax[c], city_ay[c]) == r) return 1;
-        for (dir = 0; dir < 6; ++dir)
+        for (dir = 0; dir < RING; ++dir)
             if (map_neighbour(city_ax[c], city_ay[c], dir, &nx, &ny)
                 && (!need || (map_tile[ny][nx] & need))
                 && map_resource_at(nx, ny) == r)
@@ -120,66 +118,125 @@ void hex_yield(byte ax, byte ay)
     yield(ax, ay);
 }
 
-// Each neighbour of city c scored for working: `weight` times its food,
-// twice its shields and its trade, plus one, so that 0 means no hexagon.
-static byte scores[6];
+// **Whose each hexagon of city c's ring is**, into work_owner[], and where
+// it is, into work_ring_x/work_ring_y. Cities 4 apart, as the computer
+// players found them, share their outer rings, and the human may found them closer: **a
+// hexagon is the nearer city's**, the earlier in the list on a tie, so the
+// two never work it both and nothing about it has to be stored. Only the
+// cities within twice the reach can share, NEAR_MAX of them at most.
+HIGH_BSS byte work_on[RING];
+HIGH_BSS byte work_owner[RING];
+HIGH_BSS byte work_ring_x[RING], work_ring_y[RING];
+HIGH_BSS static byte scores[RING];
+#define NEAR_MAX 8
 
+// ai.c's, in this region too.
+word ai_distance(byte ax, byte ay, byte bx, byte by);
+
+static void ring(byte c)
+{
+    byte i, k, n = 0, x = city_ax[c], y = city_ay[c];
+    byte near[NEAR_MAX];
+    word d, e;
+
+    for (k = 0; k < city_count && n < NEAR_MAX; ++k)
+        if (k != c && ai_distance(x, y, city_ax[k], city_ay[k]) <= 4)
+            near[n++] = k;
+    for (i = 0; i < RING; ++i) {
+        work_owner[i] = CITY_NONE;
+        if (!map_neighbour(x, y, i, &work_ring_x[i], &work_ring_y[i]))
+            continue;
+        work_owner[i] = c;
+        d = i < RING_INNER ? 1 : 2;
+        for (k = 0; k < n; ++k) {
+            e = ai_distance(work_ring_x[i], work_ring_y[i],
+                            city_ax[near[k]], city_ay[near[k]]);
+            if (e < d || (e == d && near[k] < work_owner[i])) {
+                d = e;
+                work_owner[i] = near[k];
+            }
+        }
+    }
+}
+
+// Each of city c's hexagons scored for working: `weight` times its food,
+// twice its shields and its trade, plus one, so that 0 means one it cannot
+// work. ring() first.
 static void score(byte c, byte weight)
 {
-    byte dir, nx, ny;
-    for (dir = 0; dir < 6; ++dir) {
-        scores[dir] = 0;
-        if (!map_neighbour(city_ax[c], city_ay[c], dir, &nx, &ny)) continue;
-        yield(nx, ny);
-        scores[dir] = weight * hex_food + 2 * hex_shields + hex_trade + 1;
+    byte i;
+    for (i = 0; i < RING; ++i) {
+        scores[i] = 0;
+        if (work_owner[i] != c) continue;
+        yield(work_ring_x[i], work_ring_y[i]);
+        scores[i] = weight * hex_food + 2 * hex_shields + hex_trade + 1;
     }
 }
 
-// `mask` and the n best neighbours not in it, by scores[].
-static byte pick(byte mask, byte n)
+// The n best hexagons not worked yet, by scores[], added to work_on[].
+static void pick(byte n)
 {
-    byte dir, best, best_dir;
+    byte i, best, best_i;
     for (; n; --n) {
         best = 0;
-        best_dir = 0;
-        for (dir = 0; dir < 6; ++dir)
-            if (!((mask >> dir) & 1) && scores[dir] > best) {
-                best = scores[dir];
-                best_dir = dir;
+        best_i = 0;
+        for (i = 0; i < RING; ++i)
+            if (!work_on[i] && scores[i] > best) {
+                best = scores[i];
+                best_i = i;
             }
         if (!best) break;
-        mask |= (byte)(1 << best_dir);
+        work_on[best_i] = 1;
     }
-    return mask;
 }
 
-static byte count(byte mask)
+static byte count(void)
 {
-    byte n = 0;
-    for (; mask; mask >>= 1) n += mask & 1;
+    byte i, n = 0;
+    for (i = 0; i < RING; ++i) n += work_on[i];
     return n;
 }
 
-// The worked hexagons' totals, the city's own included, into work_*.
-static void total(byte c, byte mask)
+static void clear(void)
 {
-    byte ax = city_ax[c], ay = city_ay[c];
-    byte dir, nx, ny, n = count(mask);
+    byte i;
+    for (i = 0; i < RING; ++i) work_on[i] = 0;
+}
+
+// city_worked[] (city.h) to work_on[] and back; storing makes it manual.
+static void load(byte c)
+{
+    byte i;
+    for (i = 0; i < RING; ++i)
+        work_on[i] = (city_worked[i >> 3][c] >> (i & 7)) & 1;
+}
+
+static void store(byte c)
+{
+    byte i;
+    city_worked[0][c] = city_worked[1][c] = 0;
+    city_worked[CITY_MANUAL_BYTE][c] = CITY_MANUAL;
+    for (i = 0; i < RING; ++i)
+        if (work_on[i]) city_worked[i >> 3][c] |= (byte)(1 << (i & 7));
+}
+
+// The worked hexagons' totals, the city's own included, into work_*.
+static void total(byte c)
+{
+    byte i, n = count();
 
     // The city's own hexagon, which always makes a shield.
-    yield(ax, ay);
+    yield(city_ax[c], city_ay[c]);
     work_food = hex_food;
     work_shields = hex_shields ? hex_shields : 1;
     work_trade = hex_trade;
-    for (dir = 0; dir < 6; ++dir) {
-        if (!((mask >> dir) & 1)) continue;
-        map_neighbour(ax, ay, dir, &nx, &ny);
-        yield(nx, ny);
+    for (i = 0; i < RING; ++i) {
+        if (!work_on[i]) continue;
+        yield(work_ring_x[i], work_ring_y[i]);
         work_food += hex_food;
         work_shields += hex_shields;
         work_trade += hex_trade;
     }
-    work_mask = mask;
     work_idle = city_size[c] > n ? city_size[c] - n : 0;
 }
 
@@ -187,58 +244,43 @@ static void total(byte c, byte mask)
 // of food, food above all, so that it does not starve for the sake of a
 // shield -- which would otherwise have it grow and shrink by turns.
 //
-// **A city the player has set by hand keeps its hexagons**: only if it has
-// more workers than citizens -- it shrank, or built a settler -- does the
-// worst of them go.
+// **A city the player has set by hand keeps its hexagons**: only a hexagon
+// a nearer city has taken since goes, and, if it has more workers than
+// citizens -- it shrank, or built a settler -- the worst of them.
 void city_work(byte c)
 {
-    byte m = city_worked[c], dir, worst, low;
+    byte i, worst, low;
 
-    if (m & CITY_MANUAL) {
-        m &= CITY_WORKED;
-        if (count(m) > city_size[c]) {
-            score(c, 3);
-            do {
-                low = 0xff;
-                worst = 0;
-                for (dir = 0; dir < 6; ++dir)
-                    if (((m >> dir) & 1) && scores[dir] < low) {
-                        low = scores[dir];
-                        worst = dir;
-                    }
-                m &= (byte)~(1 << worst);
-            } while (count(m) > city_size[c]);
-            city_worked[c] = m | CITY_MANUAL;
+    ring(c);
+    if (city_worked[CITY_MANUAL_BYTE][c] & CITY_MANUAL) {
+        load(c);
+        for (i = 0; i < RING; ++i)
+            if (work_owner[i] != c) work_on[i] = 0;
+        score(c, 3);
+        while (count() > city_size[c]) {
+            low = 0xff;
+            worst = 0;
+            for (i = 0; i < RING; ++i)
+                if (work_on[i] && scores[i] < low) {
+                    low = scores[i];
+                    worst = i;
+                }
+            work_on[worst] = 0;
         }
-        total(c, m);
+        store(c);
+        total(c);
         return;
     }
+    clear();
     score(c, 3);
-    total(c, pick(0, city_size[c]));
+    pick(city_size[c]);
+    total(c);
     if (work_food < 2 * city_size[c]) {
+        clear();
         score(c, 16);
-        total(c, pick(0, city_size[c]));
+        pick(city_size[c]);
+        total(c);
     }
-}
-
-byte city_toggle(byte c, byte dir)
-{
-    byte m, bit = (byte)(1 << dir), nx, ny;
-
-    if (!map_neighbour(city_ax[c], city_ay[c], dir, &nx, &ny)) return 0;
-    if (!(city_worked[c] & CITY_MANUAL)) {
-        city_work(c);
-        city_worked[c] = work_mask | CITY_MANUAL;
-    }
-    m = city_worked[c];
-    if (m & bit) {
-        m &= (byte)~bit;
-    } else {
-        if (count(m & CITY_WORKED) >= city_size[c]) return 0;
-        m |= bit;
-    }
-    city_worked[c] = m;
-    return 1;
 }
 
 byte city_grow(byte c)
@@ -254,9 +296,11 @@ byte city_grow(byte c)
         if (size == GROWTH_MAX_SIZE) return GROWTH_NONE;
         city_size[c] = size + 1;
         // Set by hand, the newcomer takes the best hexagon left, if any.
-        if (city_worked[c] & CITY_MANUAL) {
+        // city_work() above left the ring and its hexagons in place.
+        if (city_worked[CITY_MANUAL_BYTE][c] & CITY_MANUAL) {
             score(c, 3);
-            city_worked[c] = pick(city_worked[c], 1);
+            pick(1);
+            store(c);
         }
         return GROWTH_GREW;
     }

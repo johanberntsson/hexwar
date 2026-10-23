@@ -57,9 +57,9 @@
 // The regions from 1, and where each is kept. **slot_of, attic_bank and
 // attic_hi in src/dispatch.s are per region and have to agree**, as do
 // REGION_FILES in the Makefile and the winN memories in sevenships.scm.
-#define REGIONS 6
+#define REGIONS 7
 #define REGION_ATTIC(R) (0x8010000UL + ((dword)(R) - 1) * REGION_SIZE)
-#if REGIONS > 6
+#if REGIONS > 7
 #error "add the new region to the tables in src/dispatch.s"
 #endif
 

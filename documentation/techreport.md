@@ -79,7 +79,7 @@ most important routines included in each source file.
 | civ.c | the peoples, their leaders and city names, and the difficulty levels (the names themselves are texts) |
 | &nbsp;&nbsp;&nbsp;_civ\_choose_ | which people the human and the computer lead |
 |  |  |
-| cityscreen.c | the city screen: the city and its neighbours, and its production |
+| cityscreen.c | the city screen: the city and its two rings of hexagons, and its production |
 | help.c | the help screen: every key and click the map screen answers to |
 | text.c | the long texts: read into Attic RAM at start-up, drawn from there |
 | &nbsp;&nbsp;&nbsp;_text\_show_ | draws one text, following its markup for position and colour |
@@ -168,11 +168,12 @@ to `release/`), holding these files:
 | SEVENSHIPS.MAP | the map: a 16-byte header and one 4096-byte layer of terrain |
 | TEXT.PAK | the texts -- the title, help and new-game screens, the opening popup, and the lists of names -- with their markup |
 | SEVENSHIPS.R1 | code region 1, the computer players and the cities' growth: a header and the code, kept in Attic RAM and run at \$6000 from bank 1 |
-| SEVENSHIPS.R2 | code region 2, the city screen, Top Five Cities, the builders' improvements and what the computer players' cities build, the same way |
+| SEVENSHIPS.R2 | code region 2, Top Five Cities, the builders' improvements and what the computer players' cities build, the same way |
 | SEVENSHIPS.R3 | code region 3, diplomacy, the same way |
 | SEVENSHIPS.R4 | code region 4, trade, the ships' routes, exploring and fishing, merchant ships and emporia, and the menus, the same way |
 | SEVENSHIPS.R5 | code region 5, the Crisis and the peoples' collapse, the score and the end of the game, and the pictures, the same way |
 | SEVENSHIPS.R6 | code region 6, the menus and their commands, the treasury, and buildings and wonders, the same way |
+| SEVENSHIPS.R7 | code region 7, the city screen, the same way |
 | INTRO.PIC, DEFEAT.PIC, WIN_SURVIVAL.PIC, WIN_HEGEMONY.PIC, WIN_LEGACY.PIC | the pictures shown at boot and at the end: a palette and 60x23 full colour characters, 87 KB each |
 
 The C65 ROM boots AUTOBOOT.C65 automatically. `main()` then:
@@ -180,7 +181,7 @@ The C65 ROM boots AUTOBOOT.C65 automatically. `main()` then:
 1. keeps the VIC registers as BASIC left them (`screen_save`), switches the
    VIC-IV to 80x25 16-bit text mode with full colour characters
    (`screen_init`), reads TEXT.PAK into Attic RAM (`text_load`) and
-   SEVENSHIPS.R1 to .R6 into Attic RAM (`region_load`), and reads
+   SEVENSHIPS.R1 to .R7 into Attic RAM (`region_load`), and reads
    INTRO.PIC into the map window's tile store, palette first, so that the
    title picture shows while the rest loads (`title_splash`);
 2. reads TILES.FCI, a character at a time. Each character is widened to twice
@@ -239,15 +240,15 @@ window shows one region of code at a time. The figures below are from the linker
 | \$1600-\$1637 | 0.05 | `zpsave`: BASIC's zero page \$02-\$39, saved at start-up and put back on exit |
 | \$1638-\$1b20 | 1.2 | the `lowfree` section (`LOW_FREE`): the popup's text, the scratch buffers of the view and the minimap, and the galleys' route search |
 | \$1b21-\$1eff | 1.0 | free |
-| \$2001-\$5a5a | 14.5 | BASIC stub, startup and resident code |
-| \$5a5b-\$5ab9 | 0.1 | initialised data: the DMA lists |
-| \$5aba-\$5bb9 | 0.25 | C stack |
-| \$5bba-\$5d8b | 0.5 | BSS: small state |
-| \$5d8c-\$5fff | 0.6 | free |
+| \$2001-\$5885 | 14.1 | BASIC stub, startup and resident code |
+| \$5886-\$58f6 | 0.1 | initialised data: the DMA lists |
+| \$58f7-\$59f6 | 0.25 | C stack |
+| \$59f7-\$5bc4 | 0.5 | BSS: small state |
+| \$5bc5-\$5fff | 1.1 | free |
 | \$6000-\$7fff | 8 | the code window; region 0 as loaded (7.7 KB used) |
 | \$8000-\$9fff | 8 | resident constant data and code |
-| \$a000-\$ba79 | 6.6 | `highbss` (`HIGH_BSS`): the map `map_tile` (terrain, improvements, explored and occupied bits), the unit and city arrays (the cities' size and food box among them), the peoples' relations and attitudes, the trade deals and their ships' due turns, the emporia, the treasuries, the buildings and the legacy points, the sprite blocks, the AI's headings, the staging buffers of the texts, the regions and the pictures, the texts' line buffers, the sheet loader's buffers and its rows' extents and addresses, the saved VIC registers, and the resources, a list by hexagon row |
-| \$ba7a-\$bfff | 1.4 | free |
+| \$a000-\$bb3d | 6.8 | `highbss` (`HIGH_BSS`): the map `map_tile` (terrain, improvements, explored and occupied bits), the unit and city arrays (the cities' size, food box and worked hexagons among them), what `city_work()` found, the peoples' relations and attitudes, the trade deals and their ships' due turns, the emporia, the treasuries, the buildings and the legacy points, the sprite blocks, the AI's headings, the staging buffers of the texts, the regions and the pictures, the texts' line buffers, the sheet loader's buffers and its rows' extents and addresses, the saved VIC registers, and the resources, a list by hexagon row |
+| \$bb3e-\$bfff | 1.2 | free |
 
 The long texts and the names are not in this table at all: they are in
 TEXT.PAK, read into Attic RAM at start-up, which is most of why the
@@ -300,13 +301,14 @@ holds the screens that are not the map -- title, setup, help -- with
 save and load, the loaders of the tile sheet and the map, the end of a
 turn and the readout of what is under the arrow;
 region 1 holds the computer players and the cities' yields and growth;
-region 2 the city screen, Top Five Cities, the builders'
+region 2 Top Five Cities, the builders'
 improvements and what the computer players' cities build, which calls
 the improvements for every city and so is beside them; region 3
 diplomacy; region 4 trade, the ships' routes, exploring and fishing,
 merchant ships and emporia; region 5 the Crisis and the peoples'
 collapse, the score and the end of the game, and the pictures; region 6
-the menus and their commands, the treasury, and buildings and wonders.
+the menus and their commands, the treasury, and buildings and wonders;
+region 7 the city screen.
 
 Resident code calls a function in a region through a stub of the same
 name (`src/dispatch.s`), which maps the region in (copying it into its

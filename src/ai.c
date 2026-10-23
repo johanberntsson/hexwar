@@ -5,7 +5,8 @@
 // And for src/aibuild.c (aiint.h).
 #define guards_wanted ai_guards_wanted_r1
 #define find_far_site ai_find_far_site_r1
-#define work_site ai_work_site_r1
+// And for src/growth.c, in this region too.
+#define distance ai_distance
 
 #include "ai.h"
 #include "aiint.h"
@@ -80,7 +81,7 @@ HIGH_BSS byte ai_sea[SEEN_X];   // the same for shallows, for the ships
 // Hexagons between two cells, round the east-west wrap. In doubled
 // coordinates that is dy, plus whatever of dx the diagonal steps do not
 // cover, two to a hexagon. 16-bit throughout; see the Calypsi notes.
-static word distance(byte ax, byte ay, byte bx, byte by)
+word distance(byte ax, byte ay, byte bx, byte by)
 {
     int dx = (int)ax - (int)bx;
     int dy = (2 * (int)ay + (ax & 1)) - (2 * (int)by + (bx & 1));
@@ -138,8 +139,7 @@ static word nearest(byte me, byte ax, byte ay)
 }
 
 // What the resources a city on (ax, ay) would have are worth, on it and
-// its neighbours: one each, and copper and tin two, for bronze. No two are
-// neighbours (tools/mapgen.py), so at most three, and six.
+// its RING: one each, and copper and tin two, for bronze.
 static byte worth(byte ax, byte ay)
 {
     byte r = map_resource_at(ax, ay);
@@ -149,7 +149,7 @@ static byte worth(byte ax, byte ay)
 static byte resources_round(byte ax, byte ay)
 {
     byte dir, nx, ny, n = worth(ax, ay);
-    for (dir = 0; dir < 6; ++dir)
+    for (dir = 0; dir < RING; ++dir)
         if (map_neighbour(ax, ay, dir, &nx, &ny)) n += worth(nx, ny);
     return n;
 }
@@ -453,40 +453,14 @@ static void hunt(byte u, word range)
         unit_work[u] = WANTS_FERRY;
 }
 
-// A hexagon round city c that wants improving and has nobody on it, into
-// (work_x, work_y): copper or tin to mine first, for bronze; then one the
-// city works, as those are what an improvement adds to; then any. 0 if
-// there is none.
+// Where a builder goes to work: strategic_site()'s, or ai_work_site()'s
+// (src/aibuild.c) through ai_work_x and ai_work_y.
 static byte work_x, work_y;
 
-byte work_site(byte c)
-{
-    byte pass, dir, nx, ny, w;
-
-    city_work(c);
-    for (pass = 0; pass < 3; ++pass) {
-        for (dir = 0; dir < 6; ++dir) {
-            if (pass == 1 && !((work_mask >> dir) & 1)) continue;
-            if (!map_neighbour(city_ax[c], city_ay[c], dir, &nx, &ny))
-                continue;
-            if (map_tile[ny][nx] & MAP_OCCUPIED) continue;
-            if (!pass) {
-                w = map_resource_at(nx, ny);
-                if (w != RES_COPPER && w != RES_TIN) continue;
-            }
-            if (improve_best(nx, ny) == ORDERS_NONE) continue;
-            work_x = nx;
-            work_y = ny;
-            return 1;
-        }
-    }
-    return 0;
-}
-
-// Copper or tin next to one of p's cities and not mined yet, the nearest
-// to (ax, ay), into (work_x, work_y): bronze, which any of p's builders goes
-// for before the work round its own city. Nobody may be on it but the
-// builder looking. Whether there is one.
+// Copper or tin in the RING of one of p's cities and not mined yet, the
+// nearest to (ax, ay), into (work_x, work_y): bronze, which any of p's
+// builders goes for before the work round its own city. Nobody may be on
+// it but the builder looking. Whether there is one.
 static byte strategic_site(byte p, byte ax, byte ay)
 {
     byte c, dir, nx, ny, r;
@@ -494,7 +468,7 @@ static byte strategic_site(byte p, byte ax, byte ay)
 
     for (c = 0; c < city_count; ++c) {
         if (city_owner[c] != p) continue;
-        for (dir = 0; dir < 6; ++dir) {
+        for (dir = 0; dir < RING; ++dir) {
             if (!map_neighbour(city_ax[c], city_ay[c], dir, &nx, &ny))
                 continue;
             r = map_resource_at(nx, ny);
@@ -516,8 +490,8 @@ static byte strategic_site(byte p, byte ax, byte ay)
 // there was one.
 static byte to_work(byte u, byte c)
 {
-    if (!work_site(c)) return 0;
-    approach(u, work_x, work_y);
+    if (!ai_work_site(c)) return 0;
+    approach(u, ai_work_x, ai_work_y);
     return 1;
 }
 
@@ -851,7 +825,8 @@ static void move_unit(byte u)
             explore(u);
             return;
         }
-        if (distance(ax, ay, city_ax[c], city_ay[c]) == 1) {
+        d = distance(ax, ay, city_ax[c], city_ay[c]);
+        if (d && d <= 2) {
             w = improve_best(ax, ay);
             if (w != ORDERS_NONE) {
                 improve_start(u, w);

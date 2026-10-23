@@ -1,19 +1,43 @@
 --- OPEN ---
 
-NEXT (23 Oct 2026, after the temple, the Lion Gate and Advisors/Cities; CLAUDE.md "Where to
-start next time"):
-1. Try on a real MEGA65 (the user's fuller test before the next session): Advisors/Cities
-   and a city screen from it, CHANGE's Temple and Lion Gate, a temple's upkeep on
-   Advisors/Finance, the Lion Gate's announcement, Help/Buildings, the Legacy column and the
-   legacy victory, deals lapsing without ships, the menus from region 6
-2. More culture: more wonders (Pyramids, Palace of Knossos), clay tablets of knowledge
+I lost a city to a warrior without a popup or any kind of notification.
+
+There's no visual feedback who wins or loses when attacking or being attacked
+
+More ways of spending money:
+- government management: more expensive to have many cities (will control city sprawl)
+- military costs: basic defense free (one per city or so) but a large army is an ongoing cost
+
+Two rings, to tune: CITY_SPACING (4) for the AI now that outer rings overlap, and whether
+settlers should weigh the outer ring's resources less. The Egyptians fell by turn 300 on
+seed 7 in the first autoplay with them
+
+NEXT (23 Oct 2026, end of the day; CLAUDE.md "Where to start next time"):
+1. Try on a real MEGA65: the two rings' city screen (keys stepping the arrow, space, clicks,
+   BUY, CHANGE, units 1-9), a new city's outer ring explored, the flag on a hexagon a nearer
+   city has, city sizes; the chariot, horses and c; and from before, Advisors/Cities, the
+   temple and Lion Gate, Help/Buildings, the legacy victory, the menus from region 6
+2. The new items at the top: the lost city with no notice, fight feedback, ways to spend gold
+3. Tune the AI to the two rings (above)
+4. More culture: more wonders (Pyramids, Palace of Knossos), clay tablets of knowledge
    (Linear B, law codes, the alphabet: a science of sorts), building art
-3. The Crisis may have grown harsher -- play, or compare seeds
-4. Tune from play: the collapse, merchant ships, gold, legacy's weight in the score
-5. Escorts for merchant ships; AI galleys against the Sea Peoples
-Room: resident 628 bytes, region 0 0.3 KB, region 1 178 bytes, region 2 0.7 KB, region 3
-2.1 KB, region 4 1.5 KB, region 5 2.2 KB, region 6 1.1 KB, highram 1.4 KB; the tile sheet
-12 KB, about eight units
+5. Tune from play: the Crisis, the collapse, merchant ships, gold, legacy's weight in the
+   score; escorts for merchant ships; AI galleys against the Sea Peoples
+Room: resident 1.1 KB, region 0 0.3 KB, region 1 61 bytes, region 2 5.1 KB, region 3 2.1 KB,
+region 4 1.5 KB, region 5 2.2 KB, region 6 1.1 KB, region 7 2.2 KB, highram 1.2 KB; the tile
+sheet 9.6 KB, about six units
+
+DONE (23 Oct 2026): two rings. A city works its own hexagon and the best of the 18 in its
+two rings (RING in map.h); a hexagon in reach of two cities is the nearer one's, the earlier
+on a tie. The city screen shows all 19 (units left, production right, figures under the
+map), in a region 7 of its own; the moving and cursor keys step the arrow between hexagons
+and space works one. A human city sees its whole reach. SAVE_VERSION 17. 300 turns of
+autoplay: citizens 95 -> 122 on seed 1, 65 -> 105 on seed 7, largest city 7 -> 13
+
+DONE (23 Oct 2026): the chariot (4/1/2, 40 shields, needs horses only, never onto
+mountains) and horses (plains and grassland, +2 shields, a trade good). The AI builds
+chariots at war with horses (2 + 1 per 2 cities, over the cap) and hunts with them within 16.
+SAVE_VERSION 16. And c centres the view on the active unit
 
 DONE (23 Oct 2026): the temple (40 shields, 1 gold upkeep, 3 legacy, sold when broke) and the
 Lion Gate (160 shields, one in the world, doubles defence in its city, 20 legacy), as kinds
@@ -65,8 +89,6 @@ a city screen by selecting on city from this advisor screen.
 
 Evenually need to adjust game/AI for the difficulty levels (probably need to cheat
 on highter levels to make the game challenging)
-
-There's no visual feedback who wins or loses when attacking or being attacked
 
 The Civilopedia's pages (Help/Terrain Types, Help/Military Units) are placeholders
 

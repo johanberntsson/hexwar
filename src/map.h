@@ -161,8 +161,16 @@ extern byte map_show;
 #define DIR_NE 5
 #define DIR_NONE 0xff
 
-// The cell one step from (ax, ay) in direction `dir`, wrapping east-west.
-// Returns 0, and leaves *nax and *nay alone, off the top or bottom.
+// **A city's reach is two rings**, Civilization's fat cross on hexagons:
+// the six neighbours, RING_INNER of them, and the twelve beyond, RING in
+// all. map_neighbour() takes the ring's numbering for `dir`: 0-5 are the
+// DIR_* neighbours, 6-17 the outer ring clockwise from two steps east.
+#define RING_INNER 6
+#define RING 18
+
+// The cell one step from (ax, ay) in direction `dir` -- or, for 6-17,
+// that hexagon of the outer ring -- wrapping east-west. Returns 0, and
+// leaves *nax and *nay alone, off the top or bottom.
 byte map_neighbour(byte ax, byte ay, byte dir, byte *nax, byte *nay);
 
 // Which way (bx, by) is from (ax, ay), or DIR_NONE if not a neighbour.

@@ -60,7 +60,7 @@ checked in.
 
 **The program reads its texts, its code regions, the title's picture,
 its tile sheet and its map from drive 8** (`TEXT.PAK`, `SEVENSHIPS.R1`
-to `.R6`, `INTRO.PIC`, `TILES.FCI`, `SEVENSHIPS.MAP`, in that order), so it needs the d81 mounted: `make run`
+to `.R7`, `INTRO.PIC`, `TILES.FCI`, `SEVENSHIPS.MAP`, in that order), so it needs the d81 mounted: `make run`
 does that, and a bare `-prg` boot stops at `cannot read TEXT.PAK`.
 
 There are no tests. Verification is running it — see **Verifying a change**.
@@ -206,10 +206,10 @@ buffers at the default `$FF80000` and corrupts the display.
 
 | Address | Size | Contents |
 |---|---|---|
-| `$2001-$5FFF`, `$8000-$9FFF` | 24 KB | the resident program: code, data, BSS, C stack. About 520 bytes free, nearly all at the top of `$2001-$5FFF` |
+| `$2001-$5FFF`, `$8000-$9FFF` | 24 KB | the resident program: code, data, BSS, C stack. About 1.1 KB free, nearly all at the top of `$2001-$5FFF` |
 | `$6000-$7FFF` | 8 KB | the code window (`src/region.h`); as loaded, region 0 — the title, setup and help screens (and the Civilopedia's pages), save and load, the sheet's and the map's loaders, the owners' flags, the end of a turn and a game's start (`src/turn.c`), the computer players' starts (`src/aiplace.c`), the hover readout (`src/hover.c`), the boot splash (`title_splash()`). 0.4 KB free |
-| `$13000-$14FFF` | 8 KB | code slot 1: region 1, from `SEVENSHIPS.R1` by way of attic: the computer players and their ferrying, the cities' yields and growth, bronze. 95 bytes free |
-| `$15000-$16FFF` | 8 KB | code slot 2, shared: region 2 (the city screen, Top Five Cities, the builders' improvements, what the computer players' cities build, `src/aibuild.c`, buying; 0.7 KB free) region 3 (diplomacy; 2.1 KB free) region 4 (trade, the ships' routes, exploring and fishing, merchant ships and emporia; 1.5 KB free) region 5 (the Crisis and the collapse, the score and the end, the pictures, `src/crisis.c`, `src/score.c`, `src/picture.c`; 2.2 KB free) or region 6 (the menus and what their items do, the treasury, buildings and wonders, `src/menu.c`, `src/command.c`, `src/treasury.c`, `src/culture.c`, `src/cities.c`; 1.1 KB free), whichever was called last. **Slot 1 is also the sheet loader's staging area at boot** (`STAGING` in `src/sheet.c`), before region 1 is first called |
+| `$13000-$14FFF` | 8 KB | code slot 1: region 1, from `SEVENSHIPS.R1` by way of attic: the computer players and their ferrying, the cities' yields and growth, bronze. 61 bytes free |
+| `$15000-$16FFF` | 8 KB | code slot 2, shared: region 2 (Top Five Cities, the builders' improvements, what the computer players' cities build and where their builders work, `src/aibuild.c`; 5.1 KB free) region 7 (the city screen and buying, `src/cityscreen.c`; 2.2 KB free) region 3 (diplomacy; 2.1 KB free) region 4 (trade, the ships' routes, exploring and fishing, merchant ships and emporia; 1.5 KB free) region 5 (the Crisis and the collapse, the score and the end, the pictures, `src/crisis.c`, `src/score.c`, `src/picture.c`; 2.2 KB free) region 6 (the menus and what their items do, the treasury, buildings and wonders, `src/menu.c`, `src/command.c`, `src/treasury.c`, `src/culture.c`, `src/cities.c`; 1.1 KB free), whichever was called last. **Slot 1 is also the sheet loader's staging area at boot** (`STAGING` in `src/sheet.c`), before region 1 is first called |
 | `$17000-$1EFFF` | 32 KB | the packed tile sheet's second area, where regions 3 to 6 would have been: whatever rows did not fit bank 5's; with bank 5's, 9.6 KB free (`tools/mktiles.py` says) |
 | `$A000-$BFFF` | 8 KB | `highram`, under the BASIC ROM, banked out by `src/bank.s`: `map_tile`, the unit and city arrays, the sprite blocks, the AI's headings, the staging buffers of the texts and the regions, the texts' line buffers, the sheet loader's buffers, the saved VIC registers, the AI's exploration memory, the resource list, the sheet's row tables, the peoples' relations and attitudes and the letters' names, the trade deals, the emporia, the pictures' staging buffer, the treasuries; about 1.4 KB free — `HIGH_BSS` in `src/mega65.h` moves a variable there, and **the startup does not clear it** |
 | `$1600-$1EFF` | 2304 | `zpsave` (56 bytes, BASIC's zero page during the run), then `lowfree`: the popup's 400-byte text and the scratch buffers of the view and the minimap, and the sea routes' search (`src/path.c`), 990 bytes free — `LOW_FREE` in `src/mega65.h` moves a variable there |
@@ -540,7 +540,10 @@ pictures, the collapse, the raider, emporia and Help → Military Units;
 region 0, **178 bytes in region 1**, **0.7 KB in region 2**, 2.1 KB in
 region 3, 1.5 KB in region 4, 2.2 KB in region 5 and 1.1 KB in region 6
 (628 bytes resident and 1.1 KB in region 6 after Advisors → Cities;
-about 520 resident and **95 bytes in region 1** after the chariot).
+about 520 resident and **95 bytes in region 1** after the chariot;
+about 1.1 KB resident and **61 bytes in region 1** after the second
+ring, which moved the city screen to a region 7 of its own and
+`work_site()` to region 2 as `ai_work_site()`).
 **Region 6 is the menus'** (23 Oct 2026, for the merchant fleets' room
 in region 4): the first region added since the slots, following **A new
 region** above, which held; the treasury followed it from region 5 the
@@ -837,9 +840,11 @@ computer players ferry armies, and merchant ships found emporia
 (22-23 Oct 2026, the user's order): the treasury (**The treasury**),
 merchant fleets carrying the trade deals (**Trade**), the temple and the
 Lion Gate with the legacy victory (**Buildings and wonders**), and
-Advisors → Cities. **Confirmed on a real MEGA65** (23 Oct 2026): the
-treasury; the user was to test the rest more fully before the next
-session.
+Advisors → Cities; then, from the user's play, `c` to centre on the
+active unit, the chariot and horses (**Chariots**), and **a city's reach
+of two rings** (**Yields and growth**, **The city screen**).
+**Confirmed on a real MEGA65** (23 Oct 2026): the treasury; the user was
+to test the rest more fully before the next session.
 **Confirmed on a real MEGA65** (21 Oct 2026): all of 20 Oct 2026's
 later work — the resources and the improved resources drawn from bank 1
 at `$17000` up, the map loader in region 0, the owners' flags, contact by
@@ -855,25 +860,31 @@ hover readout from region 0, the calendar, the score and the end
 screen, and the Crisis — omens, Sea Peoples, shocks — with the 96-unit
 list.
 
-**Where to start next time** (23 Oct 2026, after the temple, the Lion
-Gate and Advisors → Cities):
-1. **Try on a real MEGA65**: Advisors → Cities and a city screen from
-   it; CHANGE's longer list (Temple, Lion Gate),
-   a temple bought or built and its upkeep on Advisors → Finance, the
-   Lion Gate's announcement, Help → Buildings, the Legacy column, the
-   legacy victory's picture, and the menus' commands from region 6;
-   the chariot and the horses, and `c` to centre on the active unit.
-2. **More culture**: more wonders (vision.md 5B names the Pyramids, the
+**Where to start next time** (23 Oct 2026, end of the day: after `c`,
+the chariot and horses, and the two rings):
+1. **Try on a real MEGA65**: the two rings' city screen (the moving and
+   cursor keys stepping the arrow, space, clicks, BUY, CHANGE, the unit
+   list 1-9), a new city's outer ring explored at once, the flag on a
+   hexagon a nearer city has, how big cities get; the chariot (two
+   moves, kept off mountains), horses, and `c`; and from before,
+   Advisors → Cities, the temple and the Lion Gate, Help → Buildings,
+   the legacy victory, and the menus from region 6.
+2. **The user's new items at the top of TODO.txt**: a city lost with no
+   popup or notice; no visual feedback of who won a fight; more ways to
+   spend gold (the cost of many cities, to curb sprawl; an army's upkeep
+   beyond a free guard or so a city).
+3. **Tune the AI to the two rings**: `CITY_SPACING` (4) with overlapping
+   outer rings, and settlers perhaps weighing the outer ring's resources
+   less; the Egyptians fell by turn 300 on seed 7 in the first run with
+   them.
+4. **More culture**: more wonders (vision.md 5B names the Pyramids, the
    Palace of Knossos) and the clay tablets of knowledge (Linear B,
    law codes, the alphabet), which want a science of some kind;
    building art for the map and the Civilopedia, which has none yet.
-3. **The Crisis may have grown harsher** (see the merchant fleets'
-   measurements: the human's side gone on seed 7 by turn 300 in two
-   different builds) — play, or compare seeds.
-4. Tune from play: the collapse, merchant ships, gold, and the weight
-   of legacy against the rest of the score.
-5. Escorts for the merchant ships; the computer players' galleys
-   against the Sea Peoples.
+5. Tune from play: the Crisis (it may have grown harsher), the collapse,
+   merchant ships, gold, and the weight of legacy in the score; escorts
+   for the merchant ships, and the computer players' galleys against the
+   Sea Peoples.
 
 The tile sheet is packed and has about six units' room left (**When
 bank 5 fills up**, step 1c).
@@ -1189,27 +1200,37 @@ other turns goes into `news` and is shown in the panel at the end of
 
 **The city screen** (`src/cityscreen.c`, after
 `civ1-reference/civ1-pic02.png`) takes over the whole screen: the city's
-name on top, three boxes — the units in the city, the city's hexagon and
-its six neighbours, and what it is producing with a CHANGE button — and
+name on top, the units in the city in a column on the left, the city's
+hexagon and its two rings (19 hexagons) in the middle with the city's
+figures under them, and what it is producing, with CHANGE and BUY
+buttons, in a column on the right (the user's choice of layout when the
+reach became two rings, 23 Oct 2026) — and
 EXIT at the bottom right (`c` and Esc/Return do the same). CHANGE turns the
 production box into a list of what can be built (`buildable[]`: warriors,
 settlers and builders), picked like a menu; a settler chosen in a city of
 size 1 waits at its cost, and the box says "waits for size 2". **The unit
 list is where a unit fortified in the city is woken**, since the map does
 not draw it (see **Bit 7** below): a click on a unit, or its number key
-1-7, wakes it if it has orders and fortifies it if it is a warrior
-without, and on the way out `open_city()` hands the orders on if the
+1-9, wakes it if it has orders and fortifies it if it is a soldier
+without (two rows a unit, its orders under its name), and on the way out `open_city()` hands the orders on if the
 turn was over or the active unit was fortified. **It is the map screen's own cells
 rewritten**: text over the panel, the minimap and most of the window, and
-in the middle the window's own full-colour cells, showing 24x10 characters
-of the tile store that `view_draw_patch()` has cleared and drawn the seven
-hexagons into, with the select ring on each hexagon the city works.
+in the middle the window's own full-colour cells, showing 40x16 characters
+of the tile store that `draw_patch()` has cleared and drawn the 19
+hexagons into, with the select ring on each hexagon the city works and,
+on one a nearer city has (**Yields and growth**), that city's owner's
+flag. `draw_patch()` was `view_draw_patch()` in the resident `view.c`
+until then, which got 650 bytes back.
 Under the patch a fourth box gives the size, the food box and the food a
 turn ("grows in 13 turns", "not growing" or "starving"), the shields and
-the trade, and how many citizens are idle. **Clicking a neighbour, or
-pressing its moving key, takes its citizen off it or puts an idle one on
-it** (`city_toggle()`, Civilization's way), which makes the city
-`CITY_MANUAL`. It is in region 2 with Top Five Cities. So nothing is allocated for it, and on the way out
+the trade, and how many citizens are idle. **Clicking a hexagon takes
+its citizen off it or puts an idle one on it** (`work_toggle()`,
+Civilization's way), which makes the city `CITY_MANUAL`; **from the
+keyboard, the moving keys and the cursor keys step the arrow from
+hexagon to hexagon** (`input_point()` in `src/input.c` puts it there;
+up and down zigzag, as tile select does) and space does what a click
+would. The screen starts with the arrow on the city. **It is region 7**,
+its own since the second ring, slot 2's like the others. So nothing is allocated for it, and on the way out
 `draw_screen()` in `src/game.c` puts the whole map screen back —
 `screen_clear()`, `view_init()`, `minimap_show()` (cells only; the pixels
 were never touched) and the panel — and marks the view dirty, so the next
@@ -1232,15 +1253,30 @@ from OpenCivOne's `TerrainMapCell.cs`, applied to array cells — which is
 what gets a new city going; it is not drawn (no tile to spare), but the
 hover readout gives every hexagon's yield as food/shields/trade
 ("Grassland 2/1/0 14,8") when nothing is on it, through `hex_yield()`. **A city of size n works its own hexagon (at least
-one shield) and the n best of its six neighbours**, picked by
+one shield) and the n best of its two rings** — `RING` in `src/map.h`,
+18 hexagons, Civilization's fat cross on hexagons, since 23 Oct 2026
+(the user's: with one ring a city could hardly ever have more than one
+resource) — picked by
 `city_work()` whenever they are wanted — 3×food + 2×shields + trade, or
 food above all if that leaves the city short — so nothing about them is
 stored, **unless the player has set them** on the city screen: then
 `city_worked[]` holds them with `CITY_MANUAL`, growth adds the newcomer
 to the best hexagon left and shrinking (or a settler) drops the worst,
 and nothing else changes them; a captured city goes back to automatic.
-Computer players never set them. Radius 1 is the city screen's patch, and cities are 4 apart, so
-none ever share a hexagon; citizens beyond six work nothing and eat.
+Computer players never set them. `city_worked[3][MAX_CITIES]` is three
+bytes a city, hexagon i at bit `i & 7` of byte `i >> 3`, `CITY_MANUAL`
+in the third (`SAVE_VERSION` 17); `city_work()` hands out `work_on[]`,
+`work_owner[]` and `work_ring_x/y[]` by ring index. **Cities 4 apart, as
+the computer players found them, share outer rings, and the human may
+found closer: a hexagon is the nearer city's, the earlier in the list on
+a tie** (`ring()` in `src/growth.c`, the user's choice over
+Civilization's first-come rule, since nothing has to be stored), and the
+other city cannot work it. `map_neighbour()` takes the ring's numbering:
+0-5 the DIR_* neighbours, 6-17 the outer ring. A city of the human's
+explores its whole reach when founded or taken (`city_capture()`).
+Citizens beyond eighteen work nothing and eat. Measured against the build
+before, 300 turns of autoplay: seed 1 went from 95 citizens to 122 and
+its largest city from 7 to 13; seed 7 from 65 to 105, 7 to 13.
 Every citizen eats 2 food and the rest goes into `city_food[]`; at
 `GROWTH_BOX(size)` = (size + 1) × 10 the city grows and the box empties,
 and empty and still short it shrinks, down to 1 (the panel: "Mycenae /
@@ -1328,7 +1364,8 @@ The names are a text, `list_resources.txt`. The map loader moved to
 region 0 with the list (`src/mapload.c`), which more than paid for it.
 
 **Bronze** (milestone 7b): **a player owns a resource when it is on one
-of its cities, or next to one and improved as that resource is** —
+of its cities, or in its reach (the two rings) and improved as that
+resource is** —
 mined copper and tin, irrigated cattle, olives and wine
 (`map_res_improved_by[]`), nothing needed for grain, fish, cedar and dye
 — (`player_owns()` in `src/growth.c`, region 1, worked out when asked
@@ -1583,11 +1620,11 @@ boats — `MAP_IRRIGATED` on the shallows, so `yield()` gives the 1 food
 irrigation does (4/0/2 for worked fish), `RES_TILE()` draws
 `TILE_FISH_BOATS` through `map_res_improved_by[]`, and the readout says
 "+boats". **The irrigation overlay is not drawn on the shallows**: the
-test is in `view_redraw()` and `view_draw_patch()` behind the
+test is in `view_redraw()` and the city screen's `draw_patch()` behind the
 `MAP_IMPROVEMENT` test, so it costs only improved hexagons anything.
 The computer players' first boat explores while there is anything left
 to; any other boat, and the first once everything is seen, makes for the
-nearest unworked fish next to one of its people's cities and works it
+nearest unworked fish in the reach of one of its people's cities and works it
 (`boat_explore()`); and a coastal city with unworked fish next to it
 (`fish_to_work()` in `src/ai.c`) and of size 2 or more builds a second
 boat, over the unit cap since it is gone once it gets there (under the
@@ -1827,10 +1864,9 @@ of the building; they count in the score and decide the legacy victory
 for a wonder, doubled before the first shield. The city screen lists the
 city's buildings under its shields and trade; CHANGE lists the temple
 where there is none and the Lion Gate while nobody has built it
-(`CULTURE_CAN()`), from the box's first row with "Build what?" on its
-frame (since the chariot, 23 Oct 2026), so that ten choices fit, and the
-notes under it ("Chariot needs horses" and the rest) are a line each,
-one for each choice missing. **The computer players**, at their unit
+(`CULTURE_CAN()`); the production box is the screen's whole height since
+the second ring, so ten choices fit with room, and the notes under them
+("Chariot: horses" and the rest) are a line each. **The computer players**, at their unit
 cap, build the Lion Gate in a city of 5 (one city at a time) and a
 temple in a city of 3 with 20 gold in hand, and finish a building they
 have started unless they need guards (`src/aibuild.c`). In 400 turns of

@@ -81,6 +81,10 @@ byte input_poll(void);
 // True if the arrow moved since the last time this was asked.
 byte input_moved(void);
 
+// Put the tip of the arrow at (x, y), kept on the screen: the city screen's
+// keys move it from hexagon to hexagon.
+void input_point(word x, word y);
+
 // **Sprites 2 and 3 are free for the game**; 0 and 1 are the arrow, and are
 // drawn in front of them. Each is monochrome, white, unexpanded, with a
 // 64-byte block of its own (63 bytes of shape, 3 a row, 24x21) that

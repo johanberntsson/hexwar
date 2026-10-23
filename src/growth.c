@@ -99,9 +99,17 @@ static void yield(byte ax, byte ay)
     hex_food += resource_food[t];
     hex_shields += resource_shields[t];
     hex_trade += resource_trade[t];
-    t = m & MAP_TERRAIN_MASK;
     if (m & MAP_IRRIGATED) ++hex_food;
-    if (m & MAP_MINED) hex_shields += mine_shields[t];
+    // A pasture is the mine bit on cattle and horses (improve.h).
+    if (m & MAP_MINED) {
+        if (RES_PASTURE(t)) {
+            ++hex_food;
+            ++hex_shields;
+        } else {
+            hex_shields += mine_shields[m & MAP_TERRAIN_MASK];
+        }
+    }
+    t = m & MAP_TERRAIN_MASK;
     // **Civilization's grassland shields**: half the grassland and river
     // squares make a shield, on a fixed pattern -- (x*7 + y*11) & 2 clear,
     // from OpenCivOne's TerrainMapCell.cs -- which is what gets a new city

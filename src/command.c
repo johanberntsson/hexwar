@@ -74,6 +74,9 @@ void game_menu_command(byte command)
     case MENU_MINE:
         unit_key('m');
         break;
+    case MENU_PASTURE:
+        unit_key('p');
+        break;
     case MENU_FISH:
         unit_key('i');
         break;

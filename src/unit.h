@@ -61,6 +61,7 @@
 #define ORDERS_FORTIFY 1
 #define ORDERS_IRRIGATE 2       // a builder at work (src/improve.h)
 #define ORDERS_MINE 3
+#define ORDERS_PASTURE 4        // MAP_IRRIGATED on cattle or horses
 
 // The players: the human, and a computer player for each of the other
 // peoples (src/ai.c). Player p leads people player_civ[p] (civ.h).
@@ -79,7 +80,7 @@ extern byte unit_ay[MAX_UNITS];
 extern byte unit_moves[MAX_UNITS];      // left this turn
 extern byte unit_orders[MAX_UNITS];
 // Turns a builder has worked on its improvement; set by improve_start(),
-// meaningful only with ORDERS_IRRIGATE or ORDERS_MINE.
+// meaningful only with ORDERS_IRRIGATE, ORDERS_MINE or ORDERS_PASTURE.
 extern byte unit_work[MAX_UNITS];
 
 // The unit waiting for orders, which view_redraw() draws on top of anything

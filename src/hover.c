@@ -24,7 +24,7 @@
 // the map window or on the minimap. Blank when the arrow is on neither.
 void game_draw_hover(void)
 {
-    byte ax, ay, c, u, x;
+    byte ax, ay, c, u, x, r;
 
     line_clear();
     // While tile select is up the readout follows the ring, not the arrow;
@@ -61,10 +61,11 @@ void game_draw_hover(void)
                 if (x != RES_NONE) line_add("+");
             }
             if (x != RES_NONE) line_add(text_line(TEXT_LIST_RESOURCES, x));
+            r = x;
             x = map_tile[ay][ax] & MAP_IMPROVEMENT;
             // Short, so that "Canaanite Builder  Mountains+mine 127,31"
             // still fits in the 40 columns.
-            if (x) line_add(x == MAP_MINED ? "+mine"
+            if (x) line_add(x == MAP_MINED ? (RES_PASTURE(r) ? "+pasture" : "+mine")
                             : x == MAP_EMPORIUM ? "+emporium"
                             : MAP_TERRAIN(ax, ay) == TILE_SHALLOW_OCEAN ? "+boats"
                             : "+irr");

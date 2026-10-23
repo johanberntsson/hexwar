@@ -39,12 +39,14 @@ IRRIGATED = res_cattle_pasture.png res_olives_grove.png res_wine_vineyard.png
 # work boat as they are, and fish worked by a fishing boat, alltiles'
 # tile_fish_improved. Then the Sea Peoples' raider (milestone 10's Crisis),
 # alltiles' swordsman as it is; and the merchant ship, its cargo ship. Then
-# the chariot, alltiles' chariot archer as it is.
+# the chariot, alltiles' chariot archer as it is. Then horses with a
+# pasture, alltiles' tile_horses_improved as it is.
 TILES = $(TERRAIN) tile_city.png tile_select.png \
         unit_settler.png unit_warrior.png unit_builder.png tile_undiscovered.png \
         $(OVERLAYS) $(RESOURCES) $(MINES) unit_spearman.png $(IRRIGATED) \
         unit_galley.png unit_fishing_boat.png res_fish_boats.png \
-        unit_raider.png unit_merchant.png unit_chariot.png
+        unit_raider.png unit_merchant.png unit_chariot.png \
+        res_horses_pasture.png
 
 all: ../res/tiles.fci
 

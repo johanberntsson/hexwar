@@ -396,36 +396,37 @@ byte key_dir(byte key)
     if (!input_real_hw && key >= KEY_PAD_FIRST && key <= KEY_PAD_LAST)
         return pad_dir[(byte)(key - KEY_PAD_FIRST)];
 
-    switch (key) {
-    // The same pattern as q e / a d / z c, on the right of the keyboard
-    // beside the cursor keys. The key left of = is : unshifted and [
-    // shifted, so both are taken.
-    case '0': return DIR_NW;
-    case '-': return DIR_NE;
-    case 'p': return DIR_W;
-    case '*': return DIR_E;
-    case ':':
-    case '[': return DIR_SW;
-    case '=': return DIR_SE;
-    }
+    // The moving keys of a real MEGA65, 0 - p * : =, went on 24 Oct 2026
+    // (the user's: they were awkward, and tile select moves a unit from
+    // the keyboard), and p builds a pasture now.
     return DIR_NONE;
 }
 
-// The active unit, a builder, starts irrigating or mining where it stands.
+// The active unit, a builder, starts irrigating, mining or building a
+// pasture where it stands.
 static void improve(byte orders)
 {
     byte u = unit_active;
-    const char *what = orders == ORDERS_IRRIGATE ? "irrigate" : "mine";
+    const char *what = orders == ORDERS_IRRIGATE ? "irrigate"
+                       : orders == ORDERS_MINE ? "mine" : "build pastures";
 
     if (unit_kind[u] != KIND_BUILDER) {
         message("Only builders", what);
         return;
     }
     if (!improve_can(orders, unit_ax[u], unit_ay[u])) {
-        line_clear();
-        line_add("Cannot ");
-        line_add(what);
-        message(line, "here");
+        if (orders == ORDERS_PASTURE) {
+            // It fails only where there is one, or no cattle or horses.
+            if (RES_PASTURE(map_resource_at(unit_ax[u], unit_ay[u])))
+                message("A pasture", "already");
+            else
+                message("Pastures are for", "cattle and horses");
+        } else {
+            line_clear();
+            line_add("Cannot ");
+            line_add(what);
+            message(line, "here");
+        }
         return;
     }
     improve_start(u, orders);
@@ -462,6 +463,7 @@ void unit_key(byte key)
         else improve(ORDERS_IRRIGATE);
         break;
     case 'm': improve(ORDERS_MINE); break;
+    case 'p': improve(ORDERS_PASTURE); break;
     case 'c':                               // bring it into the middle
         centre_on(unit_ax[u], unit_ay[u]);
         break;
@@ -517,8 +519,11 @@ static void set_orders_menu(void)
                  || kind == KIND_CHARIOT)
             command = MENU_FORTIFY;
         else if (kind == KIND_BUILDER) {
+            // A pasture instead of a mine on cattle and horses.
             command = MENU_IRRIGATE;
-            second = MENU_MINE;
+            second = RES_PASTURE(map_resource_at(unit_ax[unit_active],
+                                                 unit_ay[unit_active]))
+                     ? MENU_PASTURE : MENU_MINE;
         } else if (kind == KIND_BOAT) {
             command = MENU_FISH;
         } else if (kind == KIND_MERCHANT) {

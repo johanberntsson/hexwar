@@ -506,7 +506,7 @@ to land, those aboard are asked for orders and can step ashore.
 
 Everything can be done from the keyboard alone, since not every MEGA65 has
 a mouse. Tab starts tile select, as in Civilization: a blinking yellow ring
-on a hexagon, which the cursor keys (or the moving keys) move, and Return
+on a hexagon, which the cursor keys move, and Return
 does what a click on that hexagon would. Tab or ESC ends it. MEGA (Alt in
 xemu) and a menu title's first letter opens that menu.
 

@@ -7,6 +7,6 @@
   Defence: 1
   Moves: 2
   Cost: 40 shields
-  Needs: horses
+  Needs: horses, with a pasture
 {at 6 17}{text}The striking arm of the Bronze Age armies. Fast on open ground,
 it cannot go into the mountains, and it defends poorly.

@@ -47,6 +47,11 @@ byte improve_can(byte orders, byte ax, byte ay)
     byte m = map_tile[ay][ax];
     byte t = m & MAP_TERRAIN_MASK;
 
+    byte r = map_resource_at(ax, ay);
+
+    // A pasture on cattle or horses, wherever they are, with no water; it
+    // replaces irrigation as a mine does.
+    if (orders == ORDERS_PASTURE) return !(m & MAP_MINED) && RES_PASTURE(r);
     if (orders == ORDERS_IRRIGATE) {
         if (m & MAP_IRRIGATED) return 0;
         if (t != TILE_GRASS && t != TILE_PLAINS && t != TILE_DESERT
@@ -54,7 +59,8 @@ byte improve_can(byte orders, byte ax, byte ay)
             return 0;
         return watered(ax, ay);
     }
-    if (m & MAP_MINED) return 0;
+    // Cattle on hills get a pasture, not a mine: the bit is the pasture's.
+    if ((m & MAP_MINED) || RES_PASTURE(r)) return 0;
     // Copper and tin can be mined wherever they are -- tin is often on
     // tundra -- which is what makes them bronze (player_has()).
     return t == TILE_HILLS || t == TILE_MOUNTAIN || t == TILE_DESERT
@@ -71,6 +77,7 @@ byte improve_best(byte ax, byte ay)
     if (STRATEGIC(ax, ay) && improve_can(ORDERS_MINE, ax, ay))
         return ORDERS_MINE;
     if (map_tile[ay][ax] & MAP_IMPROVEMENT) return ORDERS_NONE;
+    if (improve_can(ORDERS_PASTURE, ax, ay)) return ORDERS_PASTURE;
     if (t != TILE_HILLS && improve_can(ORDERS_IRRIGATE, ax, ay))
         return ORDERS_IRRIGATE;
     if (improve_can(ORDERS_MINE, ax, ay)) return ORDERS_MINE;
@@ -89,7 +96,8 @@ static byte working(byte u, byte orders, byte ax, byte ay)
 {
     byte o = unit_orders[u];
     return unit_kind[u] == KIND_BUILDER
-           && (o == ORDERS_IRRIGATE || o == ORDERS_MINE)
+           && (o == ORDERS_IRRIGATE || o == ORDERS_MINE
+               || o == ORDERS_PASTURE)
            && (!orders || o == orders)
            && unit_ax[u] == ax && unit_ay[u] == ay;
 }
@@ -119,7 +127,7 @@ byte improve_turn(void)
         work = 0;
         for (v = 0; v < MAX_UNITS; ++v)
             if (working(v, orders, ax, ay)) work += unit_work[v];
-        if (work < (orders == ORDERS_IRRIGATE ? IRRIGATE_TURNS : MINE_TURNS))
+        if (work < (orders == ORDERS_MINE ? MINE_TURNS : IRRIGATE_TURNS))
             continue;
         map_tile[ay][ax] = (map_tile[ay][ax] & ~MAP_IMPROVEMENT)
                            | (orders == ORDERS_IRRIGATE ? MAP_IRRIGATED

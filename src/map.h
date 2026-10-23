@@ -93,6 +93,16 @@ extern byte map_tile[MAP_ROWS][MAP_COLUMNS];
 // on the shallows**, where MAP_IRRIGATED is fish worked by a fishing boat
 // (boat.h), drawn by its resource tile alone.
 #define MAP_OVERLAY_TILE(T) (TILE_OVERLAY_FIRST - 1 + (((T) >> 4) & 3))
+// Whether map byte T has an overlay to draw: an improvement, but not on the
+// shallows, and **not the mine bit on grassland or plains**, which is only
+// ever a pasture (improve.h), drawn by its resource tile alone. A pasture
+// on hills keeps the mine under it, which hardly shows.
+#define MAP_HAS_OVERLAY(T)                                                  \
+    (((T) & MAP_IMPROVEMENT)                                               \
+     && ((T) & MAP_TERRAIN_MASK) != TILE_SHALLOW_OCEAN                     \
+     && (((T) & MAP_IMPROVEMENT) != MAP_MINED                              \
+         || (((T) & MAP_TERRAIN_MASK) != TILE_GRASS                        \
+             && ((T) & MAP_TERRAIN_MASK) != TILE_PLAINS)))
 #define MAP_TERRAIN(AX, AY) (map_tile[AY][AX] & MAP_TERRAIN_MASK)
 #define MAP_IS_EXPLORED(AX, AY) ((map_tile[AY][AX] | map_show) & MAP_EXPLORED)
 
@@ -123,6 +133,8 @@ extern byte map_res_kind[MAP_RES_MAX];
 #define RES_TIN 8               // the far north and south: bronze
 #define RES_DYE 9               // shallows: trade
 #define RES_HORSES 10           // plains and grassland: shields; chariots
+// Improved by a pasture (ORDERS_PASTURE), which is MAP_MINED on them.
+#define RES_PASTURE(R) ((R) == RES_CATTLE || (R) == RES_HORSES)
 #define RES_COUNT 11
 // The resource on (ax, ay), RES_NONE if none: a search of its row's few.
 byte map_resource_at(byte ax, byte ay);

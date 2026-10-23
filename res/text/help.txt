@@ -2,9 +2,10 @@
 # The markup is described in tools/mktext.py.
 {at 25 0}{head}Seven Ships of the Enemy: keys
 {at 2 3}{head}Moving a unit
-{key}{0  -|pad 7  9}{tab 10}{text}north-west, north-east
-{key}{p  *|pad 4  6}{tab 10}{text}west, east
-{key}{:  =|pad 1  3}{tab 10}{text}south-west, south-east
+{key}Tab{tab 10}{text}a ring on the unit; the
+{tab 10}cursor keys move it, and
+{tab 10}Return moves the unit
+{key}{|pad}{tab 10}{text}{|7 9 4 6 1 3: a step}
 {key}click{tab 10}{text}next to the unit: there
 {tab 10}onto an enemy: attack
 {tab 10}onto a galley: board
@@ -12,6 +13,7 @@
 {key}b{tab 10}{text}found a city (settler)
 {key}f{tab 10}{text}fortify
 {key}i{tab 10}{text}irrigate; boat: fish
+{key}p{tab 10}{text}pasture: cattle, horses
 {key}m{tab 10}{text}build a mine (builder)
 {key}w{tab 10}{text}wait: ask again later
 {key}space{tab 10}{text}skip this unit's turn
@@ -31,9 +33,4 @@
 {key}{MEGA+G...|Alt+G...}{tab 10}{text}Game, Orders... menu
 {key}{HELP|F1}{tab 10}{text}this screen
 {key}Esc{tab 10}{text}quit to BASIC
-{at 2 18}{text}The moving keys sit round the unit like the six sides of its \
-hexagon:
-{at 4 20}{key}{ 0 -| 7 9}
-{p U *|4 U 6}
-{ : =| 1 3}
 {at 0 24}{grey}{HELP|F1}, Esc or Return to go back{at 72 24}{rev red} EXIT 

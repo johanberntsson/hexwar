@@ -160,14 +160,16 @@ static byte item_command(byte m, byte i)
 
 static const char *order_name(byte command)
 {
+    // With the key that does the same on the map.
     switch (command) {
-    case MENU_FOUND_CITY: return "Found City";
-    case MENU_IRRIGATE: return "Irrigate";
-    case MENU_MINE: return "Mine";
-    case MENU_FISH: return "Fish";
-    case MENU_EMPORIUM: return "Found Emporium";
+    case MENU_FOUND_CITY: return "b: Found City";
+    case MENU_IRRIGATE: return "i: Irrigate";
+    case MENU_PASTURE: return "p: Build a Pasture";
+    case MENU_MINE: return "m: Build a Mine";
+    case MENU_FISH: return "i: Fish";
+    case MENU_EMPORIUM: return "b: Found Emporium";
     }
-    return "Fortify";
+    return "f: Fortify";
 }
 
 void menu_orders(byte command, byte second)

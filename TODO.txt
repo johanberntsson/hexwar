@@ -19,9 +19,16 @@ NEXT (23 Oct 2026, end of the day; CLAUDE.md "Where to start next time"):
    (Linear B, law codes, the alphabet: a science of sorts), building art
 5. Tune from play: the Crisis, the collapse, merchant ships, gold, legacy's weight in the
    score; escorts for merchant ships; AI galleys against the Sea Peoples
-Room: resident 0.7 KB, region 0 0.3 KB, region 1 61 bytes, region 2 4.2 KB, region 3 2.1 KB,
+Room: resident 0.5 KB, region 0 0.3 KB, region 1 30 bytes, region 2 4.1 KB, region 3 2.1 KB,
 region 4 1.5 KB, region 5 2.2 KB, region 6 1.1 KB, region 7 2.2 KB, highram 1.2 KB; the tile
-sheet 9.6 KB, about six units
+sheet 7.6 KB, about five units
+
+DONE (24 Oct 2026): pastures. p (Orders: "p: Build a Pasture") on cattle and horses, 5 turns,
+no water; the mine bit on those hexagons, +1 food +1 shield, and what makes them owned, so
+chariots need horses with a pasture; irrigating them only adds food. alltiles'
+tile_horses_improved, no mine overlay under a pasture. The moving keys 0 - p * : = are gone
+(Tab and the cursor keys move a unit; xemu's keypad stays). The Orders menu shows the keys.
+To try on a MEGA65
 
 DONE (24 Oct 2026): fight feedback. Every fight of the human's -- its own attacks and those on
 it during the other turns, a city taken or burnt included -- is brought into view and told in

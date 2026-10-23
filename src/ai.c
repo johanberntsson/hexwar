@@ -457,9 +457,10 @@ static void hunt(byte u, word range)
 // (src/aibuild.c) through ai_work_x and ai_work_y.
 static byte work_x, work_y;
 
-// Copper or tin in the RING of one of p's cities and not mined yet, the
-// nearest to (ax, ay), into (work_x, work_y): bronze, which any of p's
-// builders goes for before the work round its own city. Nobody may be on
+// Copper or tin in the RING of one of p's cities and not mined yet, or
+// horses without a pasture, the nearest to (ax, ay), into (work_x,
+// work_y): bronze and chariots, which any of p's builders goes for before
+// the work round its own city. Nobody may be on
 // it but the builder looking. Whether there is one.
 static byte strategic_site(byte p, byte ax, byte ay)
 {
@@ -472,8 +473,8 @@ static byte strategic_site(byte p, byte ax, byte ay)
             if (!map_neighbour(city_ax[c], city_ay[c], dir, &nx, &ny))
                 continue;
             r = map_resource_at(nx, ny);
-            if (r != RES_COPPER && r != RES_TIN) continue;
-            if (!improve_can(ORDERS_MINE, nx, ny)) continue;
+            if (r != RES_COPPER && r != RES_TIN && r != RES_HORSES) continue;
+            if (improve_best(nx, ny) == ORDERS_NONE) continue;
             if ((map_tile[ny][nx] & MAP_OCCUPIED) && (nx != ax || ny != ay))
                 continue;
             d = distance(ax, ay, nx, ny);
@@ -808,14 +809,14 @@ static void move_unit(byte u)
         break;
     case KIND_BUILDER:
         // 5. Copper and tin next to any of its people's cities first, for
-        // bronze (strategic_site()). Then improve the hexagons round its
-        // city (improve_best()): where it stands if it is one of them and
-        // wants something, or else the first of them that wants something
-        // and has nobody on it. With all of them done it waits next to the
-        // city.
+        // bronze, and horses, for chariots (strategic_site()). Then
+        // improve the hexagons round its city (improve_best()): where it
+        // stands if it is one of them and wants something, or else the
+        // first of them that wants something and has nobody on it. With
+        // all of them done it waits next to the city.
         if (strategic_site(unit_owner[u], ax, ay)) {
             if (work_x == ax && work_y == ay)
-                improve_start(u, ORDERS_MINE);
+                improve_start(u, improve_best(ax, ay));
             else
                 approach(u, work_x, work_y);
             return;

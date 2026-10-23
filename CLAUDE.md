@@ -208,9 +208,9 @@ buffers at the default `$FF80000` and corrupts the display.
 |---|---|---|
 | `$2001-$5FFF`, `$8000-$9FFF` | 24 KB | the resident program: code, data, BSS, C stack. About 1.1 KB free, nearly all at the top of `$2001-$5FFF` |
 | `$6000-$7FFF` | 8 KB | the code window (`src/region.h`); as loaded, region 0 — the title, setup and help screens (and the Civilopedia's pages), save and load, the sheet's and the map's loaders, the owners' flags, the end of a turn and a game's start (`src/turn.c`), the computer players' starts (`src/aiplace.c`), the hover readout (`src/hover.c`), the boot splash (`title_splash()`). 0.4 KB free |
-| `$13000-$14FFF` | 8 KB | code slot 1: region 1, from `SEVENSHIPS.R1` by way of attic: the computer players and their ferrying, the cities' yields and growth, bronze. 61 bytes free |
-| `$15000-$16FFF` | 8 KB | code slot 2, shared: region 2 (Top Five Cities, the fights' popups, the builders' improvements, what the computer players' cities build and where their builders work, `src/aibuild.c`; 4.2 KB free) region 7 (the city screen and buying, `src/cityscreen.c`; 2.2 KB free) region 3 (diplomacy; 2.1 KB free) region 4 (trade, the ships' routes, exploring and fishing, merchant ships and emporia; 1.5 KB free) region 5 (the Crisis and the collapse, the score and the end, the pictures, `src/crisis.c`, `src/score.c`, `src/picture.c`; 2.2 KB free) region 6 (the menus and what their items do, the treasury, buildings and wonders, `src/menu.c`, `src/command.c`, `src/treasury.c`, `src/culture.c`, `src/cities.c`; 1.1 KB free), whichever was called last. **Slot 1 is also the sheet loader's staging area at boot** (`STAGING` in `src/sheet.c`), before region 1 is first called |
-| `$17000-$1EFFF` | 32 KB | the packed tile sheet's second area, where regions 3 to 6 would have been: whatever rows did not fit bank 5's; with bank 5's, 9.6 KB free (`tools/mktiles.py` says) |
+| `$13000-$14FFF` | 8 KB | code slot 1: region 1, from `SEVENSHIPS.R1` by way of attic: the computer players and their ferrying, the cities' yields and growth, bronze. 30 bytes free |
+| `$15000-$16FFF` | 8 KB | code slot 2, shared: region 2 (Top Five Cities, the fights' popups, the builders' improvements, what the computer players' cities build and where their builders work, `src/aibuild.c`; 4.1 KB free) region 7 (the city screen and buying, `src/cityscreen.c`; 2.2 KB free) region 3 (diplomacy; 2.1 KB free) region 4 (trade, the ships' routes, exploring and fishing, merchant ships and emporia; 1.5 KB free) region 5 (the Crisis and the collapse, the score and the end, the pictures, `src/crisis.c`, `src/score.c`, `src/picture.c`; 2.2 KB free) region 6 (the menus and what their items do, the treasury, buildings and wonders, `src/menu.c`, `src/command.c`, `src/treasury.c`, `src/culture.c`, `src/cities.c`; 1.1 KB free), whichever was called last. **Slot 1 is also the sheet loader's staging area at boot** (`STAGING` in `src/sheet.c`), before region 1 is first called |
+| `$17000-$1EFFF` | 32 KB | the packed tile sheet's second area, where regions 3 to 6 would have been: whatever rows did not fit bank 5's; with bank 5's, 7.6 KB free (`tools/mktiles.py` says) |
 | `$A000-$BFFF` | 8 KB | `highram`, under the BASIC ROM, banked out by `src/bank.s`: `map_tile`, the unit and city arrays, the sprite blocks, the AI's headings, the staging buffers of the texts and the regions, the texts' line buffers, the sheet loader's buffers, the saved VIC registers, the AI's exploration memory, the resource list, the sheet's row tables, the peoples' relations and attitudes and the letters' names, the trade deals, the emporia, the pictures' staging buffer, the treasuries; about 1.4 KB free — `HIGH_BSS` in `src/mega65.h` moves a variable there, and **the startup does not clear it** |
 | `$1600-$1EFF` | 2304 | `zpsave` (56 bytes, BASIC's zero page during the run), then `lowfree`: the popup's 400-byte text and the scratch buffers of the view and the minimap, and the sea routes' search (`src/path.c`), 990 bytes free — `LOW_FREE` in `src/mega65.h` moves a variable there |
 | `$12000` | 4000 | screen RAM, 80x25 cells of 2 bytes |
@@ -242,7 +242,7 @@ attic RAM instead and does not count. **The sheet is not something the VIC sees,
 ever a DMA source, copied into the tile store, so it needs chip RAM but
 not bank 5 — which is what step 1b uses. **Since 22 Oct 2026 it is
 packed** (step 1c), and `make` in `tiles/` says how much room is left —
-9.6 KB with 41 tiles, about six units. Take these in order when
+7.6 KB with 42 tiles, about five units. Take these in order when
 another tile or another full-colour surface needs room:
 
 1. **The tile store's row padding** — *done* (19 Oct 2026). Each of the
@@ -886,7 +886,7 @@ the chariot and horses, and the two rings):
    for the merchant ships, and the computer players' galleys against the
    Sea Peoples.
 
-The tile sheet is packed and has about six units' room left (**When
+The tile sheet is packed and has about five units' room left (**When
 bank 5 fills up**, step 1c).
 
 **The title's picture comes first** (`title_splash()` in `src/title.c`,
@@ -1243,7 +1243,7 @@ turn ("grows in 13 turns", "not growing" or "starving"), the shields and
 the trade, and how many citizens are idle. **Clicking a hexagon takes
 its citizen off it or puts an idle one on it** (`work_toggle()`,
 Civilization's way), which makes the city `CITY_MANUAL`; **from the
-keyboard, the moving keys and the cursor keys step the arrow from
+keyboard, the cursor keys (and xemu's keypad) step the arrow from
 hexagon to hexagon** (`input_point()` in `src/input.c` puts it there;
 up and down zigzag, as tile select does) and space does what a click
 would. The screen starts with the arrow on the city. **It is region 7**,
@@ -1341,6 +1341,27 @@ coordinates still fit its 40 columns. `map_reset()` clears them with the
 rest. **Roads need a bit**, and the map byte has none left: terrain is
 down to four bits (`MAP_TERRAIN_MASK` 0x0f, ten of sixteen values used).
 
+**Pastures** (24 Oct 2026, the user's: irrigating horses for chariots
+felt wrong) are a third improvement for cattle and horses
+(`RES_PASTURE()` in `src/map.h`): `p` or Orders → Build a Pasture,
+`ORDERS_PASTURE`, 5 turns, anywhere they are, no water needed. **A
+pasture is the mine bit on a cattle or horses hexagon**, since nothing
+else can be mined there (cattle on hills now take a pasture instead of a
+mine), so no map bit was needed; it replaces irrigation as a mine does.
+It adds a food and a shield (`yield()` in `src/growth.c`), and **it is
+what makes cattle and horses owned** (`map_res_improved_by[]`), so
+chariots need a pasture on horses; irrigating them still adds a food,
+as anywhere, and nothing else. Drawn by `TILE_CATTLE_PASTURE` and
+`TILE_HORSES_PASTURE` (`alltiles/`' `tile_horses_improved`) with **no
+mine overlay under it on grassland or plains** (`MAP_HAS_OVERLAY()`,
+used by `view_redraw()` and the city screen; the mine bit there is only
+ever a pasture), and on hills with the mine under it, which hardly
+shows. The readout says "+pasture". The computer players' builders go
+for horses without a pasture next to their cities as they go for copper
+and tin (`strategic_site()` in `src/ai.c`), and `improve_best()` puts a
+pasture on cattle and horses before anything else. Old saves load, but
+irrigated cattle there are irrigation now, not a pasture.
+
 **Resources** (milestone 7, vision.md §2) are ten, `RES_*` in
 `src/map.h`, tiles 19-28, in this order:
 
@@ -1383,8 +1404,9 @@ region 0 with the list (`src/mapload.c`), which more than paid for it.
 **Bronze** (milestone 7b): **a player owns a resource when it is on one
 of its cities, or in its reach (the two rings) and improved as that
 resource is** —
-mined copper and tin, irrigated cattle, olives and wine
-(`map_res_improved_by[]`), nothing needed for grain, fish, cedar and dye
+mined copper and tin, cattle and horses with a pasture (**Pastures**),
+irrigated olives and wine (`map_res_improved_by[]`), nothing needed for
+grain, fish, cedar and dye
 — (`player_owns()` in `src/growth.c`, region 1, worked out when asked
 and not stored), **and has it if it owns it or receives it in trade**
 (`player_has()`, which adds `trade_got[]`; see **Trade**); and
@@ -1396,8 +1418,8 @@ resource is drawn with its own tile**, instead of the resource:
 `RES_TILE()` in `src/map.h` looks up `map_res_improved_by[]` (the
 improvement bit that does it) and `map_res_improved[]` (the tile) in
 `src/map.c`. Mined copper and tin are `alltiles/`' `tile_copper_improved`
-and `tile_iron_improved`; irrigated cattle its `tile_cattle_improved`, a
-pasture; irrigated olives and wine its `tile_oranges_improved` recoloured
+and `tile_iron_improved`; cattle and horses with a pasture its
+`tile_cattle_improved` and `tile_horses_improved`; irrigated olives and wine its `tile_oranges_improved` recoloured
 as `res_olives` and `res_wine` are. The improvement's own overlay is
 still drawn under it, and shows through a little (the blue of the
 irrigation in the middle of a pasture). They are lines 2-30, all four
@@ -1662,8 +1684,8 @@ drawn with no overlay, and "Shallows+Fish+boats 4/0/2".
 **Chariots** (23 Oct 2026, the user's request; `KIND_CHARIOT`,
 Civilization's: attack 4, defence 1, 2 moves, cost 40) **need horses**
 (`player_has()`, `RES_HORSES`), and nothing else. Horses are a resource
-on plains and grassland (**Resources**), owned without an improvement as
-cedar is, and a trade good. **A chariot never goes onto mountains, not
+on plains and grassland (**Resources**), owned once they have a pasture
+(since 24 Oct 2026; **Pastures**), and a trade good. **A chariot never goes onto mountains, not
 even to attack**: `unit_can_enter()` says `ENTER_MOUNTAIN` ("Chariots
 keep off mountains" in the panel) before it looks for anyone there, and
 `attack_near()` in `src/ai.c` skips a mountain for a chariot. It is a
@@ -2037,8 +2059,8 @@ list.
 **Everything must be possible from the keyboard alone**, since not every
 MEGA65 has a mouse and the joystick is slow: **Tab is tile select**, as in
 Civilization — a yellow ring (`TILE_SELECT`) on the active unit or the
-middle of the view, moved by the cursor keys or the unit's moving keys,
-and Return does what a click on its hexagon would; Tab or Esc puts it
+middle of the view, moved by the cursor keys (or xemu's keypad), and
+Return does what a click on its hexagon would; Tab or Esc puts it
 away. The cursor keys go up and down by zigzagging between a column and
 the one east of it, so all four reach every hexagon. While it is up the
 ring blinks instead of the active unit, the hover readout follows the
@@ -2046,12 +2068,12 @@ ring, and other keys (`b`, `f`, the menus, HELP) work as usual.
 `view_redraw()` draws the ring with the cities and units of its hexagon
 row (`view_mark_hy`/`view_mark_x`, set by `place_mark()`), so it costs
 the beam race nothing. Keys:
-`0 - p * : =` move the active unit NW, NE, W, E, SW, SE — the `q e a d z c`
-pattern on the right of the keyboard, by the cursor keys, so that those
-letters are free for other orders (`:` is also taken as `[`, its shifted
-form); the tiles are pointy-topped, so there is no N or S; a move onto
-another player's unit or city is an attack; `b` founds a
-city with a settler; `i` and `m` irrigate and mine with a builder; MEGA or CTRL with a menu title's first letter (`g o a w d h`) opens it; space skips the unit this turn, `w` asks again
+**there are no moving keys on a real MEGA65** since 24 Oct 2026 (the
+user's: `0 - p * : =` were awkward, and tile select moves a unit from
+the keyboard); a unit moves by Tab and the cursor keys and Return, or a
+click, and a move onto another player's unit or city is an attack; `b` founds a
+city with a settler; `i`, `m` and `p` irrigate, mine and build a pasture
+with a builder; MEGA or CTRL with a menu title's first letter (`g o a w d h`) opens it; space skips the unit this turn, `w` asks again
 after the others, `f` fortifies, `c` centres the view on the active unit; Return ends the turn; the cursor keys
 scroll; ESC or RUN/STOP quits to BASIC, after asking with `popup_ask()`
 (Esc again is No). `w a s d` do not scroll.
@@ -2070,8 +2092,8 @@ say F1, and **keypad 7 9 4 6 1 3 move the unit** — but only with
 gives keypad 2 4 6 8 to its fake joystick and 7 9 1 3 to nothing; the
 keymap turns them into F3-F8 (`$F3`-`$F8`, `KEY_PAD_FIRST`), which
 `unit_key()` takes only when `input_real_hw` is 0. F3-F8 because the game
-uses none of them and xemu keeps F9-F11 for hot keys. `0 - p * : =` still
-work in xemu too.
+uses none of them and xemu keeps F9-F11 for hot keys. **The Orders
+menu gives each item's key** ("i: Irrigate", "p: Build a Pasture").
 
 **Tried on a real MEGA65 and it works** (18 Oct 2026, milestones 1-3):
 the sheet and map load off the disk with the hot registers off, BASIC
@@ -2332,7 +2354,7 @@ in xemu by building once with `input_real_hw = 1` forced in
 
 ## Assets
 
-`res/tiles.fci` is 164x4 characters — 41 4x4 tiles side by side, in the
+`res/tiles.fci` is 168x4 characters — 42 4x4 tiles side by side, in the
 order `tiles/Makefile` lists the PNGs: ten terrains (hills, grass, mountain, ocean, shallow ocean, tundra, plains, forest,
 desert, floodplain), then the city, a selection ring
 (the tile-select cursor),
@@ -2352,9 +2374,9 @@ chariot (`unit_chariot_archer.png` as it is, as `unit_chariot`;
 cattle, copper and iron cut to lines 8-23, `res_olives` and `res_wine` its
 orange trees recoloured, and `res_grain`, `res_fish`, `res_cedar` and
 `res_dye` placeholders drawn for them, and `res_horses` its horses
-scaled into lines 8-23 (its `tile_horses_improved` is not used, since
-horses need no improvement); `res_copper_mine`, `res_tin_mine`,
-`res_cattle_pasture` and `unit_spearman` are `alltiles/`' as they are, and
+scaled into lines 8-23; `res_copper_mine`, `res_tin_mine`,
+`res_cattle_pasture`, `res_horses_pasture` (its `tile_horses_improved`,
+last in the sheet) and `unit_spearman` are `alltiles/`' as they are, and
 `res_olives_grove` and `res_wine_vineyard` its orange orchard recoloured.
 `overlay_mine.png` is the mine cut out of `alltiles/`' plains and tundra
 hill mines — the pixels the two share and neither bare hill has — and

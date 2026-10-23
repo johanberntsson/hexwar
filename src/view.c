@@ -287,10 +287,9 @@ void view_redraw(word off_x, word off_y)
             // inside its hexagon, which nothing drawn later covers. An
             // unexplored hexagon's t is TILE_UNDISCOVERED, with these bits
             // clear. Fish worked by a fishing boat has the bits too, but no
-            // overlay: its resource tile is the picture. The test costs
-            // nothing on the hexagons with no improvement.
-            if ((t & MAP_IMPROVEMENT)
-                && (t & MAP_TERRAIN_MASK) != TILE_SHALLOW_OCEAN)
+            // overlay: its resource tile is the picture, as a pasture's is.
+            // The test costs nothing on the hexagons with no improvement.
+            if (MAP_HAS_OVERLAY(t))
                 view_draw_tile(tx, ty, MAP_OVERLAY_TILE(t));
             ax += 2;
             if (ax >= MAP_COLUMNS) ax -= MAP_COLUMNS;

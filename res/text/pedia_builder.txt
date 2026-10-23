@@ -8,5 +8,6 @@
   Moves: 1
   Cost: 20 shields
   Needs: nothing
-{at 6 17}{text}Irrigates (i) or mines (m) the hexagons round a city. Builders on one
-hexagon with the same orders work together.
+{at 6 17}{text}Irrigates (i) or mines (m) the hexagons round a city, and builds
+pastures (p) for cattle and horses. Builders on one hexagon with the
+same orders work together.

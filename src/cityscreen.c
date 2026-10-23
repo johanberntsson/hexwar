@@ -191,8 +191,7 @@ static void draw_patch(byte c)
         t = map_tile[ny][nx] | map_show;
         if (!(t & MAP_EXPLORED)) t = TILE_UNDISCOVERED;
         view_draw_tile(x, y, t & MAP_TERRAIN_MASK);
-        if ((t & MAP_IMPROVEMENT)
-            && (t & MAP_TERRAIN_MASK) != TILE_SHALLOW_OCEAN)
+        if (MAP_HAS_OVERLAY(t))
             view_draw_tile(x, y, MAP_OVERLAY_TILE(t));
         if ((t & MAP_EXPLORED) && (n = map_resource_at(nx, ny)) != RES_NONE)
             view_draw_tile(x, y, RES_TILE(n, t));

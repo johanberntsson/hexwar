@@ -22,9 +22,11 @@ TERRAIN = tile_plains_hill.png tile_grass.png tile_mountain.png tile_ocean.png \
 OVERLAYS = overlay_irrigation.png overlay_mine.png overlay_emporium.png
 # The resources, overlays too, in RES_* order (src/map.h) from tile 18. res_cattle, res_copper and res_tin are alltiles' cattle, copper
 # and iron cut to pixel lines 8-23; res_olives and res_wine its orange trees
-# recoloured; res_grain, res_fish, res_cedar and res_dye placeholders.
+# recoloured; res_grain, res_fish, res_cedar and res_dye placeholders;
+# res_horses alltiles' horses scaled into lines 8-23.
 RESOURCES = res_grain.png res_fish.png res_cattle.png res_olives.png \
-            res_wine.png res_cedar.png res_copper.png res_tin.png res_dye.png
+            res_wine.png res_cedar.png res_copper.png res_tin.png res_dye.png \
+            res_horses.png
 # Copper and tin mined: alltiles' tile_copper_improved and tile_iron_improved,
 # drawn instead of the resource when its hexagon has a mine (RES_TILE in
 # src/map.h). Then the bronze unit, alltiles' spearman. Then cattle, olives
@@ -36,12 +38,13 @@ IRRIGATED = res_cattle_pasture.png res_olives_grove.png res_wine_vineyard.png
 # Then the galley (milestone 9) and the fishing boat, alltiles' galley and
 # work boat as they are, and fish worked by a fishing boat, alltiles'
 # tile_fish_improved. Then the Sea Peoples' raider (milestone 10's Crisis),
-# alltiles' swordsman as it is; and the merchant ship, its cargo ship.
+# alltiles' swordsman as it is; and the merchant ship, its cargo ship. Then
+# the chariot, alltiles' chariot archer as it is.
 TILES = $(TERRAIN) tile_city.png tile_select.png \
         unit_settler.png unit_warrior.png unit_builder.png tile_undiscovered.png \
         $(OVERLAYS) $(RESOURCES) $(MINES) unit_spearman.png $(IRRIGATED) \
         unit_galley.png unit_fishing_boat.png res_fish_boats.png \
-        unit_raider.png unit_merchant.png
+        unit_raider.png unit_merchant.png unit_chariot.png
 
 all: ../res/tiles.fci
 

@@ -7,7 +7,7 @@
   Shields: 0, 1 on half of it
   Trade: 0
   Improvements: irrigation +1 food
-  Resources: grain, cattle
+  Resources: grain, cattle, horses
 {at 6 16}{red}Movement cost: 1
 Defence bonus: none
 {at 6 20}{text}The best farmland outside the river valleys.

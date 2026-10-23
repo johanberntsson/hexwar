@@ -93,15 +93,15 @@ COLOURS = {
 
 # RES_* in src/map.h. Keep the two in step.
 (NO_RESOURCE, GRAIN, FISH, CATTLE, OLIVES, WINE, CEDAR, COPPER, TIN,
- DYE) = range(10)
+ DYE, HORSES) = range(11)
 # What each terrain may hold, and how likely each: (chance a hexagon has one,
 # [(resource, weight), ...]). Tin is about two thirds as common as copper
 # inland, so that bronze is possible but scarce before there is trade, and
 # resources() adds TIN_NODES more at the edges of the world.
 RESOURCE_TERRAIN = {
     FLOODPLAIN: (0.20, [(GRAIN, 1)]),
-    GRASS: (0.10, [(GRAIN, 1), (CATTLE, 2)]),
-    PLAINS: (0.10, [(CATTLE, 2), (WINE, 1)]),
+    GRASS: (0.10, [(GRAIN, 1), (CATTLE, 2), (HORSES, 1)]),
+    PLAINS: (0.12, [(CATTLE, 2), (WINE, 1), (HORSES, 2)]),
     HILLS: (0.16, [(CATTLE, 1), (OLIVES, 2), (WINE, 2), (COPPER, 2),
                    (TIN, 1.3)]),
     MOUNTAIN: (0.12, [(COPPER, 3), (TIN, 2)]),
@@ -118,6 +118,7 @@ RESOURCE_COLOURS = {
     GRAIN: (255, 220, 0), FISH: (0, 255, 255), CATTLE: (255, 255, 255),
     OLIVES: (40, 40, 0), WINE: (160, 0, 200), CEDAR: (0, 40, 30),
     COPPER: (255, 120, 0), TIN: (200, 200, 230), DYE: (255, 0, 160),
+    HORSES: (140, 90, 40),
 }
 
 # Rainfall thresholds; see generate(). In the warm band, below DESERT_RAIN
@@ -464,9 +465,9 @@ def main():
             if r:
                 counts[r] = counts.get(r, 0) + 1
     names = ("", "grain", "fish", "cattle", "olives", "wine", "cedar",
-             "copper", "tin", "dye")
+             "copper", "tin", "dye", "horses")
     print("mapgen: resources " + ", ".join(
-        "%s %d" % (names[r], counts.get(r, 0)) for r in range(1, 10)))
+        "%s %d" % (names[r], counts.get(r, 0)) for r in range(1, HORSES + 1)))
 
 
 if __name__ == "__main__":

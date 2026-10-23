@@ -7,7 +7,7 @@
   Shields: 1
   Trade: 0
   Improvements: irrigation +1 food
-  Resources: cattle, wine
+  Resources: cattle, wine, horses
 {at 6 16}{red}Movement cost: 1
 Defence bonus: none
 {at 6 20}{text}Open country, food and shields both.

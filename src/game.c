@@ -344,6 +344,10 @@ static void move_active(byte dir)
         message("Ships keep", "to the shallows");
         return;
     }
+    if (t == ENTER_MOUNTAIN) {
+        message("Chariots keep", "off mountains");
+        return;
+    }
     if (t == ENTER_FOREIGN) {
         attack(u, nx, ny);
         return;
@@ -514,7 +518,8 @@ static void set_orders_menu(void)
     if (unit_active != UNIT_NONE) {
         byte kind = unit_kind[unit_active];
         if (kind == KIND_SETTLER) command = MENU_FOUND_CITY;
-        else if (kind == KIND_WARRIOR || kind == KIND_SPEARMAN)
+        else if (kind == KIND_WARRIOR || kind == KIND_SPEARMAN
+                 || kind == KIND_CHARIOT)
             command = MENU_FORTIFY;
         else if (kind == KIND_BUILDER) {
             command = MENU_IRRIGATE;

@@ -48,7 +48,7 @@
 #define TEXT_LEFT(BOX) ((BOX) + 2)
 #define HEADING_ROW (BOX_TOP + 1)
 #define LIST_ROW (BOX_TOP + 3)  // units, the item
-#define CHOICE_ROW (BOX_TOP + 2) // CHANGE's list, a row higher for its nine
+#define CHOICE_ROW HEADING_ROW  // CHANGE's list, its heading on the frame
 #define LIST_ROWS (BOX_BOTTOM - LIST_ROW)
 
 #define CHANGE_ROW (BOX_BOTTOM - 2)
@@ -164,7 +164,8 @@ static void wake(byte c, byte i)
     if (i >= listed_n) return;
     u = listed[i];
     if (unit_orders[u] != ORDERS_NONE) unit_orders[u] = ORDERS_NONE;
-    else if (unit_kind[u] == KIND_WARRIOR || unit_kind[u] == KIND_SPEARMAN)
+    else if (unit_kind[u] == KIND_WARRIOR || unit_kind[u] == KIND_SPEARMAN
+             || unit_kind[u] == KIND_CHARIOT)
         unit_orders[u] = ORDERS_FORTIFY;
     else return;
     draw_units(c);
@@ -360,6 +361,7 @@ static void change(byte c)
     byte copper = player_has(PLAYER_HUMAN, RES_COPPER);
     byte tin = player_has(PLAYER_HUMAN, RES_TIN);
     byte cedar = player_has(PLAYER_HUMAN, RES_CEDAR);
+    byte horses = player_has(PLAYER_HUMAN, RES_HORSES);
     byte coast = city_coastal(c), row;
 
     buildable[0] = KIND_WARRIOR;
@@ -367,6 +369,7 @@ static void change(byte c)
     buildable[2] = KIND_BUILDER;
     buildable_n = 3;
     if (copper && tin) buildable[buildable_n++] = KIND_SPEARMAN;
+    if (horses) buildable[buildable_n++] = KIND_CHARIOT;
     if (cedar && coast) buildable[buildable_n++] = KIND_GALLEY;
     if (coast) {
         buildable[buildable_n++] = KIND_BOAT;
@@ -378,20 +381,25 @@ static void change(byte c)
     for (i = 0; i < BUILDABLE; ++i)
         if (buildable[i] == city_build[c]) sel = i;
 
+    // Ten choices fill the box's ten rows, so the heading is on its frame,
+    // which draw_build() does not touch: screen_box() puts it back.
     blank_box(BUILD_LEFT, BUILD_RIGHT);
-    screen_putsxy(TEXT_LEFT(BUILD_LEFT), HEADING_ROW, "Build what?",
+    screen_putsxy(TEXT_LEFT(BUILD_LEFT), BOX_TOP, "Build what?",
                   COLOR_WHITE);
-    screen_putsxy(TEXT_LEFT(BUILD_LEFT) + 14, HEADING_ROW, "shields",
+    screen_putsxy(TEXT_LEFT(BUILD_LEFT) + 14, BOX_TOP, "shields",
                   COLOR_LIGHTGREY);
     for (i = 0; i < BUILDABLE; ++i) draw_choice(i, sel);
-    // Straight under the list, a line each: with the buildings there is
-    // room for no more (nine choices and the box's ten rows).
+    // Straight under the list, a line each: each stands for a choice
+    // missing from it, so they fit too.
     row = CHOICE_ROW + BUILDABLE;
     if (!(copper && tin))
         screen_putsxy(TEXT_LEFT(BUILD_LEFT), row++,
                       copper ? "Spearman needs tin"
                       : tin ? "Spearman needs copper"
                             : "Spearman: copper, tin",
+                      COLOR_LIGHTGREY);
+    if (!horses)
+        screen_putsxy(TEXT_LEFT(BUILD_LEFT), row++, "Chariot needs horses",
                       COLOR_LIGHTGREY);
     if (coast && !cedar)
         screen_putsxy(TEXT_LEFT(BUILD_LEFT), row, "Galley needs cedar",
@@ -426,6 +434,7 @@ static void change(byte c)
         }
     }
     if (sel != 0xff) city_build[c] = buildable[sel];
+    screen_box(BUILD_LEFT, BOX_TOP, BUILD_RIGHT, BOX_BOTTOM, BORDER_COLOUR);
     draw_build(c);
 }
 

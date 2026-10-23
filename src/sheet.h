@@ -45,7 +45,7 @@
 #define SHEET_HIGH_END 0x1F000UL
 
 // The sheet as it is in the file.
-#define SHEET_COLUMNS 156
+#define SHEET_COLUMNS 164
 #define SHEET_ROWS 4
 
 // A tile is 4x4 characters in the file and 8x4 once expanded.
@@ -97,17 +97,18 @@
 // Copper and tin once mined, drawn instead of the resource (RES_TILE in
 // src/map.h); the bronze unit; and cattle, olives and wine once irrigated,
 // the same way.
-#define TILE_COPPER_MINE 28
-#define TILE_TIN_MINE 29
-#define TILE_SPEARMAN 30
-#define TILE_CATTLE_PASTURE 31
-#define TILE_OLIVES_GROVE 32
-#define TILE_WINE_VINEYARD 33
-#define TILE_GALLEY 34
-#define TILE_FISHING_BOAT 35
-#define TILE_FISH_BOATS 36       // fish worked: drawn instead of it, as above
-#define TILE_RAIDER 37          // the Sea Peoples (src/crisis.c)
-#define TILE_MERCHANT 38        // the merchant ship (src/emporium.h)
+#define TILE_COPPER_MINE 29
+#define TILE_TIN_MINE 30
+#define TILE_SPEARMAN 31
+#define TILE_CATTLE_PASTURE 32
+#define TILE_OLIVES_GROVE 33
+#define TILE_WINE_VINEYARD 34
+#define TILE_GALLEY 35
+#define TILE_FISHING_BOAT 36
+#define TILE_FISH_BOATS 37       // fish worked: drawn instead of it, as above
+#define TILE_RAIDER 38          // the Sea Peoples (src/crisis.c)
+#define TILE_MERCHANT 39        // the merchant ship (src/emporium.h)
+#define TILE_CHARIOT 40         // horses (unit.h)
 
 // The FCI on the disk. Capitals, because that is how diskutil.rb writes the
 // host name tiles.fci -- see MAP_FILE_NAME.

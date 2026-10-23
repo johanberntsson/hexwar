@@ -64,8 +64,8 @@ static const byte terrain_order[] = {
 };
 // Military Units' are the units' names, in alphabetical order too.
 static const byte unit_order[] = {
-    KIND_BUILDER, KIND_BOAT, KIND_GALLEY, KIND_MERCHANT, KIND_RAIDER,
-    KIND_SETTLER, KIND_SPEARMAN, KIND_WARRIOR
+    KIND_BUILDER, KIND_CHARIOT, KIND_BOAT, KIND_GALLEY, KIND_MERCHANT,
+    KIND_RAIDER, KIND_SETTLER, KIND_SPEARMAN, KIND_WARRIOR
 };
 #define UNIT_PAGES (sizeof unit_order)
 // Buildings' are the temple and the wonders, in KIND_* order.

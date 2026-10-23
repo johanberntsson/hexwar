@@ -40,7 +40,7 @@ static const byte column_right[FIGURES] = { 27, 37, 44, 51, 58, 66, 74 };
 #define GOLD_POINT 200          // by turn 300 a treasury is 1000-3500
 
 static const byte goods[] = {
-    RES_OLIVES, RES_WINE, RES_CEDAR, RES_COPPER, RES_TIN, RES_DYE
+    RES_OLIVES, RES_WINE, RES_CEDAR, RES_COPPER, RES_TIN, RES_DYE, RES_HORSES
 };
 
 static char digits[6];

@@ -192,6 +192,7 @@ TEXTS    = $(RES)/text/help.txt \
            $(RES)/text/pedia_builder.txt \
            $(RES)/text/pedia_spearman.txt \
            $(RES)/text/pedia_raider.txt \
+           $(RES)/text/pedia_chariot.txt \
            $(RES)/text/pedia_galley.txt \
            $(RES)/text/pedia_boat.txt \
            $(RES)/text/pedia_merchant.txt \

@@ -10,4 +10,5 @@
   Resources: copper, tin
 {at 6 16}{red}Movement cost: 1
 Defence bonus: +100%
+No chariots
 {at 6 20}{text}Hard to farm, harder to take.

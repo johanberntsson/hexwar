@@ -40,6 +40,7 @@
 // which is anything. Each makes for an enemy no further than its range.
 #define AI_ODDS 3
 #define AI_RANGE 8
+#define CHARIOT_RANGE 16        // two moves a turn, and built for a war
 #define BARB_ODDS 1
 #define BARB_RANGE 24
 
@@ -409,13 +410,15 @@ static byte spearman_in(byte c)
 }
 
 // Attack a neighbouring enemy if the odds are `odds` or better (see
-// combat_worth()). Whether it did.
+// combat_worth()), never into the mountains with a chariot. Whether it did.
 static byte attack_near(byte u, byte odds)
 {
     byte dir, nx, ny, me = unit_owner[u];
     for (dir = 0; dir < 6; ++dir) {
         if (!map_neighbour(unit_ax[u], unit_ay[u], dir, &nx, &ny)) continue;
         if (!(map_tile[ny][nx] & MAP_OCCUPIED)) continue;
+        if (unit_kind[u] == KIND_CHARIOT
+            && MAP_TERRAIN(nx, ny) == TILE_MOUNTAIN) continue;
         if (!enemy(me, combat_holder(nx, ny))) continue;
         if (!combat_worth(unit_kind[u], nx, ny, odds)) continue;
         combat_attack(u, nx, ny);
@@ -781,12 +784,13 @@ static void move_unit(byte u)
         break;
     case KIND_WARRIOR:
     case KIND_SPEARMAN:
+    case KIND_CHARIOT:
         // A fair fight next to it first. Then a warrior in a city short of
         // guards (guards_wanted()) stays to guard it, and one within
         // RECALL_RANGE of it goes back; 4. the rest hunt the enemy nearby
         // or explore. Further out they do not come back: the city builds
         // its own guard, or every explorer would be called home as soon as
-        // a city grew.
+        // a city grew. A chariot, defence 1, only attacks and hunts.
         if (attack_near(u, AI_ODDS)) return;
         if (unit_work[u] == WANTS_FERRY) {
             // Waiting for the galley, while there is still a war to go to.
@@ -799,7 +803,7 @@ static void move_unit(byte u)
         c = home(u);
         // A spearman also goes home to a city with none, to take the
         // warriors' place (retire(), src/aibuild.c).
-        if (c != CITY_NONE
+        if (c != CITY_NONE && unit_kind[u] != KIND_CHARIOT
             && distance(ax, ay, city_ax[c], city_ay[c]) <= RECALL_RANGE
             && (guards(unit_owner[u], u, c) < guards_wanted(c)
                 || (unit_kind[u] == KIND_SPEARMAN && !spearman_in(c)))) {
@@ -811,7 +815,7 @@ static void move_unit(byte u)
             }
             return;
         }
-        hunt(u, AI_RANGE);
+        hunt(u, unit_kind[u] == KIND_CHARIOT ? CHARIOT_RANGE : AI_RANGE);
         break;
     case KIND_GALLEY:
         // Galleys ferry settlers (ferry()), and otherwise explore the

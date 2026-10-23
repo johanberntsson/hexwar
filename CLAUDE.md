@@ -206,11 +206,11 @@ buffers at the default `$FF80000` and corrupts the display.
 
 | Address | Size | Contents |
 |---|---|---|
-| `$2001-$5FFF`, `$8000-$9FFF` | 24 KB | the resident program: code, data, BSS, C stack. 628 bytes free, nearly all at `$5D8C-$5FFF` |
+| `$2001-$5FFF`, `$8000-$9FFF` | 24 KB | the resident program: code, data, BSS, C stack. About 520 bytes free, nearly all at the top of `$2001-$5FFF` |
 | `$6000-$7FFF` | 8 KB | the code window (`src/region.h`); as loaded, region 0 — the title, setup and help screens (and the Civilopedia's pages), save and load, the sheet's and the map's loaders, the owners' flags, the end of a turn and a game's start (`src/turn.c`), the computer players' starts (`src/aiplace.c`), the hover readout (`src/hover.c`), the boot splash (`title_splash()`). 0.4 KB free |
-| `$13000-$14FFF` | 8 KB | code slot 1: region 1, from `SEVENSHIPS.R1` by way of attic: the computer players and their ferrying, the cities' yields and growth, bronze. 178 bytes free |
+| `$13000-$14FFF` | 8 KB | code slot 1: region 1, from `SEVENSHIPS.R1` by way of attic: the computer players and their ferrying, the cities' yields and growth, bronze. 95 bytes free |
 | `$15000-$16FFF` | 8 KB | code slot 2, shared: region 2 (the city screen, Top Five Cities, the builders' improvements, what the computer players' cities build, `src/aibuild.c`, buying; 0.7 KB free) region 3 (diplomacy; 2.1 KB free) region 4 (trade, the ships' routes, exploring and fishing, merchant ships and emporia; 1.5 KB free) region 5 (the Crisis and the collapse, the score and the end, the pictures, `src/crisis.c`, `src/score.c`, `src/picture.c`; 2.2 KB free) or region 6 (the menus and what their items do, the treasury, buildings and wonders, `src/menu.c`, `src/command.c`, `src/treasury.c`, `src/culture.c`, `src/cities.c`; 1.1 KB free), whichever was called last. **Slot 1 is also the sheet loader's staging area at boot** (`STAGING` in `src/sheet.c`), before region 1 is first called |
-| `$17000-$1EFFF` | 32 KB | the packed tile sheet's second area, where regions 3 to 6 would have been: whatever rows did not fit bank 5's; with bank 5's, 12 KB free (`tools/mktiles.py` says) |
+| `$17000-$1EFFF` | 32 KB | the packed tile sheet's second area, where regions 3 to 6 would have been: whatever rows did not fit bank 5's; with bank 5's, 9.6 KB free (`tools/mktiles.py` says) |
 | `$A000-$BFFF` | 8 KB | `highram`, under the BASIC ROM, banked out by `src/bank.s`: `map_tile`, the unit and city arrays, the sprite blocks, the AI's headings, the staging buffers of the texts and the regions, the texts' line buffers, the sheet loader's buffers, the saved VIC registers, the AI's exploration memory, the resource list, the sheet's row tables, the peoples' relations and attitudes and the letters' names, the trade deals, the emporia, the pictures' staging buffer, the treasuries; about 1.4 KB free — `HIGH_BSS` in `src/mega65.h` moves a variable there, and **the startup does not clear it** |
 | `$1600-$1EFF` | 2304 | `zpsave` (56 bytes, BASIC's zero page during the run), then `lowfree`: the popup's 400-byte text and the scratch buffers of the view and the minimap, and the sea routes' search (`src/path.c`), 990 bytes free — `LOW_FREE` in `src/mega65.h` moves a variable there |
 | `$12000` | 4000 | screen RAM, 80x25 cells of 2 bytes |
@@ -242,7 +242,7 @@ attic RAM instead and does not count. **The sheet is not something the VIC sees,
 ever a DMA source, copied into the tile store, so it needs chip RAM but
 not bank 5 — which is what step 1b uses. **Since 22 Oct 2026 it is
 packed** (step 1c), and `make` in `tiles/` says how much room is left —
-12 KB with 39 tiles, about eight units. Take these in order when
+9.6 KB with 41 tiles, about six units. Take these in order when
 another tile or another full-colour surface needs room:
 
 1. **The tile store's row padding** — *done* (19 Oct 2026). Each of the
@@ -539,7 +539,8 @@ pictures, the collapse, the raider, emporia and Help → Military Units;
 625; the slot copying cost 140, and each stub is 13), against 0.3 KB in
 region 0, **178 bytes in region 1**, **0.7 KB in region 2**, 2.1 KB in
 region 3, 1.5 KB in region 4, 2.2 KB in region 5 and 1.1 KB in region 6
-(628 bytes resident and 1.1 KB in region 6 after Advisors → Cities).
+(628 bytes resident and 1.1 KB in region 6 after Advisors → Cities;
+about 520 resident and **95 bytes in region 1** after the chariot).
 **Region 6 is the menus'** (23 Oct 2026, for the merchant fleets' room
 in region 4): the first region added since the slots, following **A new
 region** above, which held; the treasury followed it from region 5 the
@@ -860,7 +861,8 @@ Gate and Advisors → Cities):
    it; CHANGE's longer list (Temple, Lion Gate),
    a temple bought or built and its upkeep on Advisors → Finance, the
    Lion Gate's announcement, Help → Buildings, the Legacy column, the
-   legacy victory's picture, and the menus' commands from region 6.
+   legacy victory's picture, and the menus' commands from region 6;
+   the chariot and the horses, and `c` to centre on the active unit.
 2. **More culture**: more wonders (vision.md 5B names the Pyramids, the
    Palace of Knossos) and the clay tablets of knowledge (Linear B,
    law codes, the alphabet), which want a science of some kind;
@@ -873,7 +875,7 @@ Gate and Advisors → Cities):
 5. Escorts for the merchant ships; the computer players' galleys
    against the Sea Peoples.
 
-The tile sheet is packed and has about eight units' room left (**When
+The tile sheet is packed and has about six units' room left (**When
 bank 5 fills up**, step 1c).
 
 **The title's picture comes first** (`title_splash()` in `src/title.c`,
@@ -954,7 +956,7 @@ text, and a picture of three hexagons of the terrain, the middle one
 raised, drawn into the tile store under the window's own cells as the
 city screen's patch is (`draw_picture()` in `src/help.c`; it has to stay
 inside the map window, an `#error`); and **Military Units** (22 Oct
-2026), a third submenu the same way (`UNITS`), of all eight kinds in
+2026), a third submenu the same way (`UNITS`), of all nine kinds in
 alphabetical order by `unit_kind_name[]`, each opening its page,
 `pedia_settler.txt` to `pedia_merchant.txt` in `KIND_*` order from
 `TEXT_PEDIA_SETTLER` (the commands are `MENU_UNIT` + kind, after the
@@ -1286,8 +1288,8 @@ coordinates still fit its 40 columns. `map_reset()` clears them with the
 rest. **Roads need a bit**, and the map byte has none left: terrain is
 down to four bits (`MAP_TERRAIN_MASK` 0x0f, ten of sixteen values used).
 
-**Resources** (milestone 7, vision.md §2) are nine, `RES_*` in
-`src/map.h`, tiles 18-26, in this order:
+**Resources** (milestone 7, vision.md §2) are ten, `RES_*` in
+`src/map.h`, tiles 19-28, in this order:
 
 | | where | adds |
 |---|---|---|
@@ -1300,6 +1302,7 @@ down to four bits (`MAP_TERRAIN_MASK` 0x0f, ten of sixteen values used).
 | copper | hills, mountains | 2 shields |
 | tin | hills, mountains; and hills, mountains, tundra in the 3 rows at the top and bottom | 1 shield |
 | purple dye | shallows | 3 trade |
+| horses | plains, grassland | 2 shields |
 
 `mapgen.py` places them (step 7): four tin nodes at the edges of the
 world, then the rest by `RESOURCE_TERRAIN`'s chances (tin among them), **never two next to
@@ -1441,7 +1444,9 @@ vassals' formula, alliances.
 **Trade** (`src/trade.c`, region 4, milestone 9's first part) is the
 Amarna gift exchange as Civilization IV's resource trades. **The goods**
 are vision.md's luxury and strategic ones — olives, wine, cedar, copper,
-tin, purple dye; the staples feed the city that has them. **A deal**
+tin, purple dye and, since 23 Oct 2026, horses (the Diplomacy screen's
+prompts were shortened so that all seven fit a row); the staples feed
+the city that has them. **A deal**
 (`deal_from/to/give/back[]`, `MAX_DEALS` 8, one a pair) is one player
 sending a good it owns, and usually another coming back; with nothing
 back it is a gift (15 to the receiver's attitude at once). A good is not
@@ -1600,6 +1605,30 @@ the city screen's CHANGE list; and with a boat on the fish at (21,4) on
 seed 1, `i`: "Fishing boats at work", the boat gone, the fishing boats
 drawn with no overlay, and "Shallows+Fish+boats 4/0/2".
 
+**Chariots** (23 Oct 2026, the user's request; `KIND_CHARIOT`,
+Civilization's: attack 4, defence 1, 2 moves, cost 40) **need horses**
+(`player_has()`, `RES_HORSES`), and nothing else. Horses are a resource
+on plains and grassland (**Resources**), owned without an improvement as
+cedar is, and a trade good. **A chariot never goes onto mountains, not
+even to attack**: `unit_can_enter()` says `ENTER_MOUNTAIN` ("Chariots
+keep off mountains" in the panel) before it looks for anyone there, and
+`attack_near()` in `src/ai.c` skips a mountain for a chariot. It is a
+land unit, so it comes before the ships (kind 6; the ships and buildings
+moved up one, `SAVE_VERSION` 16). **The computer players** move it as a
+warrior but never call it home to guard (defence 1), and hunt within
+`CHARIOT_RANGE` (16) rather than `AI_RANGE` (8). **At war with a people
+still standing, and with horses, a computer player keeps
+`WAR_CHARIOTS()` of them** — two, and one more for every two cities —
+built straight after its guards, before anything else, over the unit cap
+(`src/aibuild.c`; the user's wish, 23 Oct 2026); otherwise one instead
+of a warrior at step 4 of `ai_build()`. A throwaway count over 400 turns
+of autoplay: 17 built on seed 1 (5, 4 and 8 by the first three players,
+the human's side among them), against 2 before the war rule; none on
+seed 3 and 1 on seed 7, where those at war had no horses. Checked headlessly with a
+throwaway start (a chariot at (51,9) on seed 1, a mountain to the east):
+refused onto the mountain, two moves west, and CHANGE with every good,
+ten choices.
+
 **Emporia** (milestone 9, 22 Oct 2026, vision.md §3; `src/emporium.c`,
 region 4): **a merchant ship** (`KIND_MERCHANT`, `alltiles/`' cargo
 ship: a coastal city, cost 30, move 3, attack 0, defence 1, the
@@ -1644,7 +1673,7 @@ no orders; the human out is game over as before. **A game over is no
 longer a quit to BASIC**: the next key shows the final score and goes
 back to the title (`GAME_RETIRE`), as Retire does after its own. **The
 score** (`score_screen()`): per people, cities, citizens, goods it has
-(the six trade goods, `player_has()`), trade deals, and a score of a
+(the seven trade goods, `player_has()`), trade deals, and a score of a
 point a citizen, two a city, two a good and three a deal, after
 Civilization's; peoples not yet met are "not yet met" until the end,
 those out "fallen". Since 23 Oct 2026 also gold (a point for every
@@ -1773,7 +1802,7 @@ nothing, 50), buying, the Finance screen, the score, save and load, and
 
 **Buildings and wonders** (23 Oct 2026, the user's request: a cultural
 building and a wonder; `src/culture.c`, region 6; vision.md 5B). **They
-are kinds after the units'** (`KIND_TEMPLE` 9, `KIND_LION_GATE` 10,
+are kinds after the units'** (`KIND_TEMPLE` 10, `KIND_LION_GATE` 11,
 `BUILD_KINDS` in `src/unit.h`; `KINDS` is still the units' count), with
 a name and a cost in `unit_kind_name[]` and `unit_kind_cost[]`, so
 `city_build[]`, CHANGE, BUY and the panel's "built Temple" take them as
@@ -1792,14 +1821,16 @@ city building it goes back to warriors; **every unit in its city
 defends twice as well** (`defence()` in `src/combat.c`; Civilization's
 Great Wall is city walls) and it gives `LEGACY_WONDER` (20) points,
 Civilization's score for a wonder. **Legacy points** (`player_legacy[]`,
-saved, `SAVE_VERSION` 15) are the builder's for good, whatever becomes
+saved, `SAVE_VERSION` 15; 16 with the chariot) are the builder's for good, whatever becomes
 of the building; they count in the score and decide the legacy victory
 (**The end**). BUY's price is Civilization's for buildings, 2r, and 4r
 for a wonder, doubled before the first shield. The city screen lists the
 city's buildings under its shields and trade; CHANGE lists the temple
 where there is none and the Lion Gate while nobody has built it
-(`CULTURE_CAN()`), a row higher than it was, so that nine choices fit,
-and the bronze note is a line. **The computer players**, at their unit
+(`CULTURE_CAN()`), from the box's first row with "Build what?" on its
+frame (since the chariot, 23 Oct 2026), so that ten choices fit, and the
+notes under it ("Chariot needs horses" and the rest) are a line each,
+one for each choice missing. **The computer players**, at their unit
 cap, build the Lion Gate in a city of 5 (one city at a time) and a
 temple in a city of 3 with 20 gold in hand, and finish a building they
 have started unless they need guards (`src/aibuild.c`). In 400 turns of
@@ -2248,24 +2279,28 @@ in xemu by building once with `input_real_hw = 1` forced in
 
 ## Assets
 
-`res/tiles.fci` is 156x4 characters — 39 4x4 tiles side by side, in the
+`res/tiles.fci` is 164x4 characters — 41 4x4 tiles side by side, in the
 order `tiles/Makefile` lists the PNGs: ten terrains (hills, grass, mountain, ocean, shallow ocean, tundra, plains, forest,
 desert, floodplain), then the city, a selection ring
 (the tile-select cursor),
 three units (settler, warrior, builder), the black hexagon of unexplored
-land, the overlays, irrigation, mine and emporium (**Emporia**), the nine resources (see
+land, the overlays, irrigation, mine and emporium (**Emporia**), the ten resources (see
 **Resources**), mined copper and tin, the spearman, irrigated
 cattle, olives and wine (see **Bronze**), and the galley and the
 fishing boat (see **Galleys**, `alltiles/`' `unit_galley.png` and
 `unit_work_boat.png` as they are), and fish worked by one
 (`tile_fish_improved.png`, as `res_fish_boats`), and the Sea Peoples'
 raider and the merchant ship (`alltiles/`' `unit_swordsman.png` and
-`unit_cargo_ship.png`, as `unit_raider` and `unit_merchant`);
+`unit_cargo_ship.png`, as `unit_raider` and `unit_merchant`), and the
+chariot (`unit_chariot_archer.png` as it is, as `unit_chariot`;
+**Chariots**);
 `TILE_*` in `src/sheet.h`. Where each tile goes is the loader's business
 (**When bank 5 fills up**, step 1c). `res_cattle`, `res_copper` and `res_tin` are `alltiles/`'
 cattle, copper and iron cut to lines 8-23, `res_olives` and `res_wine` its
 orange trees recoloured, and `res_grain`, `res_fish`, `res_cedar` and
-`res_dye` placeholders drawn for them; `res_copper_mine`, `res_tin_mine`,
+`res_dye` placeholders drawn for them, and `res_horses` its horses
+scaled into lines 8-23 (its `tile_horses_improved` is not used, since
+horses need no improvement); `res_copper_mine`, `res_tin_mine`,
 `res_cattle_pasture` and `unit_spearman` are `alltiles/`' as they are, and
 `res_olives_grove` and `res_wine_vineyard` its orange orchard recoloured.
 `overlay_mine.png` is the mine cut out of `alltiles/`' plains and tundra

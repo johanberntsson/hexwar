@@ -34,7 +34,7 @@ HIGH_BSS byte trade_ask_give[PLAYERS];
 // What can be traded: vision.md's luxury and strategic goods. The staples
 // -- grain, fish, cattle -- feed the city that has them and go nowhere.
 static const byte goods[] = {
-    RES_OLIVES, RES_WINE, RES_CEDAR, RES_COPPER, RES_TIN, RES_DYE
+    RES_OLIVES, RES_WINE, RES_CEDAR, RES_COPPER, RES_TIN, RES_DYE, RES_HORSES
 };
 #define GOODS (sizeof goods / sizeof goods[0])
 
@@ -325,7 +325,7 @@ static byte choose(byte row, const char *what, byte from, byte to,
         k[2] = 0;
         put(row, k, COLOR_WHITE);
         put(row, text_line(TEXT_LIST_RESOURCES, r), COLOR_LIGHTGREEN);
-        put(row, "  ", COLOR_WHITE);
+        put(row, " ", COLOR_WHITE);
     }
     if (gift) {
         put(row, "0 ", COLOR_WHITE);
@@ -354,9 +354,9 @@ byte trade_propose(byte p, byte row)
         mood_down(p, PLAYER_HUMAN, MOOD_TRIBUTE);
         return 1;
     }
-    give = choose(row, "Send which good?  ", PLAYER_HUMAN, p, 0);
+    give = choose(row, "Send which? ", PLAYER_HUMAN, p, 0);
     if (give == DEAL_FREE || give == RES_NONE) return 0;
-    get = choose(row, "For which?  ", p, PLAYER_HUMAN, "nothing, a gift");
+    get = choose(row, "For which? ", p, PLAYER_HUMAN, "gift");
     if (get == DEAL_FREE) return 0;
     if (get == RES_NONE || accepts(p, PLAYER_HUMAN, get, give)) {
         trade_agree(PLAYER_HUMAN, p, give, get);

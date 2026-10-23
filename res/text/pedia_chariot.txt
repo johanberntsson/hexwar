@@ -1,0 +1,12 @@
+# The Civilopedia's page on the Chariot: Help/Military Units. A placeholder.
+# The markup is described in tools/mktext.py.
+{at 42 4}{head}CHARIOT
+{at 42 6}{grey}Military Unit
+{at 6 9}{head}Chariot
+{text}  Attack: 4
+  Defence: 1
+  Moves: 2
+  Cost: 40 shields
+  Needs: horses
+{at 6 17}{text}The striking arm of the Bronze Age armies. Fast on open ground,
+it cannot go into the mountains, and it defends poorly.

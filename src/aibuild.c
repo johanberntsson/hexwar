@@ -8,6 +8,7 @@
 #include "ai.h"
 #include "aiint.h"
 #include "city.h"
+#include "combat.h"
 #include "culture.h"
 #include "emporium.h"
 #include "treasury.h"
@@ -71,6 +72,20 @@ static byte building(byte p, byte c)
     return 0;
 }
 
+// **Chariots at war**: a player with horses at war with another people
+// keeps WAR_CHARIOTS of them, over the unit cap, to take the fight to it
+// (hunt() in ai.c gives them a longer reach). With the warriors alone they
+// made one or two in 400 turns, at the end of the list.
+#define WAR_CHARIOTS(CITIES) (2 + (CITIES) / 2)
+
+static byte at_war_with_people(byte p)
+{
+    byte q;
+    for (q = 0; q < PLAYERS; ++q)
+        if (q != p && at_war(p, q) && player_alive(q)) return 1;
+    return 0;
+}
+
 // Whether city c has fish next to it that no fishing boat works yet.
 static byte fish_to_work(byte c)
 {
@@ -90,12 +105,12 @@ static byte fish_to_work(byte c)
 // spare, or from the first with a citizen if there is no settler about,
 // and a site in reach -- settlers out and cities together no more than
 // AI_CITY_CAP; then up to the cap 3. a builder for each city that has
-// hexagons to improve, and 4. warriors to explore and fight. Changing
-// keeps the shields, so nothing is lost by it. With bronze the guards are
-// spearmen, defence 2 to a warrior's 1.
+// hexagons to improve, and 4. warriors to explore and fight, or chariots
+// with horses -- and at war chariots straight after the guards. Changing keeps the shields, so nothing is lost by it. With
+// bronze the guards are spearmen, defence 2 to a warrior's 1.
 void ai_build(byte p)
 {
-    byte c, u, cap, kind, guard;
+    byte c, u, cap, kind, guard, horses, chariots;
     byte cities = 0, settlers, builders, galleys, boats, merchants, explorers = 0;
     byte units = unit_count_kind(p, KIND_NONE) - unit_count_kind(p, KIND_SETTLER);
 
@@ -114,6 +129,9 @@ void ai_build(byte p)
             ++explorers;
 
     guard = player_bronze(p) ? KIND_SPEARMAN : KIND_WARRIOR;
+    horses = player_has(p, RES_HORSES);
+    chariots = horses && at_war_with_people(p)
+               ? unit_count_kind(p, KIND_CHARIOT) : 0xff;
     for (c = 0; c < city_count; ++c) {
         if (city_owner[c] != p) continue;
         retire(p, c);
@@ -126,6 +144,10 @@ void ai_build(byte p)
             // the cap if need be, since the warriors it replaces go once it
             // is in (retire()).
             kind = KIND_SPEARMAN;
+        } else if (chariots < WAR_CHARIOTS(cities)) {
+            // At war: chariots, guards apart, before anything else.
+            kind = KIND_CHARIOT;
+            ++chariots;
         } else if (KIND_IS_BUILDING(city_build[c])
                    && CULTURE_CAN(c, city_build[c])) {
             // A building under way is finished, guards apart: changing
@@ -182,7 +204,8 @@ void ai_build(byte p)
             kind = KIND_BUILDER;
             ++builders;
         } else {
-            kind = KIND_WARRIOR;
+            // 4. Attackers: chariots, with horses (unit.h).
+            kind = horses ? KIND_CHARIOT : KIND_WARRIOR;
         }
         city_build[c] = kind;
     }

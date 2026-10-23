@@ -38,7 +38,8 @@ static word distance(byte ax, byte ay, byte bx, byte by)
 static byte good(byte r)
 {
     return r == RES_OLIVES || r == RES_WINE || r == RES_CEDAR
-           || r == RES_COPPER || r == RES_TIN || r == RES_DYE;
+           || r == RES_COPPER || r == RES_TIN || r == RES_DYE
+           || r == RES_HORSES;
 }
 
 static byte is_water(byte t)

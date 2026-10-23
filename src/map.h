@@ -122,7 +122,8 @@ extern byte map_res_kind[MAP_RES_MAX];
 #define RES_COPPER 7            // hills and mountains: shields; bronze
 #define RES_TIN 8               // the far north and south: bronze
 #define RES_DYE 9               // shallows: trade
-#define RES_COUNT 10
+#define RES_HORSES 10           // plains and grassland: shields; chariots
+#define RES_COUNT 11
 // The resource on (ax, ay), RES_NONE if none: a search of its row's few.
 byte map_resource_at(byte ax, byte ay);
 #define MAP_RESOURCE_TILE(R) (TILE_RESOURCE_FIRST - 1 + (R))

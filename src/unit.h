@@ -24,22 +24,23 @@
 #define KIND_BUILDER 3
 #define KIND_SPEARMAN 4         // bronze: needs copper and tin (growth.h)
 #define KIND_RAIDER 5           // the Sea Peoples' only, never built (crisis.c)
-#define KIND_GALLEY 6           // cedar and a coastal city; carries GALLEY_HOLD
-#define KIND_BOAT 7             // a fishing boat: a coastal city; carries nobody
-#define KIND_MERCHANT 8         // a coastal city; founds an emporium (emporium.h)
-#define KINDS 9
+#define KIND_CHARIOT 6          // horses; two moves, never onto mountains
+#define KIND_GALLEY 7           // cedar and a coastal city; carries GALLEY_HOLD
+#define KIND_BOAT 8             // a fishing boat: a coastal city; carries nobody
+#define KIND_MERCHANT 9         // a coastal city; founds an emporium (emporium.h)
+#define KINDS 10
 // **Buildings follow the units** (src/culture.h): what a city can build
 // is a kind, so city_build[] and the CHANGE list take them as they are,
 // with a name and a cost in unit_kind_name[] and unit_kind_cost[] -- and
 // nothing else of the units' tables, since nothing ever creates one.
-#define KIND_TEMPLE 9
-#define KIND_LION_GATE 10       // a wonder: one in the world
-#define BUILD_KINDS 11
+#define KIND_TEMPLE 10
+#define KIND_LION_GATE 11       // a wonder: one in the world
+#define BUILD_KINDS 12
 #define KIND_IS_BUILDING(K) ((K) >= KIND_TEMPLE)
 
 // **The ships are the kinds from KIND_GALLEY on**: they sail the shallows
 // and their own cities, and everything else is a land unit, which on the
-// water is aboard a galley.
+// water is aboard a galley. So a new land unit goes before KIND_GALLEY.
 #define KIND_IS_SHIP(K) ((K) >= KIND_GALLEY)
 
 // **A galley** (milestone 9, Civilization's trireme) sails the shallows
@@ -124,14 +125,15 @@ byte unit_at(byte ax, byte ay);
 
 // Whether a unit of `kind` and `owner` may step onto (ax, ay): a land unit
 // not into water but onto its own galley with room (ENTER_BOARD), a ship
-// only onto the shallows or its own city; and not onto another player's
-// unit or city, which is an attack (combat.h) -- except a land unit's onto
-// a ship.
+// only onto the shallows or its own city, a chariot never onto mountains,
+// not even to attack; and not onto another player's unit or city, which
+// is an attack (combat.h) -- except a land unit's onto a ship.
 #define ENTER_OK 0
 #define ENTER_WATER 1           // a land unit, and no galley to board
 #define ENTER_FOREIGN 2
 #define ENTER_BOARD 3
 #define ENTER_LAND 4            // a ship, and land or the open sea
+#define ENTER_MOUNTAIN 5        // a chariot, and mountains
 byte unit_can_enter(byte owner, byte kind, byte ax, byte ay);
 
 // Galley u has stopped: wake the units aboard if it is next to land.

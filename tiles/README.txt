@@ -5,8 +5,9 @@ res_olives_grove and res_wine_vineyard its orange orchard recoloured;
 res_copper_mine, res_tin_mine and res_cattle_pasture are its copper, iron
 and cattle improved as they are; res_grain,
 res_fish, res_cedar and res_dye are placeholders drawn for this game;
-unit_raider and unit_merchant are its swordsman and cargo ship, and
-overlay_emporium its bazaar scaled to 16x16 in pixel lines 8-23): https://github.com/RyanGrieb/OpenCiv
+unit_raider, unit_merchant and unit_chariot are its swordsman, cargo
+ship and chariot archer, res_horses its horses scaled into pixel lines
+8-23, and overlay_emporium its bazaar scaled to 16x16 in pixel lines 8-23): https://github.com/RyanGrieb/OpenCiv
 by Ryan Grieb, with art commissioned for it from lucasyoung988, brysia and
 pratamacam (see the Credits in OpenCiv's README).
 

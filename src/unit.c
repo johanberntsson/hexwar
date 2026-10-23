@@ -21,20 +21,24 @@ byte unit_hidden;
 // swordsman, attack 3 against Civilization's barbarian legion's 4: with
 // the warriors' 1 they almost never took a guarded city, and the Crisis
 // was mild (22 Oct 2026). The merchant ship is vision.md's merchant fleet,
-// which founds emporia, as Civilization's caravan founds trade routes.
+// which founds emporia, as Civilization's caravan founds trade routes. The
+// chariot is Civilization's, 4/1/2 for 40 shields, with horses for its
+// advance.
 const char *const unit_kind_name[] = {
-    "", "Settler", "Warrior", "Builder", "Spearman", "Raider", "Galley",
-    "Fishing Boat", "Merchant", "Temple", "Lion Gate"
+    "", "Settler", "Warrior", "Builder", "Spearman", "Raider", "Chariot",
+    "Galley", "Fishing Boat", "Merchant", "Temple", "Lion Gate"
 };
-const byte unit_kind_moves[] = { 0, 1, 1, 1, 1, 1, 3, 2, 3 };
+const byte unit_kind_moves[] = { 0, 1, 1, 1, 1, 1, 2, 3, 2, 3 };
 // The temple's is Civilization's; the Lion Gate's a wonder's for cities
 // that make a few shields a turn (Civilization's take 200-600).
-const byte unit_kind_cost[] = { 0, 30, 10, 20, 20, 30, 40, 20, 30, 40, 160 };
-const byte unit_kind_attack[] = { 0, 0, 1, 0, 1, 3, 1, 0, 0 };
-const byte unit_kind_defence[] = { 0, 1, 1, 1, 2, 1, 1, 1, 1 };
+const byte unit_kind_cost[] = {
+    0, 30, 10, 20, 20, 30, 40, 40, 20, 30, 40, 160
+};
+const byte unit_kind_attack[] = { 0, 0, 1, 0, 1, 3, 4, 1, 0, 0 };
+const byte unit_kind_defence[] = { 0, 1, 1, 1, 2, 1, 1, 1, 1, 1 };
 const byte unit_kind_tile[] = {
     0, TILE_SETTLER, TILE_WARRIOR, TILE_BUILDER, TILE_SPEARMAN, TILE_RAIDER,
-    TILE_GALLEY, TILE_FISHING_BOAT, TILE_MERCHANT
+    TILE_CHARIOT, TILE_GALLEY, TILE_FISHING_BOAT, TILE_MERCHANT
 };
 
 #define IS_WATER(T) ((T) == TILE_OCEAN || (T) == TILE_SHALLOW_OCEAN)
@@ -174,6 +178,8 @@ byte unit_can_enter(byte owner, byte kind, byte ax, byte ay)
                 else if (!KIND_IS_SHIP(unit_kind[u])) ++aboard;
             }
         return aboard < galleys ? ENTER_BOARD : ENTER_WATER;
+    } else if (kind == KIND_CHARIOT && terrain == TILE_MOUNTAIN) {
+        return ENTER_MOUNTAIN;
     }
     if (!(t & MAP_OCCUPIED)) return ENTER_OK;
     if (c != CITY_NONE && city_owner[c] != owner) return ENTER_FOREIGN;

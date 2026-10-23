@@ -41,15 +41,16 @@ static const byte mine_shields[TERRAIN_COUNT] = {
 
 // What a resource adds, by RES_* (src/map.h): Civilization's specials add
 // two to four, and these keep to that. Tin and copper are worth more than
-// their shields once there is bronze (TODO.txt, milestone 7b).
+// their shields once there is bronze (TODO.txt, milestone 7b). Horses are
+// Civilization's plains special, two shields more.
 static const byte resource_food[RES_COUNT] = {
-    0, 2, 2, 1, 1, 0, 0, 0, 0, 0
+    0, 2, 2, 1, 1, 0, 0, 0, 0, 0, 0
 };
 static const byte resource_shields[RES_COUNT] = {
-    0, 0, 0, 1, 0, 0, 2, 2, 1, 0
+    0, 0, 0, 1, 0, 0, 2, 2, 1, 0, 2
 };
 static const byte resource_trade[RES_COUNT] = {
-    0, 0, 0, 0, 2, 3, 0, 0, 0, 3
+    0, 0, 0, 0, 2, 3, 0, 0, 0, 3, 0
 };
 
 byte player_owns(byte p, byte r)

@@ -65,9 +65,10 @@ Milestones 1-10 of `TODO.txt` are in, in a first form: a whole game from
   levels.
 - **Cities** that grow on their food, work the hexagons round them (by
   hand on the city screen, or by themselves), and build settlers,
-  warriors, builders, spearmen, galleys, fishing boats, merchant ships,
-  temples and the Lion Gate; builders irrigate and mine; copper and tin
-  together make bronze, which the spearman needs.
+  warriors, builders, spearmen, chariots, galleys, fishing boats,
+  merchant ships, temples and the Lion Gate; builders irrigate and mine;
+  copper and tin together make bronze, which the spearman needs, and
+  horses the chariot.
 - **Combat** after Civilization's rules, barbarians, and a people that
   loses its capital breaking up into rebel cities.
 - **Diplomacy** in the voice of the Amarna letters: contact, war,
@@ -115,7 +116,8 @@ display. The cattle, copper and tin (OpenCiv's iron) resources are cut down
 to fit the middle of a hexagon, and the olives and wine, and their improved
 groves, are OpenCiv's orange trees and orchard recoloured. The Sea
 Peoples' raider is OpenCiv's swordsman, the merchant ship its cargo ship,
-and the emporium its bazaar, scaled down to the middle of a hexagon.
+the chariot its chariot archer, and the emporium its bazaar and the horses
+its horses, scaled down to the middle of a hexagon.
 
 Additional graphics and tiles were created by myself for this game.
 

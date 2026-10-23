@@ -39,7 +39,6 @@ void game_end_turn(void)
     byte c, kind;
 
     message("", "");
-    news = NEWS_NONE;
     for (c = PLAYER_FIRST_AI; c < PLAYERS; ++c) ai_turn(c);
     ai_barbarians(game_turn);
     diplomacy_turn();
@@ -70,16 +69,6 @@ void game_end_turn(void)
             message(city_name_of(c), line);
             dirty = 1;
         }
-    }
-    // Being attacked matters more than what was built.
-    if (news != NEWS_NONE) {
-        static const char *const what[] = {
-            "", "repelled", "a unit lost", "a city lost"
-        };
-        line_clear();
-        line_add(player_adjective(news_owner));
-        line_add(" attack");
-        message(line, what[news]);
     }
     dirty = 1;
     hover_dirty = 1;

@@ -1,6 +1,7 @@
 #include "combat.h"
 #include "culture.h"
 #include "city.h"
+#include "diplomacy.h"
 #include "map.h"
 #include "sheet.h"
 #include "unit.h"
@@ -11,8 +12,16 @@ byte combat_war[PLAYERS];
 byte combat_owner;
 byte combat_kind;
 byte combat_city;
-byte news;
-byte news_owner;
+byte fight_count;
+HIGH_BSS byte fight_what[FIGHTS];
+HIGH_BSS byte fight_ax[FIGHTS], fight_ay[FIGHTS];
+HIGH_BSS byte fight_kind[FIGHTS];
+HIGH_BSS byte fight_foe[FIGHTS], fight_foe_kind[FIGHTS];
+HIGH_BSS byte fight_lost[FIGHTS];
+HIGH_BSS byte fight_founder[FIGHTS], fight_name[FIGHTS];
+
+// Where the attack of the moment is, and how many died, for note().
+static byte at_x, at_y, lost;
 
 word combat_seed = 0x2a6d;
 
@@ -34,7 +43,7 @@ void combat_reset(void)
 {
     byte p;
     for (p = 0; p < PLAYERS; ++p) combat_war[p] = 0;
-    news = NEWS_NONE;
+    fight_count = 0;
 }
 
 byte combat_holder(byte ax, byte ay)
@@ -103,25 +112,46 @@ static void check_alive(byte p)
         if (unit_kind[u] != KIND_NONE && unit_owner[u] == p) unit_remove(u);
 }
 
-static void tell(byte victim, byte what, byte attacker)
+// A fight of the human's, for fight_show(): `kind` the human's unit, `foe`
+// and `foe_kind` the other side. Before a city changes hands, so that it
+// is still there to be named.
+static void note(byte what, byte kind, byte foe, byte foe_kind)
 {
-    if (victim != PLAYER_HUMAN) return;
-    news = what;
-    news_owner = attacker;
+    byte i = fight_count, c;
+    if (diplomacy_auto || i == FIGHTS) return;
+    fight_what[i] = what;
+    fight_ax[i] = at_x;
+    fight_ay[i] = at_y;
+    fight_kind[i] = kind;
+    fight_foe[i] = foe;
+    fight_foe_kind[i] = foe_kind;
+    fight_lost[i] = lost;
+    c = city_at(at_x, at_y);
+    fight_founder[i] = c;
+    if (c != CITY_NONE) {
+        fight_founder[i] = city_founder[c];
+        fight_name[i] = city_name[c];
+    }
+    fight_count = (byte)(i + 1);
 }
 
 byte combat_attack(byte u, byte ax, byte ay)
 {
-    byte me = unit_owner[u];
+    byte me = unit_owner[u], kind = unit_kind[u];
     byte d = defender(ax, ay);
-    byte a, v, c;
+    byte a, v, c, o, dk;
 
     unit_moves[u] = 0;
+    at_x = ax;
+    at_y = ay;
+    lost = 1;
     if (d == UNIT_NONE) {
         // Nobody in the city: in, and it is ours -- or ashes.
         c = city_at(ax, ay);
-        combat_owner = city_owner[c];
-        tell(combat_owner, NEWS_LOST_CITY, me);
+        o = city_owner[c];
+        combat_owner = o;
+        if (me == PLAYER_HUMAN) note(FIGHT_TOOK, kind, o, KIND_NONE);
+        else if (o == PLAYER_HUMAN) note(FIGHT_CITY, KIND_NONE, me, kind);
         if (me == PLAYER_BARBARIAN) {
             city_destroy(c);
             c = CITY_NONE;
@@ -130,23 +160,34 @@ byte combat_attack(byte u, byte ax, byte ay)
         }
         combat_city = c;
         unit_move_to(u, ax, ay);
-        check_alive(combat_owner);
+        check_alive(o);
         return COMBAT_TOOK;
     }
 
-    a = (byte)(4 * unit_kind_attack[unit_kind[u]]);
+    a = (byte)(4 * unit_kind_attack[kind]);
     v = defence(d);
+    o = unit_owner[d];
+    dk = unit_kind[d];
     if (rnd() % (byte)(a + v) >= a) {
         combat_owner = me;
-        combat_kind = unit_kind[u];
-        tell(unit_owner[d], NEWS_HELD, me);
+        combat_kind = kind;
+        if (me == PLAYER_HUMAN) note(FIGHT_LOST, kind, o, dk);
+        else if (o == PLAYER_HUMAN) note(FIGHT_HELD, dk, me, kind);
         unit_remove(u);
         return COMBAT_LOST;
     }
-    combat_owner = unit_owner[d];
-    combat_kind = unit_kind[d];
-    tell(combat_owner, NEWS_LOST_UNIT, me);
-    if (city_at(ax, ay) != CITY_NONE) {
+    combat_owner = o;
+    combat_kind = dk;
+    if (city_at(ax, ay) == CITY_NONE) {
+        lost = 0;
+        for (v = 0; v < MAX_UNITS; ++v)
+            if (unit_kind[v] != KIND_NONE && unit_ax[v] == ax
+                && unit_ay[v] == ay)
+                ++lost;
+    }
+    if (me == PLAYER_HUMAN) note(FIGHT_WON, kind, o, dk);
+    else if (o == PLAYER_HUMAN) note(FIGHT_FELL, dk, me, kind);
+    if (lost == 1) {
         unit_remove(d);
     } else {
         for (v = 0; v < MAX_UNITS; ++v)

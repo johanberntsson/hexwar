@@ -209,7 +209,7 @@ buffers at the default `$FF80000` and corrupts the display.
 | `$2001-$5FFF`, `$8000-$9FFF` | 24 KB | the resident program: code, data, BSS, C stack. About 1.1 KB free, nearly all at the top of `$2001-$5FFF` |
 | `$6000-$7FFF` | 8 KB | the code window (`src/region.h`); as loaded, region 0 — the title, setup and help screens (and the Civilopedia's pages), save and load, the sheet's and the map's loaders, the owners' flags, the end of a turn and a game's start (`src/turn.c`), the computer players' starts (`src/aiplace.c`), the hover readout (`src/hover.c`), the boot splash (`title_splash()`). 0.4 KB free |
 | `$13000-$14FFF` | 8 KB | code slot 1: region 1, from `SEVENSHIPS.R1` by way of attic: the computer players and their ferrying, the cities' yields and growth, bronze. 61 bytes free |
-| `$15000-$16FFF` | 8 KB | code slot 2, shared: region 2 (Top Five Cities, the builders' improvements, what the computer players' cities build and where their builders work, `src/aibuild.c`; 5.1 KB free) region 7 (the city screen and buying, `src/cityscreen.c`; 2.2 KB free) region 3 (diplomacy; 2.1 KB free) region 4 (trade, the ships' routes, exploring and fishing, merchant ships and emporia; 1.5 KB free) region 5 (the Crisis and the collapse, the score and the end, the pictures, `src/crisis.c`, `src/score.c`, `src/picture.c`; 2.2 KB free) region 6 (the menus and what their items do, the treasury, buildings and wonders, `src/menu.c`, `src/command.c`, `src/treasury.c`, `src/culture.c`, `src/cities.c`; 1.1 KB free), whichever was called last. **Slot 1 is also the sheet loader's staging area at boot** (`STAGING` in `src/sheet.c`), before region 1 is first called |
+| `$15000-$16FFF` | 8 KB | code slot 2, shared: region 2 (Top Five Cities, the fights' popups, the builders' improvements, what the computer players' cities build and where their builders work, `src/aibuild.c`; 4.2 KB free) region 7 (the city screen and buying, `src/cityscreen.c`; 2.2 KB free) region 3 (diplomacy; 2.1 KB free) region 4 (trade, the ships' routes, exploring and fishing, merchant ships and emporia; 1.5 KB free) region 5 (the Crisis and the collapse, the score and the end, the pictures, `src/crisis.c`, `src/score.c`, `src/picture.c`; 2.2 KB free) region 6 (the menus and what their items do, the treasury, buildings and wonders, `src/menu.c`, `src/command.c`, `src/treasury.c`, `src/culture.c`, `src/cities.c`; 1.1 KB free), whichever was called last. **Slot 1 is also the sheet loader's staging area at boot** (`STAGING` in `src/sheet.c`), before region 1 is first called |
 | `$17000-$1EFFF` | 32 KB | the packed tile sheet's second area, where regions 3 to 6 would have been: whatever rows did not fit bank 5's; with bank 5's, 9.6 KB free (`tools/mktiles.py` says) |
 | `$A000-$BFFF` | 8 KB | `highram`, under the BASIC ROM, banked out by `src/bank.s`: `map_tile`, the unit and city arrays, the sprite blocks, the AI's headings, the staging buffers of the texts and the regions, the texts' line buffers, the sheet loader's buffers, the saved VIC registers, the AI's exploration memory, the resource list, the sheet's row tables, the peoples' relations and attitudes and the letters' names, the trade deals, the emporia, the pictures' staging buffer, the treasuries; about 1.4 KB free — `HIGH_BSS` in `src/mega65.h` moves a variable there, and **the startup does not clear it** |
 | `$1600-$1EFF` | 2304 | `zpsave` (56 bytes, BASIC's zero page during the run), then `lowfree`: the popup's 400-byte text and the scratch buffers of the view and the minimap, and the sea routes' search (`src/path.c`), 990 bytes free — `LOW_FREE` in `src/mega65.h` moves a variable there |
@@ -1194,9 +1194,26 @@ hexagons and halved), one turn in eight on average, two warriors appear
 on empty land at least `BARB_SPACING` (6) hexagons from every unit and
 city, up to `BARB_CAP` (8) — a band can take it to 9. Every barbarian
 attacks whatever is next to it, whatever the odds, or makes for the
-nearest unit or city within 24. What happened to the human during the
-other turns goes into `news` and is shown in the panel at the end of
-`end_turn()` ("Barbarian attack / a city lost").
+nearest unit or city within 24.
+
+**Every fight of the human's is a popup, with the view on it** (24 Oct
+2026, the user's: a city lost during the other turns had gone by with a
+line in the panel nobody saw, and the human's own attacks said only a
+line too). `combat_attack()` notes each one the human attacks or is
+attacked in (`note()`, `fight_*[]` in `src/combat.h`, up to `FIGHTS` (8)
+a turn in `HIGH_BSS`, not during Play 50 Turns): who with what against
+whom, where, the city there by founder and name (a burnt one is gone),
+and how many of a stack died. `game_run()` shows them before the
+greetings and letters, one a frame pair as `show_met()` does the met:
+`show_at()` puts the hexagon in window row 1 above the popup, the redraw
+shows who is left, then `fight_show()` (`src/fight.c`, region 2) says
+"Victory!" or "Defeat!" and "Your Chariot destroyed a Barbarian Warrior
+and 1 more.", "Your Warrior was destroyed attacking a Hittite Spearman.",
+"Your Spearman in Mycenae held off an Egyptian Chariot.", "Mycenae was
+burnt to the ground by a Barbarian Raider." and so on; after the last the
+view goes back to the unit with the orders. The panel's old news line is
+gone. A tie of defences goes to the first unit in the list, so a settler
+can be the one to "hold off" an attack on its stack.
 
 **The city screen** (`src/cityscreen.c`, after
 `civ1-reference/civ1-pic02.png`) takes over the whole screen: the city's

@@ -1,10 +1,6 @@
 --- OPEN ---
 
-I lost a city to a warrior without a popup or any kind of notification.
-
-There's no visual feedback who wins or loses when attacking or being attacked
-
-More ways of spending money:
+Ideas for more ways of spending money:
 - government management: more expensive to have many cities (will control city sprawl)
 - military costs: basic defense free (one per city or so) but a large army is an ongoing cost
 
@@ -17,15 +13,21 @@ NEXT (23 Oct 2026, end of the day; CLAUDE.md "Where to start next time"):
    BUY, CHANGE, units 1-9), a new city's outer ring explored, the flag on a hexagon a nearer
    city has, city sizes; the chariot, horses and c; and from before, Advisors/Cities, the
    temple and Lion Gate, Help/Buildings, the legacy victory, the menus from region 6
-2. The new items at the top: the lost city with no notice, fight feedback, ways to spend gold
+2. The new items at the top: ways to spend gold
 3. Tune the AI to the two rings (above)
 4. More culture: more wonders (Pyramids, Palace of Knossos), clay tablets of knowledge
    (Linear B, law codes, the alphabet: a science of sorts), building art
 5. Tune from play: the Crisis, the collapse, merchant ships, gold, legacy's weight in the
    score; escorts for merchant ships; AI galleys against the Sea Peoples
-Room: resident 1.1 KB, region 0 0.3 KB, region 1 61 bytes, region 2 5.1 KB, region 3 2.1 KB,
+Room: resident 0.7 KB, region 0 0.3 KB, region 1 61 bytes, region 2 4.2 KB, region 3 2.1 KB,
 region 4 1.5 KB, region 5 2.2 KB, region 6 1.1 KB, region 7 2.2 KB, highram 1.2 KB; the tile
 sheet 9.6 KB, about six units
+
+DONE (24 Oct 2026): fight feedback. Every fight of the human's -- its own attacks and those on
+it during the other turns, a city taken or burnt included -- is brought into view and told in
+a popup ("Victory!/Defeat!", "Your Warrior was destroyed attacking a Hittite Spearman.",
+"Mycenae was burnt to the ground by a Barbarian Raider."), up to 8 a turn, not in Play 50
+Turns (src/fight.c, region 2). The panel's news line is gone. To try on a MEGA65
 
 DONE (23 Oct 2026): two rings. A city works its own hexagon and the best of the 18 in its
 two rings (RING in map.h); a hexagon in reach of two cities is the nearer one's, the earlier

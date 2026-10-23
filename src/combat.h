@@ -49,14 +49,28 @@ extern byte combat_city;
 // odds of at least `ratio` / 4 attack to defence.
 byte combat_worth(byte kind, byte ax, byte ay, byte ratio);
 
-// The last time the human's units or cities were attacked during the other
-// players' turns, for the panel: who attacked, and what happened.
-#define NEWS_NONE 0
-#define NEWS_HELD 1             // the attack failed
-#define NEWS_LOST_UNIT 2
-#define NEWS_LOST_CITY 3
-extern byte news;
-extern byte news_owner;
+// **The fights the human's units and cities were in**, since they were
+// last shown, for fight_show() (fight.h), which game.c calls for each in
+// turn with the view on the hexagon. Up to FIGHTS of them; not noted
+// during Play 50 Turns. fight_kind is the human's unit, fight_foe and
+// fight_foe_kind the other side's, fight_lost how many of the losing side
+// died (a stack outside a city), and fight_founder and fight_name the city
+// on the hexagon (fight_founder CITY_NONE for none), kept by name since a
+// burnt one is gone.
+#define FIGHTS 8
+#define FIGHT_WON 0             // the human attacked and won
+#define FIGHT_LOST 1            // ... and lost
+#define FIGHT_TOOK 2            // ... and took an empty city
+#define FIGHT_HELD 3            // the human was attacked and won
+#define FIGHT_FELL 4            // ... and lost
+#define FIGHT_CITY 5            // ... and an empty city was taken or burnt
+extern byte fight_count;
+extern byte fight_what[FIGHTS];
+extern byte fight_ax[FIGHTS], fight_ay[FIGHTS];
+extern byte fight_kind[FIGHTS];
+extern byte fight_foe[FIGHTS], fight_foe_kind[FIGHTS];
+extern byte fight_lost[FIGHTS];
+extern byte fight_founder[FIGHTS], fight_name[FIGHTS];
 
 // Whether player p is still in the game: a player who has had a city is out
 // once the last one is gone, and one who never founded any once its units

@@ -197,10 +197,11 @@ stub:       .macro  name, target, region
             stub    ai_find_far_site, ai_find_far_site_r1, 1
             stub    ai_work_site, ai_work_site_r2, 2
 
-; Region 2, slot 2: the city screen, Top Five Cities, the builders'
-; improvements and what the computer players' cities build.
+; Region 2, slot 2: the city screen, Top Five Cities, the fights' popups,
+; the builders' improvements and what the computer players' cities build.
             stub    city_screen, city_screen_r7, 7
             stub    top_cities_screen, top_cities_screen_r2, 2
+            stub    fight_show, fight_show_r2, 2
             stub    improve_can, improve_can_r2, 2
             stub    improve_best, improve_best_r2, 2
             stub    improve_start, improve_start_r2, 2

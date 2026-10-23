@@ -26,6 +26,7 @@
 #include "civ.h"
 #include "diplomacy.h"
 #include "combat.h"
+#include "fight.h"
 #include "sevenships.h"
 #include "input.h"
 #include "map.h"
@@ -57,6 +58,8 @@ byte retired;            // quit by Game/Retire, for the title screen
 byte loaded;             // from a saved game: no opening popup
 byte game_end_wait;      // see game.h
 static byte end_due;     // the last unit has had its orders: end the turn
+static byte fight_shown;  // fights shown of fight_count (combat.h)
+static byte fight_placed; // ... and the next brought into view
 word game_turn;
 word game_year;
 
@@ -234,16 +237,15 @@ static void centre_on(byte ax, byte ay)
     dirty = 1;
 }
 
-// Where a people just met was seen, brought into view above the middle of
-// the window, which the greeting's popup is about to cover -- or below it,
-// near the bottom of the map, where the view cannot go far enough down.
-// Row 1, so that whichever of the player's is next to it is in view too
-// if it is below, as it is half the time.
+// (ax, ay) brought into view above the middle of the window, which a popup
+// is about to cover -- or below it, near the bottom of the map, where the
+// view cannot go far enough down. Row 1, so that whichever of the
+// player's is next to it is in view too if it is below, as it is half the
+// time: for a people just met, and for a fight.
 #define MET_ROW 1               // the window row of the tile's top
 #define MET_ROW_BELOW 17
-void show_met(void)
+static void show_at(byte ax, byte ay)
 {
-    byte ax = diplomacy_ax, ay = diplomacy_ay;
     int y = (int)MAP_CELL_Y(ax, ay) - MET_ROW;
 
     centre_on(ax, ay);
@@ -251,6 +253,11 @@ void show_met(void)
     if (y < VIEW_MIN_OFF_Y) y = VIEW_MIN_OFF_Y;
     if (y > VIEW_MAX_OFF_Y) y = VIEW_MAX_OFF_Y;
     off_y = (word)y;
+}
+
+void show_met(void)
+{
+    show_at(diplomacy_ax, diplomacy_ay);
 }
 
 // ------------------------------------------------------------------- turns
@@ -291,7 +298,8 @@ void select_unit(byte after)
 // --------------------------------------------------------------- orders
 
 // The active unit u attacks (nx, ny) -- after a declaration of war, if it
-// takes one -- and the panel says how it went.
+// takes one. How it went is a popup, as for every fight of the human's
+// (fight.h), shown by game_run().
 static void attack(byte u, byte nx, byte ny)
 {
     byte kind = unit_kind[u];
@@ -309,21 +317,8 @@ static void attack(byte u, byte nx, byte ny)
         if (!popup_ask_shown()) return;
         declare_war(PLAYER_HUMAN, o);
     }
-    line_clear();
-    switch (combat_attack(u, nx, ny)) {
-    case COMBAT_WON:
-        line_add_unit(combat_owner, combat_kind);
-        message(line, "destroyed");
-        break;
-    case COMBAT_LOST:
-        line_add("Your ");
-        line_add(unit_kind_name[kind]);
-        message(line, "was destroyed");
-        break;
-    default:
-        message("Captured", city_name_of(combat_city));
-        break;
-    }
+    message("", "");
+    combat_attack(u, nx, ny);
     dirty = 1;
     hover_dirty = 1;
     select_unit(u);
@@ -701,6 +696,8 @@ byte game_run(void)
 {
     byte key;
 
+    fight_shown = 0;
+    fight_placed = 0;
     draw_frame();
     minimap_init();
     draw_status();
@@ -752,8 +749,24 @@ byte game_run(void)
         // greeted after the redraw, so that they are on the map behind the
         // greeting -- the popup that said so used to leave the player to
         // find them.
-        // The letters wait for the greetings, which come first.
-        if (contact) {
+        // The letters wait for the greetings, which come first. Fights
+        // come before them all: each is brought into view, and shown
+        // after the redraw, the units that died gone from the map; then
+        // the view goes back to the unit with the orders.
+        if (fight_shown < fight_count) {
+            if (!fight_placed) {
+                show_at(fight_ax[fight_shown], fight_ay[fight_shown]);
+                fight_placed = 1;
+            } else {
+                fight_show(fight_shown);
+                fight_placed = 0;
+                if (++fight_shown == fight_count) {
+                    fight_shown = fight_count = 0;
+                    if (unit_active != UNIT_NONE)
+                        centre_on(unit_ax[unit_active], unit_ay[unit_active]);
+                }
+            }
+        } else if (contact) {
             contact = 0;
             greet |= diplomacy_contact();
             if (greet) show_met();

@@ -476,8 +476,10 @@ terrain is drawn, and their overlays are drawn after the next row's terrain.
 | Production | every city adds its shields (its own hexagon's, at least 1, plus its best neighbour's); one that reaches the cost of what it is building puts the unit on its hexagon, or finishes the temple or the wonder, and keeps the surplus |
 | New turn | the turn number goes up, the year moves on ten years from 1600 BC, and every unit gets its moves back |
 
-Anything that happened to the player's units and cities during the other
-players' turns is reported in the panel ("Barbarian attack / a city lost"),
+Every fight the player's units and cities are in, whether the player's
+own attack or one during the other players' turns, is brought into view
+and told in a popup ("Mycenae was burnt to the ground by a Barbarian
+Raider."),
 and what the other rulers have to say in letters ("Say to Agamemnon,
 Wanax of Mycenae: thus says Suppiluliuma, Great King of Hatti. …").
 The game is over when the player has lost the last city, or, before

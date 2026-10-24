@@ -209,7 +209,7 @@ buffers at the default `$FF80000` and corrupts the display.
 | `$2001-$5FFF`, `$8000-$9FFF` | 24 KB | the resident program: code, data, BSS, C stack. About 1.1 KB free, nearly all at the top of `$2001-$5FFF` |
 | `$6000-$7FFF` | 8 KB | the code window (`src/region.h`); as loaded, region 0 — the title, setup and help screens (and the Civilopedia's pages), save and load, the sheet's and the map's loaders, the owners' flags, the end of a turn and a game's start (`src/turn.c`), the computer players' starts (`src/aiplace.c`), the hover readout (`src/hover.c`), the boot splash (`title_splash()`). 0.4 KB free |
 | `$13000-$14FFF` | 8 KB | code slot 1: region 1, from `SEVENSHIPS.R1` by way of attic: the computer players and their ferrying, the cities' yields and growth, bronze. 0.8 KB free |
-| `$15000-$16FFF` | 8 KB | code slot 2, shared: region 2 (Top Five Cities, the fights' popups, the builders' improvements, what the computer players' cities build and where their builders work, `src/aibuild.c`, and where their settlers found cities, `src/aisite.c`; 3.1 KB free) region 7 (the city screen and buying, `src/cityscreen.c`; 2.2 KB free) region 3 (diplomacy; 2.1 KB free) region 4 (trade, the ships' routes, exploring and fishing, merchant ships and emporia; 1.5 KB free) region 5 (the Crisis and the collapse, the score and the end, the pictures, `src/crisis.c`, `src/score.c`, `src/picture.c`; 2.2 KB free) region 6 (the menus and what their items do, the treasury, buildings and wonders, `src/menu.c`, `src/command.c`, `src/treasury.c`, `src/culture.c`, `src/cities.c`; 0.3 KB free), whichever was called last. **Slot 1 is also the sheet loader's staging area at boot** (`STAGING` in `src/sheet.c`), before region 1 is first called |
+| `$15000-$16FFF` | 8 KB | code slot 2, shared: region 2 (Top Five Cities, the fights' popups, the builders' improvements, what the computer players' cities build and where their builders work, `src/aibuild.c`, and where their settlers found cities, `src/aisite.c`; 3.1 KB free) region 7 (the city screen and buying, `src/cityscreen.c`; 2.2 KB free) region 3 (diplomacy; 2.1 KB free) region 4 (trade, the ships' routes, exploring and fishing, merchant ships and emporia; 1.5 KB free) region 5 (the Crisis and the collapse, the score and the end, the pictures, the military advisor, `src/crisis.c`, `src/score.c`, `src/picture.c`, `src/military.c`; 0.8 KB free) region 6 (the menus and what their items do, the treasury, buildings and wonders, `src/menu.c`, `src/command.c`, `src/treasury.c`, `src/culture.c`, `src/cities.c`; 0.3 KB free), whichever was called last. **Slot 1 is also the sheet loader's staging area at boot** (`STAGING` in `src/sheet.c`), before region 1 is first called |
 | `$17000-$1EFFF` | 32 KB | the packed tile sheet's second area, where regions 3 to 6 would have been: whatever rows did not fit bank 5's; with bank 5's, 7.6 KB free (`tools/mktiles.py` says) |
 | `$A000-$BFFF` | 8 KB | `highram`, under the BASIC ROM, banked out by `src/bank.s`: `map_tile`, the unit and city arrays, the sprite blocks, the AI's headings, the staging buffers of the texts and the regions, the texts' line buffers, the sheet loader's buffers, the saved VIC registers, the AI's exploration memory, the resource list, the sheet's row tables, the peoples' relations and attitudes and the letters' names, the trade deals, the emporia, the pictures' staging buffer, the treasuries; about 1.4 KB free — `HIGH_BSS` in `src/mega65.h` moves a variable there, and **the startup does not clear it** |
 | `$1600-$1EFF` | 2304 | `zpsave` (56 bytes, BASIC's zero page during the run), then `lowfree`: the popup's 400-byte text and the scratch buffers of the view and the minimap, and the sea routes' search (`src/path.c`), 990 bytes free — `LOW_FREE` in `src/mega65.h` moves a variable there |
@@ -954,7 +954,15 @@ for anything else, or no unit wanting orders, it is empty and does not
 open; its items do what `b` and `f` do. World has **Top Five Cities**
 (`src/topcities.c`, region 2): the five largest cities the player has
 seen, whoever's, with their people and size; and **Score** (**The end**). Advisors has **Diplomacy**
-(see **Contact** below) and **Finance** (**The treasury**), and since
+(see **Contact** below) and **Finance** (**The treasury**); **F1 to F4
+open the four advisors from the map** (24 Oct 2026, the user's: Cities,
+Military, Diplomacy, Finance, and the dropdown says so, "F1 Cities");
+**Military** (`military_screen()`, `src/military.c`, region 5, 24 Oct
+2026) is a row for each kind of unit but the raider, with how many the
+human has, how many fortified and how many aboard a galley, and the
+kind's attack, defence and moves; then the units in all, the free ones
+and the upkeep (**The treasury**), and the peoples met it is at war
+with; and since
 23 Oct 2026 **Cities** first (`cities_screen()` in `src/cities.c`, region
 6, called straight from `src/command.c`): the human's cities after
 Civilization's City Status — size, food a turn after what the citizens
@@ -2099,22 +2107,24 @@ with a builder; MEGA or CTRL with a menu title's first letter (`g o a w d h`) op
 after the others, `f` fortifies, `c` centres the view on the active unit; Return ends the turn; the cursor keys
 scroll; ESC or RUN/STOP quits to BASIC, after asking with `popup_ask()`
 (Esc again is No). `w a s d` do not scroll.
-**HELP or F1 opens the help screen** (`src/help.c`, and what it says is
+**HELP opens the help screen** (PageUp in xemu, which maps it there) (`src/help.c`, and what it says is
 `res/text/help.txt`; see **Texts**), which lists all of this; the map screen's bottom row only says "HELP for the keys". It takes
 over the screen like the city screen, and `draw_screen()` puts the map
 back. HELP arrives in `$D610` as `$1F` (mega65-core's
-`matrix_to_ascii.vhdl`, which xemu copies), and `input_poll()` returns it
-as `KEY_HELP`, F1's code, so `FAKE_KEYS` presses it as 241.
+`matrix_to_ascii.vhdl`, which xemu copies), `KEY_HELP`, so `FAKE_KEYS`
+presses it as 31. Until 24 Oct 2026 F1 was help too, as 241, and the
+advisors took it.
 
 **The game knows when it is in xemu**: bit 5 of `$D60F` is set on a real
 MEGA65 and clear in xemu, read into `input_real_hw` by `input_init()`. In
-xemu, which has no HELP key and a PC keypad, the hint and the help screen
-say F1, and **keypad 7 9 4 6 1 3 move the unit** — but only with
+xemu, which has HELP on PageUp and a PC keypad, the hint and the help
+screen say PgUp, and **keypad 7 9 4 6 1 3 move the unit** — but only with
 `res/xemu-keymap.cfg`, which `make run` passes with `-keymap`. Stock xemu
 gives keypad 2 4 6 8 to its fake joystick and 7 9 1 3 to nothing; the
-keymap turns them into F3-F8 (`$F3`-`$F8`, `KEY_PAD_FIRST`), which
-`unit_key()` takes only when `input_real_hw` is 0. F3-F8 because the game
-uses none of them and xemu keeps F9-F11 for hot keys. **The Orders
+keymap turns them into the MEGA65's F5-F10 (`$F5`-`$FA`,
+`KEY_PAD_FIRST`), which `unit_key()` takes only when `input_real_hw` is
+0: keys the game has no other use for, F1-F4 being the advisors' (F3-F8
+until then). **The Orders
 menu gives each item's key** ("i: Irrigate", "p: Build a Pasture").
 
 **Tried on a real MEGA65 and it works** (18 Oct 2026, milestones 1-3):
@@ -2330,7 +2340,7 @@ suspect when something behaves oddly:
 **Long texts live in attic RAM, not in the 32 KB.** Each is a file in
 `res/text/`, plain ASCII with a little markup in braces — `{at X Y}`,
 `{tab N}`, a colour such as `{key}` or `{rev red}`, and `{A|B}` for
-what differs between a real MEGA65 (A) and xemu (B), such as `{HELP|F1}`
+what differs between a real MEGA65 (A) and xemu (B), such as `{HELP|PgUp}`
 — all described in `tools/mktext.py`'s docstring. The Makefile's `TEXTS`
 lists them, **and the order there is the numbering**: `mktext.py` packs
 them into `build/text.pak` (`TEXT.PAK` on the disk) and writes

@@ -11,10 +11,6 @@
 // control port this pair belongs to is not the same in xemu as on the
 // machine** (Ozmoo found the mouse on port 1 on real hardware and on port 2
 // under xemu), so the button is taken from both ports below.
-// What $D610 delivers for HELP (mega65-core's matrix_to_ascii.vhdl, which
-// xemu copies), handed on as KEY_HELP.
-#define KEYBOARD_HELP 0x1f
-
 // The modifier keys held now, which is near enough to when the key in $D610
 // was pressed for a scan once a frame. Needed for CTRL, whose letters arrive
 // as control codes that clash with Return, Tab and RUN/STOP's 3; MEGA's
@@ -368,7 +364,7 @@ byte input_poll(void)
             return KEY_MEGA('a' - 1 + key);
         if ((mods & MOD_MEGA) && key >= 'a' && key <= 'z')
             return KEY_MEGA(key);
-        return key == KEYBOARD_HELP ? KEY_HELP : key;
+        return key;
     }
 
     // --- either fire button, on either port, is the mouse button ---

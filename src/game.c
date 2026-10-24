@@ -150,8 +150,8 @@ static void draw_frame(void)
         screen_putsxy(VIEW_LEFT + VIEW_COLUMNS - 17, SCREEN_ROWS - 1,
                       "HELP for the keys", TEXT_COLOUR);
     else
-        screen_putsxy(VIEW_LEFT + VIEW_COLUMNS - 15, SCREEN_ROWS - 1,
-                      "F1 for the keys", TEXT_COLOUR);
+        screen_putsxy(VIEW_LEFT + VIEW_COLUMNS - 17, SCREEN_ROWS - 1,
+                      "PgUp for the keys", TEXT_COLOUR);
 }
 
 void draw_status(void)
@@ -844,6 +844,19 @@ byte game_run(void)
             break;
         case KEY_HELP:
             open_help(TEXT_HELP);
+            break;
+        // The advisors, as the Advisors menu says.
+        case KEY_F1:
+            game_menu_command(MENU_CITIES);
+            break;
+        case KEY_F2:
+            game_menu_command(MENU_MILITARY);
+            break;
+        case KEY_F3:
+            game_menu_command(MENU_DIPLOMACY);
+            break;
+        case KEY_F4:
+            game_menu_command(MENU_FINANCE);
             break;
         default:
             if (KEY_IS_MEGA(key)) {

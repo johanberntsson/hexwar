@@ -232,6 +232,7 @@ stub:       .macro  name, target, region
 ; Region 5, slot 2: the Crisis, the score and the end of the game, and the
 ; pictures.
             stub    score_screen, score_screen_r5, 5
+            stub    military_screen, military_screen_r5, 5
             stub    crisis_turn, crisis_turn_r5, 5
             stub    picture_show, picture_show_r5, 5
             stub    picture_end, picture_end_r5, 5

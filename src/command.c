@@ -15,6 +15,7 @@
 #include "score.h"
 #include "text.h"
 #include "treasury.h"
+#include "military.h"
 #include "unit.h"
 
 #pragma clang section text="r6text" rodata="r6rodata"
@@ -38,6 +39,10 @@ void game_menu_command(byte command)
         break;
     case MENU_FINANCE:
         finance_screen();
+        draw_screen();
+        break;
+    case MENU_MILITARY:
+        military_screen();
         draw_screen();
         break;
 #ifdef DEBUG_MENU

@@ -1,4 +1,4 @@
-# The help screen: HELP or F1 on the map, or Help/Keyboard Control.
+# The help screen: HELP (PageUp in xemu) on the map, or Help/Keyboard Control.
 # The markup is described in tools/mktext.py.
 {at 25 0}{head}Seven Ships of the Enemy: keys
 {at 2 3}{head}Moving a unit
@@ -31,6 +31,8 @@
 {head}The game
 {key}menu bar{tab 10}{text}click a title to open it
 {key}{MEGA+G...|Alt+G...}{tab 10}{text}Game, Orders... menu
-{key}{HELP|F1}{tab 10}{text}this screen
+{key}F1-F4{tab 10}{text}cities, military,
+{tab 10}diplomacy, finance
+{key}{HELP|PgUp}{tab 10}{text}this screen
 {key}Esc{tab 10}{text}quit to BASIC
-{at 0 24}{grey}{HELP|F1}, Esc or Return to go back{at 72 24}{rev red} EXIT 
+{at 0 24}{grey}{HELP|PgUp}, Esc or Return to go back{at 72 24}{rev red} EXIT 

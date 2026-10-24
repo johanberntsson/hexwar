@@ -88,11 +88,12 @@ static const char *const debug_items[] = { "Show Map", "Play 50 Turns" };
 static const byte debug_commands[] = { MENU_SHOW_MAP, MENU_PLAY_50 };
 #endif
 
+// With their keys on the map.
 static const char *const advisors_items[] = {
-    "Cities", "Diplomacy", "Finance"
+    "F1 Cities", "F2 Military", "F3 Diplomacy", "F4 Finance"
 };
 static const byte advisors_commands[] = {
-    MENU_CITIES, MENU_DIPLOMACY, MENU_FINANCE
+    MENU_CITIES, MENU_MILITARY, MENU_DIPLOMACY, MENU_FINANCE
 };
 
 static const char *const world_items[] = { "Top Five Cities", "Score" };
@@ -115,7 +116,7 @@ static const byte *const menu_commands[MENUS + 4] = {
     debug_commands, help_commands, options_commands, 0, 0, 0
 };
 static byte menu_count[MENUS + 4] = {
-    3, 0, 3, 2, 2, 4, 1, TERRAIN_COUNT, UNIT_PAGES, BUILDING_PAGES
+    3, 0, 4, 2, 2, 4, 1, TERRAIN_COUNT, UNIT_PAGES, BUILDING_PAGES
 };
 #else
 static const char *const *const menu_items[MENUS + 4] = {
@@ -127,7 +128,7 @@ static const byte *const menu_commands[MENUS + 4] = {
     help_commands, options_commands, 0, 0, 0
 };
 static byte menu_count[MENUS + 4] = {
-    3, 0, 3, 2, 4, 1, TERRAIN_COUNT, UNIT_PAGES, BUILDING_PAGES
+    3, 0, 4, 2, 4, 1, TERRAIN_COUNT, UNIT_PAGES, BUILDING_PAGES
 };
 #endif
 

@@ -35,17 +35,25 @@
 // (input_x, input_y). $D610 never delivers it -- the F keys start at 241.
 #define KEY_CLICK 0xf0
 
-// HELP, or F1: $D610's code for F1. input_poll() turns HELP's own code into
-// it, so the two are one key to the game.
-#define KEY_HELP 0xf1
+// HELP: $D610's code for it (mega65-core's matrix_to_ascii.vhdl, which
+// xemu copies). xemu gives it to the PC's PageUp. Until 24 Oct 2026 F1 was
+// help as well, and HELP was handed on as F1's code.
+#define KEY_HELP 0x1f
 
-// xemu has neither HELP nor a keypad of its own, so there the game takes F1
-// for help and the keypad for moving. **The keypad needs `make run`'s
-// res/xemu-keymap.cfg**, which gives keypad 7 9 4 6 1 3 to F3-F8 -- keys
-// nothing else here wants, and that xemu does not keep for hot keys -- so
-// they arrive as $F3-$F8. Stock xemu gives the keypad to its fake joystick.
-#define KEY_PAD_FIRST 0xf3
-#define KEY_PAD_LAST 0xf8
+// F1-F4 are the advisors: Cities, Military, Diplomacy, Finance. On the
+// MEGA65 F2 and F4 are shifted F1 and F3.
+#define KEY_F1 0xf1
+#define KEY_F2 0xf2
+#define KEY_F3 0xf3
+#define KEY_F4 0xf4
+
+// xemu has no keypad of its own, so there the game takes the PC's keypad for
+// moving. **It needs `make run`'s res/xemu-keymap.cfg**, which gives keypad
+// 7 9 4 6 1 3 to F5-F10 -- keys nothing else here wants -- so they arrive as
+// $F5-$FA. Stock xemu gives the keypad to its fake joystick. (F3-F8 until
+// the advisors took F3 and F4.)
+#define KEY_PAD_FIRST 0xf5
+#define KEY_PAD_LAST 0xfa
 
 // MEGA and a letter, which the game takes for the PC's Alt and a letter: the
 // menu bar's titles. $D610 delivers MEGA+a-z as $C1-$DA, and input_poll()

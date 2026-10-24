@@ -1,10 +1,5 @@
 --- OPEN ---
 
-We need a military advisor screen too. For now it can just list how many units we have of
-each category (warrior, chariot, spearman etc). And let's add shortcuts, and write these
-in the menu: F1 Cities, F2 = Military, F3 = Diplomacy, F4 = Finance. Since F1 is currently
-Help in the emulator we'll change it to F12
-
 Two rings, to tune: CITY_SPACING (4) for the AI now that outer rings overlap, and whether
 settlers should weigh the outer ring's resources less. The Egyptians fell by turn 300 on
 seed 7 in the first autoplay with them
@@ -21,8 +16,13 @@ NEXT (23 Oct 2026, end of the day; CLAUDE.md "Where to start next time"):
 5. Tune from play: the Crisis, the collapse, merchant ships, gold, legacy's weight in the
    score; escorts for merchant ships; AI galleys against the Sea Peoples
 Room: resident 0.5 KB, region 0 0.4 KB, region 1 0.8 KB, region 2 3.1 KB, region 3 2.1 KB,
-region 4 1.5 KB, region 5 2.2 KB, region 6 0.3 KB, region 7 2.2 KB, highram 1.2 KB; the tile
+region 4 1.5 KB, region 5 0.8 KB, region 6 0.3 KB, region 7 2.2 KB, highram 1.2 KB; the tile
 sheet 7.6 KB, about five units
+
+DONE (24 Oct 2026): Advisors/Military (src/military.c, region 5): units of each kind, fortified,
+aboard, their figures, the upkeep and the wars. F1-F4 open Cities, Military, Diplomacy and
+Finance from the map, and the menu says so. HELP is HELP only (PageUp in xemu); xemu's keypad
+moves are F5-F10 now (res/xemu-keymap.cfg)
 
 DONE (24 Oct 2026): upkeep in gold against exploits: 4 units free and 3 a city, then 1 gold
 a unit a turn (short of gold, a unit a turn is disbanded); 10 cities free, then k*k gold a

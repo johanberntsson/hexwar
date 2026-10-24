@@ -510,7 +510,7 @@ on a hexagon, which the cursor keys move, and Return
 does what a click on that hexagon would. Tab or ESC ends it. MEGA (Alt in
 xemu) and a menu title's first letter opens that menu.
 
-Otherwise the cursor keys scroll the view, HELP (F1 in xemu) lists the keys, and ESC
+Otherwise the cursor keys scroll the view, HELP (PageUp in xemu) lists the keys, F1 to F4 open the advisors (cities, military, diplomacy and finance), and ESC
 or RUN/STOP quits. In xemu, keypad 7, 9, 4, 6, 1 and 3 move a unit as well.
 
 ## Combat

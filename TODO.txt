@@ -4,20 +4,82 @@ Two rings, to tune: CITY_SPACING (4) for the AI now that outer rings overlap, an
 settlers should weigh the outer ring's resources less. The Egyptians fell by turn 300 on
 seed 7 in the first autoplay with them
 
-NEXT (23 Oct 2026, end of the day; CLAUDE.md "Where to start next time"):
-1. Try on a real MEGA65: the two rings' city screen (keys stepping the arrow, space, clicks,
-   BUY, CHANGE, units 1-9), a new city's outer ring explored, the flag on a hexagon a nearer
-   city has, city sizes; the chariot, horses and c; and from before, Advisors/Cities, the
-   temple and Lion Gate, Help/Buildings, the legacy victory, the menus from region 6
-2. Gold: the new upkeep for armies and realms (allowances in treasury.h) and more to spend on
+NEXT (24 Oct 2026, end of the day; CLAUDE.md "Where to start next time"):
+1. The user's play-testing: new items go at the top of this file
+2. Try on a real MEGA65: fight popups (own attacks, attacks in the other turns, several a
+   turn); p for pastures, chariots only with pastured horses, moving by Tab now the moving
+   keys are gone; Finance's upkeep rows; F1-F4 (F2/F4 shifted), Advisors/Military, HELP.
+   From 23 Oct: the two rings' city screen, the chariot, c, Advisors/Cities, the temple and
+   Lion Gate, the legacy victory
 3. Tune the AI to the two rings (above)
 4. More culture: more wonders (Pyramids, Palace of Knossos), clay tablets of knowledge
    (Linear B, law codes, the alphabet: a science of sorts), building art
-5. Tune from play: the Crisis, the collapse, merchant ships, gold, legacy's weight in the
-   score; escorts for merchant ships; AI galleys against the Sea Peoples
+5. Tune from play: the Crisis, the collapse, merchant ships, gold and the upkeep allowances
+   (treasury.h), legacy's weight in the score; escorts for merchant ships; AI galleys
+   against the Sea Peoples
 Room: resident 0.5 KB, region 0 0.4 KB, region 1 0.8 KB, region 2 3.1 KB, region 3 2.1 KB,
-region 4 1.5 KB, region 5 0.8 KB, region 6 0.3 KB, region 7 2.2 KB, highram 1.2 KB; the tile
-sheet 7.6 KB, about five units
+region 4 1.5 KB, region 5 0.8 KB, region 6 0.3 KB (a region 8 for the treasury is the next
+room there), region 7 2.2 KB, highram 1.1 KB; the tile sheet 7.6 KB, about five units
+
+Roads (milestone 6's last item): they need a map bit (none left in map_tile; a 320-byte
+bitmap would do at 128x20) and road art for six directions (alltiles' road_*.png are
+corner pieces, check whether they fit)
+
+Per-continent AI policy (attack/defend/transport), as Civ 1's, now there are boats and wars
+
+Placeholder art to replace: res_grain, res_fish, res_cedar, res_dye (and res_olives and
+res_wine are recoloured orange trees)
+
+Diplomacy not yet: the vassals' formula, alliances, news of wars between the others
+
+The AI ferries settlers now, but rarely: most peoples reach AI_CITY_CAP (6) on their own land
+before they have a galley. Raise the cap (7-8, MAX_CITIES is 32 shared) if overseas cities
+are wanted sooner.
+
+Seed 7 has a landmass the shallows do not reach: its people (the Hittites) meets nobody in
+300 turns, even with fishing boats. Needs open-sea ships, or a map change.
+
+Trade to tune once played: AIs only ask one turn in eight; goods are few (most peoples
+own one or two), so deals are rare -- two in 300 turns of autoplay on seed 1.
+
+Diplomacy to tune once it has been played: wars come from crowding (cities of two
+peoples within 7 hexagons), and in 300 turns of autoplay on seed 1 only the Egyptians
+and Canaanites fought. A computer player accepts a ceasefire the turn the human declares
+war on it if it is the weaker.
+
+More wonders and monuments for the legacy win (the temple and the Lion Gate are in): the
+Pyramids etc if they fit the time period (the oldest pyramids are probably too old), and
+Help/Wonders with descriptions
+
+Evenually need to adjust game/AI for the difficulty levels (probably need to cheat
+on highter levels to make the game challenging)
+
+The Civilopedia's pages (Help/Terrain Types, Help/Military Units) are placeholders
+
+--- IDEAS, not yet decided implement or not --
+
+You can irrigate and mine etc outside the city area
+
+Civ 1 and 2 didn't have the concept of borders and allowed city spamming to starve AI
+
+--- MILESTONES ---
+
+Each milestone includes the AI's use of what it adds, so the computer players keep up.
+Ideas for the AI: documentation/civ1-civ2-ai-analysis-sources.txt and OpenCivOne
+(https://codeberg.org/rhorvat/OpenCivOne).
+
+Milestone 9: trade
+- Maybe: find_site() could value fish more, so that more cities are founded by it
+
+Milestone 10: the end game -- the Bronze Age Collapse (DRAFT, vision.md sections 4 and 5)
+A game is 400 turns, as Civ 1's: growth and rivalry first, then the Crisis, then the end.
+- Still open for the Crisis: the computer players' galleys fighting the Sea Peoples; the
+  raiders' own art (now the galley with a barbarian flag); a deal ending when the sender
+  no longer owns the good, or a raid cuts its route; shocks weighted by region and growing
+  towards the end
+- The collapse: half a people's cities lost as a second trigger, besides the capital
+
+--- DONE ---
 
 DONE (24 Oct 2026): Advisors/Military (src/military.c, region 5): units of each kind, fortified,
 aboard, their figures, the upkeep and the wars. F1-F4 open Cities, Military, Diplomacy and
@@ -78,20 +140,10 @@ soldiers and galleys as Civ 1's does. Panel, Advisors/Finance, a Gold column in 
 Need a financial adviros screen that shows main stats - income and expenses
 - DONE as Advisors/Finance (income only: there are no expenses yet)
 
-The AI ferries settlers now, but rarely: most peoples reach AI_CITY_CAP (6) on their own land
-before they have a galley. Raise the cap (7-8, MAX_CITIES is 32 shared) if overseas cities
-are wanted sooner.
-
-Seed 7 has a landmass the shallows do not reach: its people (the Hittites) meets nobody in
-300 turns, even with fishing boats. Needs open-sea ships, or a map change.
-
-Trade to tune once played: AIs only ask one turn in eight; goods are few (most peoples
-own one or two), so deals are rare -- two in 300 turns of autoplay on seed 1.
-
-Diplomacy to tune once it has been played: wars come from crowding (cities of two
-peoples within 7 hexagons), and in 300 turns of autoplay on seed 1 only the Egyptians
-and Canaanites fought. A computer player accepts a ceasefire the turn the human declares
-war on it if it is the weaker.
+Need city advisor screen (list of cities and basic stats (production etc). POssible to go into
+a city screen by selecting on city from this advisor screen.
+- DONE (23 Oct 2026): Advisors/Cities (src/cities.c): size, food, shields, trade, production
+  and turns; Return or a click opens the city screen, and back to the list after it
 
 Need cultural building and monument/wonders for the lasting legacy win. This also means
 wonders and Help/Wonders screen with descriptions. The Lion Gate, Pyramids etc
@@ -99,27 +151,104 @@ wonders and Help/Wonders screen with descriptions. The Lion Gate, Pyramids etc
 - DONE in part (23 Oct 2026): the temple and the Lion Gate, Help/Buildings, the legacy victory.
   More wonders to come
 
-Need city advisor screen (list of cities and basic stats (production etc). POssible to go into
-a city screen by selecting on city from this advisor screen.
-- DONE (23 Oct 2026): Advisors/Cities (src/cities.c): size, food, shields, trade, production
-  and turns; Return or a click opens the city screen, and back to the list after it
+Milestone 10: the end game -- the Bronze Age Collapse (vision.md sections 4 and 5): done parts
+- DONE (22 Oct 2026): calendar, 2 years a turn to turn 176 (1250 BC), then 1; the Crisis
+  is due at turn 226 (1200 BC) and the game ends after turn 400 (1026 BC). Turns left on
+  World/Score
+- DONE (22 Oct 2026, src/crisis.c, region 5): omens (a rumour at turn 200, a warning at
+  215, Ammurapi's letter at 226), the Sea Peoples (barbarian galleys with warriors, later
+  spearmen, off the richest coastal cities; the barbarians' AI moves them), shocks
+  (drought, earthquake, plague, revolt), pleas from rulers losing cities, trade deals lost
+  at sea, AI coastal guards. The unit list is 96 now (64 was full by the Crisis)
+- DONE (22 Oct 2026): the raider, the Sea Peoples' own unit (attack 3, defence 1,
+  alltiles' swordsman), and raids 3 in 16 rising to 8. Warriors with attack 1 almost never
+  took a guarded city. 400 turns: one people of eight fell, one broke up, citizens down a
+  tenth to a half. A revolt now puts the city in the rebels' hands
+- DONE (22 Oct 2026): collapse of the computer players, Civ 1's civil war: a people that
+  loses its capital (its first city) with 3 or more cities left loses the cities furthest
+  from its largest, a third of its citizens, to the rebels -- barbarian-owned cities, which
+  keep a guard and can be taken back. Not done: half its cities lost as a second trigger
+- DONE (22 Oct 2026): the end at turn 400, or when the human's people is the last left, or
+  is out; the final screen (src/score.c, region 5) with each people's cities, citizens,
+  goods, deals and score (1 a citizen, 2 a city, 2 a good, 3 a deal) and the outcome:
+  defeat, survival victory, or hegemony victory with the highest score. Game over now goes
+  to the title, not to BASIC. Retire shows the same screen, and World/Score during the game
+- DONE (22 Oct 2026): screens/' pictures, in the map window with their own palette: the
+  intro as a splash at boot while the sheet and map load, and defeat, win_survival or
+  win_hegemony before the final score (src/picture.c, res/*.pic from screens/Makefile).
+  win_legacy needs monuments, vision.md 5B, a milestone of its own. The survival bonus left out: everybody standing would get it, and the fallen score
+  next to nothing anyway
+- Was: the Crisis is mild -- in 400-turn autoplays one people of eleven fell (seed 1,
+  the Hittites) and citizens fell a quarter to a half. Knobs: SEA_CAP (20), the raid rate,
+  the fleet size, in src/crisis.c. Fixed on the way: AI cities built spearmen over the cap
+  without end (35 on seed 7), since spearman_in() counted one that only passed through
+- Memory: the Crisis goes in region 5 with the score (6.2 KB free), once a turn from
+  end_turn(), like diplomacy_turn(); its state saved (SAVE_VERSION). The AI's part (Sea
+  Peoples, coastal guards) needs room in region 1 first (123 bytes free)
+- Test: Play 50 Turns to 400 with AUTOPLAY_TURNS=200, and see that the game ends, that
+  peoples survive the Crisis about half the time, and that the score screen is right
 
-Evenually need to adjust game/AI for the difficulty levels (probably need to cheat
-on highter levels to make the game challenging)
+Milestone 9: trade: done parts
+- DONE (21 Oct 2026): gift exchange of goods by letter. Olives, wine, cedar, copper, tin
+  and dye; a deal is a good for a good, or a gift, for as long as the two are at peace; a
+  good received counts for bronze; partners like each other more; AIs ask for what they
+  lack (copper/tin first) and demand tribute when strong and cold; the human answers by
+  letter and proposes (or ends a trade) with T on Advisors/Diplomacy (src/trade.c, region 4)
+- DONE (21 Oct 2026): the galley (Civ 1's trireme): cedar and a coastal city, the shallows
+  only, carries 2 land units (step onto it to board; woken when it stops next to land);
+  computer players build one and explore with it. Cedar 12% -> 25% of forests
+- DONE (21 Oct 2026): AI ferrying of settlers: a settler that cannot walk to its site asks
+  for the galley, boards, and is landed near the site; galleys route along the shallows by a
+  breadth-first search (src/path.c); with a galley the AI looks 16 hexagons for a site
+- DONE (22 Oct 2026): the fishing boat (Civ 4's work boat): a coastal city, no resources,
+  cost 20, 2 moves, the galley's waters, carries nobody. Each computer player builds one
+  early and explores the coasts with it (src/boat.c, region 4: the nearest unseen 8x4
+  block with shallows, by sea_route()); galleys with nobody to ferry explore the same way.
+  First contact, 300 turns of autoplay, pairs of six met: seed 1 3 -> 6 (turns 23-109),
+  seed 3 1 -> 6 (34-131), seed 7 1 -> 3 (53-93)
+- DONE (22 Oct 2026): the fishing boat works fish (i, Orders/Fish): it is used up and the
+  fish becomes fishing boats, MAP_IRRIGATED on the shallows (+1 food, 4/0/2), drawn with
+  alltiles' tile_fish_improved and no irrigation overlay. AI: the first boat explores, then
+  fishes; a coastal city of size 2+ with unworked fish builds another, over the cap. In
+  300 turns every fish next to a city was worked (1-2 a map: few cities are by fish)
+- DONE (22 Oct 2026): AI ferrying of armies: a warrior or spearman that comes no nearer the
+  enemy in 6 turns asks for the galley, which takes it to the nearest enemy city. In 400
+  turns of autoplay 27 boarded on seed 1, 2 on seed 7
+- DONE (22 Oct 2026): merchant ships (alltiles' cargo ship, a coastal city, cost 30, 3
+  moves) found emporia (b, Orders/Found Emporium) on an empty coast by trade goods; the
+  owner owns the goods round it, for bronze, trade and score. Drawn as the improvement bits'
+  fourth value (alltiles' bazaar); burnt by an enemy standing on it. The AI builds one at a
+  time without bronze and makes for copper or tin it lacks. 3-6 emporia a 400-turn game
+- DONE (23 Oct 2026): trade deals carried by merchant ships (see above). Later: escorts
 
-The Civilopedia's pages (Help/Terrain Types, Help/Military Units) are placeholders
+Milestone 8: basic diplomacy -- DONE (21 Oct 2026)
+- DONE: contact between all the peoples (adjacency); war, ceasefire (16 turns, then war)
+  and peace; an attitude per pair (temper per people, drift, grievances: war declared,
+  units by cities, cities crowding each other, refused offers; colder to the human by level)
+- DONE: computer players declare war, ask for ceasefires and offer peace by Civ 1's rules
+  (OpenCivOne Diplomacy.cs: one turn in four per pair, the stronger declares)
+- DONE: letters in the Amarna formulas, res/text/letter_*.txt, as popups; offers answered
+  Yes/No. The human proposes ceasefire/peace or declares war on Advisors/Diplomacy
+- Not yet: tribute and gifts (need trade), the vassals' formula, alliances, news of wars
+  between the others
 
---- IDEAS, not yet decided implement or not --
-
-You can irrigate and mine etc outside the city area
-
-Civ 1 and 2 didn't have the concept of borders and allowed city spamming to starve AI
-
---- MILESTONES ---
-
-Each milestone includes the AI's use of what it adds, so the computer players keep up.
-Ideas for the AI: documentation/civ1-civ2-ai-analysis-sources.txt and OpenCivOne
-(https://codeberg.org/rhorvat/OpenCivOne).
+Milestone 7: resources -- DONE (20 Oct 2026)
+- DONE: grain, fish, cattle, olives, wine, cedar, copper, tin, purple dye (vision.md
+  section 2), nine tiles in bank 1 (code region 4 given up for them); a list by hexagon row
+  in highram, not a layer; mapgen.py step 7 places them (tin only at the top and bottom
+  edges, no two adjacent); drawn a row behind the terrain; they add to yields; the hover
+  readout names them; find_site() values them; saved (SAVE_VERSION 8)
+- Placeholder art to replace: res_grain, res_fish, res_cedar, res_dye (and res_olives and
+  res_wine are recoloured orange trees)
+- DONE 7b: bronze. A player has a resource on one of its cities or mined next to one;
+  copper + tin = bronze = the spearman (1/2, 20 shields). Mined copper and tin have their
+  own tiles (alltiles' *_improved). AI builders mine them first, round any of their
+  cities; AI guards are spearmen with bronze, and warriors they replace are disbanded.
+  Tin: 4 edge nodes plus inland hills/mountains at 2/3 of copper's rate. In 200-turn
+  autoplays one people of four had bronze on seed 1, none on seeds 3 and 7
+- DONE: improved resources have their own tiles in code region 3's room (now the
+  sheet's): irrigated cattle (pasture), olives and wine (orchard recoloured). One tile
+  left. Fish's improved tile is fishing boats, made by a fishing boat (milestone 9)
 
 Milestone 6: yields and city growth -- DONE but for roads (20 Oct 2026)
 - DONE: food, shields and trade per terrain (src/growth.c, Civ 1's numbers); city size,
@@ -144,114 +273,6 @@ Milestone 6: yields and city growth -- DONE but for roads (20 Oct 2026)
 - Roads: still to do. They need tiles (there is room now) and a map bit
   (a 320-byte bitmap would do at 128x20)
 - Per-continent policy (attack/defend/transport) when there are boats and wars
-
-Milestone 7: resources -- DONE (20 Oct 2026)
-- DONE: grain, fish, cattle, olives, wine, cedar, copper, tin, purple dye (vision.md
-  section 2), nine tiles in bank 1 (code region 4 given up for them); a list by hexagon row
-  in highram, not a layer; mapgen.py step 7 places them (tin only at the top and bottom
-  edges, no two adjacent); drawn a row behind the terrain; they add to yields; the hover
-  readout names them; find_site() values them; saved (SAVE_VERSION 8)
-- Placeholder art to replace: res_grain, res_fish, res_cedar, res_dye (and res_olives and
-  res_wine are recoloured orange trees)
-- DONE 7b: bronze. A player has a resource on one of its cities or mined next to one;
-  copper + tin = bronze = the spearman (1/2, 20 shields). Mined copper and tin have their
-  own tiles (alltiles' *_improved). AI builders mine them first, round any of their
-  cities; AI guards are spearmen with bronze, and warriors they replace are disbanded.
-  Tin: 4 edge nodes plus inland hills/mountains at 2/3 of copper's rate. In 200-turn
-  autoplays one people of four had bronze on seed 1, none on seeds 3 and 7
-- DONE: improved resources have their own tiles in code region 3's room (now the
-  sheet's): irrigated cattle (pasture), olives and wine (orchard recoloured). One tile
-  left. Fish's improved tile is fishing boats, made by a fishing boat (milestone 9)
-
-Milestone 8: basic diplomacy -- DONE (21 Oct 2026)
-- DONE: contact between all the peoples (adjacency); war, ceasefire (16 turns, then war)
-  and peace; an attitude per pair (temper per people, drift, grievances: war declared,
-  units by cities, cities crowding each other, refused offers; colder to the human by level)
-- DONE: computer players declare war, ask for ceasefires and offer peace by Civ 1's rules
-  (OpenCivOne Diplomacy.cs: one turn in four per pair, the stronger declares)
-- DONE: letters in the Amarna formulas, res/text/letter_*.txt, as popups; offers answered
-  Yes/No. The human proposes ceasefire/peace or declares war on Advisors/Diplomacy
-- Not yet: tribute and gifts (need trade), the vassals' formula, alliances, news of wars
-  between the others
-
-Milestone 9: trade
-- DONE (21 Oct 2026): gift exchange of goods by letter. Olives, wine, cedar, copper, tin
-  and dye; a deal is a good for a good, or a gift, for as long as the two are at peace; a
-  good received counts for bronze; partners like each other more; AIs ask for what they
-  lack (copper/tin first) and demand tribute when strong and cold; the human answers by
-  letter and proposes (or ends a trade) with T on Advisors/Diplomacy (src/trade.c, region 4)
-- DONE (21 Oct 2026): the galley (Civ 1's trireme): cedar and a coastal city, the shallows
-  only, carries 2 land units (step onto it to board; woken when it stops next to land);
-  computer players build one and explore with it. Cedar 12% -> 25% of forests
-- DONE (21 Oct 2026): AI ferrying of settlers: a settler that cannot walk to its site asks
-  for the galley, boards, and is landed near the site; galleys route along the shallows by a
-  breadth-first search (src/path.c); with a galley the AI looks 16 hexagons for a site
-- DONE (22 Oct 2026): the fishing boat (Civ 4's work boat): a coastal city, no resources,
-  cost 20, 2 moves, the galley's waters, carries nobody. Each computer player builds one
-  early and explores the coasts with it (src/boat.c, region 4: the nearest unseen 8x4
-  block with shallows, by sea_route()); galleys with nobody to ferry explore the same way.
-  First contact, 300 turns of autoplay, pairs of six met: seed 1 3 -> 6 (turns 23-109),
-  seed 3 1 -> 6 (34-131), seed 7 1 -> 3 (53-93)
-- DONE (22 Oct 2026): the fishing boat works fish (i, Orders/Fish): it is used up and the
-  fish becomes fishing boats, MAP_IRRIGATED on the shallows (+1 food, 4/0/2), drawn with
-  alltiles' tile_fish_improved and no irrigation overlay. AI: the first boat explores, then
-  fishes; a coastal city of size 2+ with unworked fish builds another, over the cap. In
-  300 turns every fish next to a city was worked (1-2 a map: few cities are by fish)
-- Maybe: find_site() could value fish more, so that more cities are founded by it
-- DONE (22 Oct 2026): AI ferrying of armies: a warrior or spearman that comes no nearer the
-  enemy in 6 turns asks for the galley, which takes it to the nearest enemy city. In 400
-  turns of autoplay 27 boarded on seed 1, 2 on seed 7
-- DONE (22 Oct 2026): merchant ships (alltiles' cargo ship, a coastal city, cost 30, 3
-  moves) found emporia (b, Orders/Found Emporium) on an empty coast by trade goods; the
-  owner owns the goods round it, for bronze, trade and score. Drawn as the improvement bits'
-  fourth value (alltiles' bazaar); burnt by an enemy standing on it. The AI builds one at a
-  time without bronze and makes for copper or tin it lacks. 3-6 emporia a 400-turn game
-- DONE (23 Oct 2026): trade deals carried by merchant ships (see above). Later: escorts
-
-Milestone 10: the end game -- the Bronze Age Collapse (DRAFT, vision.md sections 4 and 5)
-A game is 400 turns, as Civ 1's: growth and rivalry first, then the Crisis, then the end.
-- DONE (22 Oct 2026): calendar, 2 years a turn to turn 176 (1250 BC), then 1; the Crisis
-  is due at turn 226 (1200 BC) and the game ends after turn 400 (1026 BC). Turns left on
-  World/Score
-- DONE (22 Oct 2026, src/crisis.c, region 5): omens (a rumour at turn 200, a warning at
-  215, Ammurapi's letter at 226), the Sea Peoples (barbarian galleys with warriors, later
-  spearmen, off the richest coastal cities; the barbarians' AI moves them), shocks
-  (drought, earthquake, plague, revolt), pleas from rulers losing cities, trade deals lost
-  at sea, AI coastal guards. The unit list is 96 now (64 was full by the Crisis)
-- DONE (22 Oct 2026): the raider, the Sea Peoples' own unit (attack 3, defence 1,
-  alltiles' swordsman), and raids 3 in 16 rising to 8. Warriors with attack 1 almost never
-  took a guarded city. 400 turns: one people of eight fell, one broke up, citizens down a
-  tenth to a half. A revolt now puts the city in the rebels' hands
-- Was: the Crisis is mild -- in 400-turn autoplays one people of eleven fell (seed 1,
-  the Hittites) and citizens fell a quarter to a half. Knobs: SEA_CAP (20), the raid rate,
-  the fleet size, in src/crisis.c. Fixed on the way: AI cities built spearmen over the cap
-  without end (35 on seed 7), since spearman_in() counted one that only passed through
-- Still open for the Crisis: the computer players' galleys fighting the Sea Peoples; the
-  raiders' own art (now the galley with a barbarian flag); a deal ending when the sender
-  no longer owns the good, or a raid cuts its route; shocks weighted by region and growing
-  towards the end; a revolting city going over to the rebels (barbarians own no cities,
-  so a revolt is rebels by the city for now)
-- DONE (22 Oct 2026): collapse of the computer players, Civ 1's civil war: a people that
-  loses its capital (its first city) with 3 or more cities left loses the cities furthest
-  from its largest, a third of its citizens, to the rebels -- barbarian-owned cities, which
-  keep a guard and can be taken back. Not done: half its cities lost as a second trigger
-- DONE (22 Oct 2026): the end at turn 400, or when the human's people is the last left, or
-  is out; the final screen (src/score.c, region 5) with each people's cities, citizens,
-  goods, deals and score (1 a citizen, 2 a city, 2 a good, 3 a deal) and the outcome:
-  defeat, survival victory, or hegemony victory with the highest score. Game over now goes
-  to the title, not to BASIC. Retire shows the same screen, and World/Score during the game
-- DONE (22 Oct 2026): screens/' pictures, in the map window with their own palette: the
-  intro as a splash at boot while the sheet and map load, and defeat, win_survival or
-  win_hegemony before the final score (src/picture.c, res/*.pic from screens/Makefile).
-  win_legacy needs monuments, vision.md 5B, a milestone of its own. The survival bonus left out: everybody standing would get it, and the fallen score
-  next to nothing anyway
-- Memory: the Crisis goes in region 5 with the score (6.2 KB free), once a turn from
-  end_turn(), like diplomacy_turn(); its state saved (SAVE_VERSION). The AI's part (Sea
-  Peoples, coastal guards) needs room in region 1 first (123 bytes free)
-- Test: Play 50 Turns to 400 with AUTOPLAY_TURNS=200, and see that the game ends, that
-  peoples survive the Crisis about half the time, and that the score screen is right
-
---- DONE ---
 
 The tile sheet is packed (22 Oct 2026): a tile row keeps only its characters with pixels,
 so 34 tiles took 49 KB rather than 68; rows go into bank 5 then bank 1, each row's bank and
@@ -314,7 +335,6 @@ Milestone 4, basic warfare
 - Allow attack (including barbarians), both for AI (if at war) and player. Need attack and defence points for warrior unit
 - Allow units as city defence
 - Losing the last city means game over (doesn't apply to barbarians)
-
 
 Probably need some scripting or cheat way of testing instead of just playing for hours
 - added Debug/Play 50 turns

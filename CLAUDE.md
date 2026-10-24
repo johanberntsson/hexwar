@@ -206,7 +206,7 @@ buffers at the default `$FF80000` and corrupts the display.
 
 | Address | Size | Contents |
 |---|---|---|
-| `$2001-$5FFF`, `$8000-$9FFF` | 24 KB | the resident program: code, data, BSS, C stack. About 1.1 KB free, nearly all at the top of `$2001-$5FFF` |
+| `$2001-$5FFF`, `$8000-$9FFF` | 24 KB | the resident program: code, data, BSS, C stack. About 0.5 KB free, nearly all at the top of `$2001-$5FFF` |
 | `$6000-$7FFF` | 8 KB | the code window (`src/region.h`); as loaded, region 0 — the title, setup and help screens (and the Civilopedia's pages), save and load, the sheet's and the map's loaders, the owners' flags, the end of a turn and a game's start (`src/turn.c`), the computer players' starts (`src/aiplace.c`), the hover readout (`src/hover.c`), the boot splash (`title_splash()`). 0.4 KB free |
 | `$13000-$14FFF` | 8 KB | code slot 1: region 1, from `SEVENSHIPS.R1` by way of attic: the computer players and their ferrying, the cities' yields and growth, bronze. 0.8 KB free |
 | `$15000-$16FFF` | 8 KB | code slot 2, shared: region 2 (Top Five Cities, the fights' popups, the builders' improvements, what the computer players' cities build and where their builders work, `src/aibuild.c`, and where their settlers found cities, `src/aisite.c`; 3.1 KB free) region 7 (the city screen and buying, `src/cityscreen.c`; 2.2 KB free) region 3 (diplomacy; 2.1 KB free) region 4 (trade, the ships' routes, exploring and fishing, merchant ships and emporia; 1.5 KB free) region 5 (the Crisis and the collapse, the score and the end, the pictures, the military advisor, `src/crisis.c`, `src/score.c`, `src/picture.c`, `src/military.c`; 0.8 KB free) region 6 (the menus and what their items do, the treasury, buildings and wonders, `src/menu.c`, `src/command.c`, `src/treasury.c`, `src/culture.c`, `src/cities.c`; 0.3 KB free), whichever was called last. **Slot 1 is also the sheet loader's staging area at boot** (`STAGING` in `src/sheet.c`), before region 1 is first called |
@@ -849,7 +849,15 @@ Advisors → Cities; then, from the user's play, `c` to centre on the
 active unit, the chariot and horses (**Chariots**), and **a city's reach
 of two rings** (**Yields and growth**, **The city screen**).
 **Confirmed on a real MEGA65** (23 Oct 2026): the treasury; the user was
-to test the rest more fully before the next session.
+to test the rest more fully before the next session. **24 Oct 2026**,
+from the user's play: a popup for every fight of the human's, with the
+view on it (**Combat**, after the barbarians); pastures, and horses
+needing one, with the moving keys `0 - p * : =` gone (**Pastures**,
+**Controls** in **The pointer**); the city-site search out of region 1
+(**Growing past 32 KB**); upkeep in gold for large armies and realms
+(**The treasury**); and Advisors → Military, with F1-F4 for the four
+advisors and HELP on PageUp in xemu (**The menu bar**). None of 24 Oct's
+work has been tried on a real MEGA65 yet.
 **Confirmed on a real MEGA65** (21 Oct 2026): all of 20 Oct 2026's
 later work — the resources and the improved resources drawn from bank 1
 at `$17000` up, the map loader in region 0, the owners' flags, contact by
@@ -865,31 +873,38 @@ hover readout from region 0, the calendar, the score and the end
 screen, and the Crisis — omens, Sea Peoples, shocks — with the 96-unit
 list.
 
-**Where to start next time** (23 Oct 2026, end of the day: after `c`,
-the chariot and horses, and the two rings):
-1. **Try on a real MEGA65**: the two rings' city screen (the moving and
-   cursor keys stepping the arrow, space, clicks, BUY, CHANGE, the unit
-   list 1-9), a new city's outer ring explored at once, the flag on a
-   hexagon a nearer city has, how big cities get; the chariot (two
-   moves, kept off mountains), horses, and `c`; and from before,
-   Advisors → Cities, the temple and the Lion Gate, Help → Buildings,
-   the legacy victory, and the menus from region 6.
-2. **The user's new items at the top of TODO.txt**: a city lost with no
-   popup or notice; no visual feedback of who won a fight; more ways to
-   spend gold (the cost of many cities, to curb sprawl; an army's upkeep
-   beyond a free guard or so a city).
+**Where to start next time** (24 Oct 2026, end of the day; the user
+stopped to play-test):
+1. **Ask what the play-testing found**, and take the new items at the
+   top of TODO.txt first.
+2. **Try on a real MEGA65**: the fight popups (own attacks, attacks on
+   the human's units and cities during the other turns, several in one
+   turn); `p` on cattle and horses, chariots in CHANGE only with a
+   pasture on horses, moving by Tab and the cursor keys now the moving
+   keys are gone; the Finance screen's upkeep rows; F1-F4 (F2 and F4 are
+   shifted F1 and F3 there), Advisors → Military, and HELP. And from 23
+   Oct: the two rings' city screen, the chariot, `c`, Advisors → Cities,
+   the temple and the Lion Gate, the legacy victory.
 3. **Tune the AI to the two rings**: `CITY_SPACING` (4) with overlapping
    outer rings, and settlers perhaps weighing the outer ring's resources
    less; the Egyptians fell by turn 300 on seed 7 in the first run with
-   them.
+   them. (In a 136-turn autoplay on seed 1 the human's side, played by
+   the AI, was out by turn 136, in HEAD before 24 Oct's work as well.)
 4. **More culture**: more wonders (vision.md 5B names the Pyramids, the
    Palace of Knossos) and the clay tablets of knowledge (Linear B,
    law codes, the alphabet), which want a science of some kind;
    building art for the map and the Civilopedia, which has none yet.
-5. Tune from play: the Crisis (it may have grown harsher), the collapse,
-   merchant ships, gold, and the weight of legacy in the score; escorts
-   for the merchant ships, and the computer players' galleys against the
-   Sea Peoples.
+5. Tune from play: the Crisis, the collapse, merchant ships, gold and the
+   new upkeep's allowances (`src/treasury.h`), the weight of legacy in
+   the score; escorts for the merchant ships, and the computer players'
+   galleys against the Sea Peoples.
+
+**Room is short in places** (24 Oct 2026): resident 0.5 KB, region 0
+0.4 KB, region 1 0.8 KB, region 2 3.1 KB, region 3 2.1 KB, region 4 1.5
+KB, region 5 0.8 KB, **region 6 0.3 KB**, region 7 2.2 KB, highram 1.1
+KB. Region 6 is the menus' and the treasury's (3 KB of it); a region 8
+for the treasury is the next room there (**A new region**, under
+**Growing past 32 KB**, is the recipe; attic holds eight).
 
 The tile sheet is packed and has about five units' room left (**When
 bank 5 fills up**, step 1c).

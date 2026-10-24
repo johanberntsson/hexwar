@@ -118,7 +118,10 @@ static void check_alive(byte p)
 static void note(byte what, byte kind, byte foe, byte foe_kind)
 {
     byte i = fight_count, c;
-    if (diplomacy_auto || i == FIGHTS) return;
+#ifdef DEBUG_MENU
+    if (diplomacy_auto) return;
+#endif
+    if (i == FIGHTS) return;
     fight_what[i] = what;
     fight_ax[i] = at_x;
     fight_ay[i] = at_y;

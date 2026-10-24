@@ -94,12 +94,18 @@ static byte wrap(byte draw, byte x, byte y, byte *widest)
     return lines;
 }
 
-// The buttons along the bottom of the box: one OK, or Yes and No.
+// The buttons along the bottom of the box: one OK, or a pair of answers
+// (POPUP_YES_NO and the rest, indexing these), the first of which is 1.
+// Each answer's key is the first letter of its button.
 #define OK_TEXT "[ OK ]"
-#define YES_TEXT "[ Yes ]"
-#define NO_TEXT "[ No ]"
 #define BUTTON_GAP 4
-#define ASK_WIDTH (sizeof YES_TEXT - 1 + BUTTON_GAP + sizeof NO_TEXT - 1)
+
+static const char *const first_text[] = { 0, "[ Yes ]", "[ Move unit ]" };
+static const char *const second_text[] = { 0, "[ No ]", "[ View city ]" };
+static const byte first_len[] = { 0, 7, 13 };
+static const byte second_len[] = { 0, 6, 13 };
+static const byte first_key[] = { 0, 'y', 'm' };
+static const byte second_key[] = { 0, 'n', 'v' };
 
 // Whether the arrow is on row `row`, from column `x` for `w` columns.
 static byte pointer_on(byte row, byte x, byte w)
@@ -108,26 +114,29 @@ static byte pointer_on(byte row, byte x, byte w)
     return (byte)(input_y >> 3) == row && col >= x && col < x + w;
 }
 
-#define NO_X(BX) ((BX) + ASK_WIDTH - (sizeof NO_TEXT - 1))
+#define NO_X(BX) ((BX) + first_len[pair] + BUTTON_GAP)
 
-// Draw Yes and No on row `by` from column `bx`, the one `yes` says in
-// reverse.
-static void draw_buttons(byte bx, byte by, byte yes)
+// Draw the pair's buttons on row `by` from column `bx`, the one `yes` says
+// in reverse.
+static void draw_buttons(byte pair, byte bx, byte by, byte yes)
 {
-    screen_putsxy(bx, by, YES_TEXT,
+    screen_putsxy(bx, by, first_text[pair],
                   yes ? (ATTR_REVERSE | COLOR_YELLOW) : COLOR_YELLOW);
-    screen_putsxy(NO_X(bx), by, NO_TEXT,
+    screen_putsxy(NO_X(bx), by, second_text[pair],
                   yes ? COLOR_YELLOW : (ATTR_REVERSE | COLOR_YELLOW));
 }
 
-// Show the text with OK, or with Yes and No if `ask`, and return 1 for OK or
-// Yes, 0 for No.
-static byte show(byte ask)
+// Show the text with OK, or with the buttons of `pair` if it is not 0, and
+// return 1 for OK or the first button, 0 for the second.
+static byte show(byte pair)
 {
     byte lines, widest, w, h, x0, y0, y, key, bx, by, answer, yes = 0;
+    // OK's box is as wide as Yes and No's.
+    byte b = pair ? pair : POPUP_YES_NO;
+    byte ask_width = first_len[b] + BUTTON_GAP + second_len[b];
 
     lines = wrap(0, 0, 0, &widest);
-    if (widest < ASK_WIDTH) widest = ASK_WIDTH;
+    if (widest < ask_width) widest = ask_width;
     w = widest + 4;
     h = lines + 5;
     x0 = VIEW_LEFT + (VIEW_COLUMNS - w) / 2;
@@ -139,9 +148,9 @@ static byte show(byte ask)
 
     wrap(1, x0 + 2, y0 + 1, &widest);
     by = y0 + h - 2;
-    if (ask) {
-        bx = x0 + (w - ASK_WIDTH) / 2;
-        draw_buttons(bx, by, yes);
+    if (pair) {
+        bx = x0 + (w - ask_width) / 2;
+        draw_buttons(pair, bx, by, yes);
         input_moved();          // only a move from here on selects
     } else {
         screen_putsxy(x0 + (w - (sizeof OK_TEXT - 1)) / 2, by, OK_TEXT,
@@ -152,7 +161,7 @@ static byte show(byte ask)
         screen_wait_raster(SCREEN_ROW_LINE(SCREEN_ROWS - 1));
         key = input_poll();
         if (key >= 'A' && key <= 'Z') key += 'a' - 'A';
-        if (!ask) {
+        if (!pair) {
             // Anywhere is OK: a click need not be on the button.
             if (key == KEY_CLICK || key == KEY_RETURN || key == KEY_SPACE
                 || key == KEY_ESC || key == KEY_RUNSTOP) {
@@ -167,22 +176,21 @@ static byte show(byte ask)
         // Return or space picks it; y and n answer at once, Esc is No.
         answer = yes;
         if (input_moved()) {
-            if (pointer_on(by, bx, sizeof YES_TEXT - 1)) answer = 1;
-            if (pointer_on(by, NO_X(bx), sizeof NO_TEXT - 1)) answer = 0;
+            if (pointer_on(by, bx, first_len[pair])) answer = 1;
+            if (pointer_on(by, NO_X(bx), second_len[pair])) answer = 0;
         }
         if (key == KEY_LEFT) answer = 1;
         if (key == KEY_RIGHT) answer = 0;
-        if (answer != yes) draw_buttons(bx, by, yes = answer);
+        if (answer != yes) draw_buttons(pair, bx, by, yes = answer);
         if (key == KEY_RETURN || key == KEY_SPACE) break;
-        if (key == 'y'
-            || (key == KEY_CLICK
-                && pointer_on(by, bx, sizeof YES_TEXT - 1))) {
+        if (key == first_key[pair]
+            || (key == KEY_CLICK && pointer_on(by, bx, first_len[pair]))) {
             answer = 1;
             break;
         }
-        if (key == 'n' || key == KEY_ESC || key == KEY_RUNSTOP
+        if (key == second_key[pair] || key == KEY_ESC || key == KEY_RUNSTOP
             || (key == KEY_CLICK
-                && pointer_on(by, NO_X(bx), sizeof NO_TEXT - 1))) {
+                && pointer_on(by, NO_X(bx), second_len[pair]))) {
             answer = 0;
             break;
         }
@@ -199,14 +207,19 @@ void popup_show(void)
 
 byte popup_ask(const char *s)
 {
-    popup_begin();
-    popup_add(s);
-    return show(1);
+    return popup_choose(s, POPUP_YES_NO);
 }
 
 byte popup_ask_shown(void)
 {
-    return show(1);
+    return show(POPUP_YES_NO);
+}
+
+byte popup_choose(const char *s, byte pair)
+{
+    popup_begin();
+    popup_add(s);
+    return show(pair);
 }
 
 void popup(const char *s)

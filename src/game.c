@@ -535,23 +535,28 @@ static void set_orders_menu(void)
 
 // A click on hexagon (ax, ay) of the map, by the arrow or by Return in tile
 // select. Next to the unit with orders it moves the unit there; on one of
-// the player's cities it opens the city screen; on one of the player's own
+// the player's cities it opens the city screen, and on one next to the unit
+// with orders it asks which; on one of the player's own
 // units that still has moves it gives that unit the orders, waking it if it
 // was fortified. Anywhere else it centres the view there.
 static void click_hex(byte ax, byte ay)
 {
-    byte u, dir, c;
+    byte u, dir = DIR_NONE, c;
 
+    c = city_at(ax, ay);
+    if (c != CITY_NONE && city_owner[c] != PLAYER_HUMAN) c = CITY_NONE;
     if (unit_active != UNIT_NONE) {
         dir = map_direction(unit_ax[unit_active], unit_ay[unit_active],
                             ax, ay);
-        if (dir != DIR_NONE) {
+        // Next to the unit and one of the player's cities: ask which.
+        if (dir != DIR_NONE
+            && (c == CITY_NONE
+                || popup_choose(city_name_of(c), POPUP_MOVE_VIEW))) {
             move_active(dir);
             return;
         }
     }
-    c = city_at(ax, ay);
-    if (c != CITY_NONE && city_owner[c] == PLAYER_HUMAN) {
+    if (c != CITY_NONE) {
         open_city(c);
         return;
     }

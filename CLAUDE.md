@@ -2095,7 +2095,10 @@ puts `SPRPTRADR` back before returning to BASIC.
 Controls: the mouse or a joystick in either port moves the arrow, and the
 button or fire is `KEY_CLICK`. A click next to the active unit moves it
 there (or attacks, if another player holds the hexagon), on one of the
-player's cities opens the city screen, on one of the player's units hands
+player's cities opens the city screen — and on one that is both, asks
+"Move unit" or "View city" (`popup_choose()`, `POPUP_MOVE_VIEW`, View city
+highlighted; 24 Oct 2026, the user's, since a double click did not work
+with tile select) — on one of the player's units hands
 it the orders, elsewhere on the map centres the view, on the minimap
 centres the view there, and on the panel at the end of a turn ends it
 (`click()` and `click_hex()` in `src/game.c`). A city comes before a unit

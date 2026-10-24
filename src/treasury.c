@@ -14,6 +14,7 @@
 #include "input.h"
 #include "map.h"
 #include "screen.h"
+#include "sheet.h"
 #include "trade.h"
 
 #pragma clang section text="r6text" rodata="r6rodata"
@@ -76,10 +77,58 @@ static void add(byte p, word g)
     player_gold[p] = gold + g > TREASURY_MAX ? TREASURY_MAX : gold + g;
 }
 
+// p's cities.
+static byte cities(byte p)
+{
+    byte c, n = 0;
+    for (c = 0; c < city_count; ++c)
+        if (city_owner[c] == p) ++n;
+    return n;
+}
+
+// The units beyond p's free ones, with n cities, and what a realm of n
+// cities costs a turn (treasury.h).
+static byte over_army(byte p, byte n)
+{
+    byte units = unit_count_kind(p, KIND_NONE);
+    byte free = ARMY_FREE_BASE + ARMY_FREE_A_CITY * n;
+    return units > free ? units - free : 0;
+}
+
+static word realm_cost(byte n)
+{
+    byte k = n > REALM_FREE ? n - REALM_FREE : 0;
+    return (word)k * k;
+}
+
+// One of p's units disbanded for want of gold: a land unit on land, not a
+// settler, the last in the list that is not in a city, or else the last
+// in one -- never a ship, which might have somebody aboard.
+static void disband(byte p)
+{
+    byte u, k, pick = UNIT_NONE, t;
+    for (u = MAX_UNITS; u-- > 0;) {
+        k = unit_kind[u];
+        if (unit_owner[u] != p || k == KIND_NONE || k == KIND_SETTLER
+            || KIND_IS_SHIP(k))
+            continue;
+        t = MAP_TERRAIN(unit_ax[u], unit_ay[u]);
+        if (t == TILE_OCEAN || t == TILE_SHALLOW_OCEAN) continue;
+        if (city_at(unit_ax[u], unit_ay[u]) == CITY_NONE) {
+            pick = u;
+            break;
+        }
+        if (pick == UNIT_NONE) pick = u;
+    }
+    if (pick == UNIT_NONE) return;
+    if (p == PLAYER_HUMAN) message("No gold: a unit", "was disbanded");
+    unit_remove(pick);
+}
+
 void treasury_turn(void)
 {
-    byte c, p, u;
-    word buy, left;
+    byte c, p, u, n;
+    word buy, left, cost;
 
     for (p = 0; p < PLAYERS; ++p) add(p, TREASURY_DEAL * deals(p));
     for (c = 0; c < city_count; ++c) {
@@ -97,6 +146,24 @@ void treasury_turn(void)
                 if (p == PLAYER_HUMAN) message("No gold: a temple", "was sold");
             }
         }
+    }
+    // The realm's cost, and the army's, once the turn's gold is in; one
+    // unit goes for want of it.
+    for (p = 0; p < PLAYERS; ++p) {
+        n = cities(p);
+        cost = realm_cost(n);
+        player_gold[p] = player_gold[p] > cost ? player_gold[p] - cost : 0;
+        cost = ARMY_UPKEEP * over_army(p, n);
+        if (player_gold[p] >= cost) {
+            player_gold[p] -= cost;
+        } else {
+            player_gold[p] = 0;
+            disband(p);
+        }
+    }
+    for (c = 0; c < city_count; ++c) {
+        p = city_owner[c];
+        if (p >= PLAYERS) continue;
         // The computer players buy as Civilization's do: shields for gold,
         // two to one, for a soldier or a galley under way -- up to a third
         // of the treasury in a city with nobody in it, a 64th otherwise.
@@ -125,7 +192,9 @@ void treasury_turn(void)
 #define EXIT_LEFT (SCREEN_COLUMNS - 2 - (sizeof EXIT_TEXT - 1))
 #define LEFT 8
 #define TABLE_TOP 5
-#define TABLE_ROWS 14
+// Cities listed; the rest are counted, not listed. **Everything has to end
+// above EXIT_ROW**: a row past the screen is code slot 1 at $13000.
+#define TABLE_ROWS 6
 #define FIGURES 3
 static const char *const heading[FIGURES] = { "Trade", "Corruption", "Gold" };
 static const byte column_right[FIGURES] = { 35, 48, 56 };
@@ -152,9 +221,20 @@ static void put_right(byte right, byte y, const char *s, byte colour)
     screen_putsxy(right + 1 - length(s), y, s, colour);
 }
 
+// An expense on row y: its name, how many, and the gold in red.
+static void expense(byte y, const char *what, byte count, word gold)
+{
+    screen_putsxy(LEFT, y, what, COLOR_WHITE);
+    put_right(column_right[0], y, number(count), COLOR_LIGHTGREEN);
+    if (gold)
+        screen_putsxy(column_right[2] - length(number(gold)), y, "-",
+                      COLOR_RED);
+    put_right(column_right[2], y, number(gold), COLOR_RED);
+}
+
 void finance_screen(void)
 {
-    byte c, i, y = TABLE_TOP + 2, key, n, temples = 0;
+    byte c, i, y = TABLE_TOP + 2, key, n, temples = 0, mine = 0;
     word total = 0;
 
     sprite_hide(2);             // the minimap's outline, which is gone
@@ -172,6 +252,7 @@ void finance_screen(void)
     for (c = 0; c < city_count; ++c) {
         if (city_owner[c] != PLAYER_HUMAN) continue;
         income(c);
+        ++mine;
         total += trade - corruption;
         if (city_culture[c] & CITY_TEMPLE) ++temples;
         if (y >= TABLE_TOP + 2 + TABLE_ROWS) continue;  // counted, not listed
@@ -190,14 +271,16 @@ void finance_screen(void)
     y += 2;
     screen_putsxy(LEFT, y, "Income a turn", COLOR_WHITE);
     put_right(column_right[2], y, number(total), COLOR_YELLOW);
-    screen_putsxy(LEFT, y + 1, "Temples' upkeep", COLOR_WHITE);
-    put_right(column_right[0], y + 1, number(temples), COLOR_LIGHTGREEN);
-    screen_putsxy(column_right[2] - length(number(temples)), y + 1, "-",
-                  COLOR_RED);
-    put_right(column_right[2], y + 1, number(temples), COLOR_RED);
-    screen_putsxy(LEFT, y + 3, "Corruption grows with the distance from the "
+    expense(y + 1, "Temples' upkeep", temples, temples);
+    n = over_army(PLAYER_HUMAN, mine);
+    expense(y + 2, "Units beyond the free", n, ARMY_UPKEEP * n);
+    expense(y + 3, "Cities beyond the free", mine > REALM_FREE
+            ? mine - REALM_FREE : 0, realm_cost(mine));
+    screen_putsxy(LEFT, y + 5, "Corruption grows with the distance from the "
                   "capital.", COLOR_LIGHTGREY);
-    screen_putsxy(LEFT, y + 4, "Gold buys production: b on the city screen.",
+    screen_putsxy(LEFT, y + 6, "Free: 4 units and 3 a city, and 10 cities.",
+                  COLOR_LIGHTGREY);
+    screen_putsxy(LEFT, y + 7, "Gold buys production: b on the city screen.",
                   COLOR_LIGHTGREY);
     screen_putsxy(0, EXIT_ROW, "Esc or Return to go on", COLOR_LIGHTGREY);
     screen_putsxy(EXIT_LEFT, EXIT_ROW, EXIT_TEXT, BUTTON_EXIT);

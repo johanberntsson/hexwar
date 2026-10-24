@@ -1,8 +1,9 @@
 --- OPEN ---
 
-Ideas for more ways of spending money:
-- government management: more expensive to have many cities (will control city sprawl)
-- military costs: basic defense free (one per city or so) but a large army is an ongoing cost
+We need a military advisor screen too. For now it can just list how many units we have of
+each category (warrior, chariot, spearman etc). And let's add shortcuts, and write these
+in the menu: F1 Cities, F2 = Military, F3 = Diplomacy, F4 = Finance. Since F1 is currently
+Help in the emulator we'll change it to F12
 
 Two rings, to tune: CITY_SPACING (4) for the AI now that outer rings overlap, and whether
 settlers should weigh the outer ring's resources less. The Egyptians fell by turn 300 on
@@ -13,15 +14,22 @@ NEXT (23 Oct 2026, end of the day; CLAUDE.md "Where to start next time"):
    BUY, CHANGE, units 1-9), a new city's outer ring explored, the flag on a hexagon a nearer
    city has, city sizes; the chariot, horses and c; and from before, Advisors/Cities, the
    temple and Lion Gate, Help/Buildings, the legacy victory, the menus from region 6
-2. The new items at the top: ways to spend gold
+2. Gold: the new upkeep for armies and realms (allowances in treasury.h) and more to spend on
 3. Tune the AI to the two rings (above)
 4. More culture: more wonders (Pyramids, Palace of Knossos), clay tablets of knowledge
    (Linear B, law codes, the alphabet: a science of sorts), building art
 5. Tune from play: the Crisis, the collapse, merchant ships, gold, legacy's weight in the
    score; escorts for merchant ships; AI galleys against the Sea Peoples
-Room: resident 0.5 KB, region 0 0.3 KB, region 1 30 bytes, region 2 4.1 KB, region 3 2.1 KB,
-region 4 1.5 KB, region 5 2.2 KB, region 6 1.1 KB, region 7 2.2 KB, highram 1.2 KB; the tile
+Room: resident 0.5 KB, region 0 0.4 KB, region 1 0.8 KB, region 2 3.1 KB, region 3 2.1 KB,
+region 4 1.5 KB, region 5 2.2 KB, region 6 0.3 KB, region 7 2.2 KB, highram 1.2 KB; the tile
 sheet 7.6 KB, about five units
+
+DONE (24 Oct 2026): upkeep in gold against exploits: 4 units free and 3 a city, then 1 gold
+a unit a turn (short of gold, a unit a turn is disbanded); 10 cities free, then k*k gold a
+turn for k more. Above what the AI reaches: 136 turns of autoplay unchanged but for gold.
+Advisors/Finance shows both (and no longer runs off the screen with 11+ cities). The city-
+site search moved out of ai.c to src/aisite.c (region 2): region 1 has 841 bytes. Region 6
+is down to 0.3 KB: a region 8 for the treasury (3 KB) would be the next room there
 
 DONE (24 Oct 2026): pastures. p (Orders: "p: Build a Pasture") on cattle and horses, 5 turns,
 no water; the mine bit on those hexagons, +1 food +1 shield, and what makes them owned, so

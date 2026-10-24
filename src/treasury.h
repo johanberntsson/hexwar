@@ -12,6 +12,18 @@
 // 1 gold a turn each, as Civilization's buildings cost; with an empty
 // treasury a temple is sold (src/culture.h).
 //
+// **A large army and a large realm cost gold** (24 Oct 2026, the user's,
+// against exploits rather than to change the game as it is played): a
+// player keeps ARMY_FREE_BASE units free and ARMY_FREE_A_CITY more for
+// each of its cities, and pays ARMY_UPKEEP gold a turn for each beyond,
+// Civilization's units' upkeep in gold; short of it, one unit a turn is
+// disbanded, as there. And REALM_FREE cities are free; with k more, the
+// realm costs k * k gold a turn, which keeps sprawl dear as it grows
+// (Civilization's empire-size unhappiness, in gold). The allowances are
+// above what the computer players reach now: they keep to six cities,
+// and their units to about three a city, ships and soldiers over their
+// cap included.
+//
 // **Gold buys production**, at Civilization's price (city_buy_cost() in
 // src/cityscreen.c): the human with b on the city screen; the computer
 // players as Civilization's do, turning gold into shields at two to one in
@@ -29,6 +41,10 @@
 #define TREASURY_DEAL 2
 #define TREASURY_MAX 30000      // Civilization's ceiling
 #define TREASURY_START 50       // the human's, at the easiest level only
+#define ARMY_FREE_BASE 4        // finance_screen() says these in words
+#define ARMY_FREE_A_CITY 3
+#define ARMY_UPKEEP 1
+#define REALM_FREE 10
 
 // Each player's gold; HIGH_BSS, saved.
 extern word player_gold[PLAYERS];

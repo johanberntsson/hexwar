@@ -208,8 +208,8 @@ buffers at the default `$FF80000` and corrupts the display.
 |---|---|---|
 | `$2001-$5FFF`, `$8000-$9FFF` | 24 KB | the resident program: code, data, BSS, C stack. About 1.1 KB free, nearly all at the top of `$2001-$5FFF` |
 | `$6000-$7FFF` | 8 KB | the code window (`src/region.h`); as loaded, region 0 — the title, setup and help screens (and the Civilopedia's pages), save and load, the sheet's and the map's loaders, the owners' flags, the end of a turn and a game's start (`src/turn.c`), the computer players' starts (`src/aiplace.c`), the hover readout (`src/hover.c`), the boot splash (`title_splash()`). 0.4 KB free |
-| `$13000-$14FFF` | 8 KB | code slot 1: region 1, from `SEVENSHIPS.R1` by way of attic: the computer players and their ferrying, the cities' yields and growth, bronze. 30 bytes free |
-| `$15000-$16FFF` | 8 KB | code slot 2, shared: region 2 (Top Five Cities, the fights' popups, the builders' improvements, what the computer players' cities build and where their builders work, `src/aibuild.c`; 4.1 KB free) region 7 (the city screen and buying, `src/cityscreen.c`; 2.2 KB free) region 3 (diplomacy; 2.1 KB free) region 4 (trade, the ships' routes, exploring and fishing, merchant ships and emporia; 1.5 KB free) region 5 (the Crisis and the collapse, the score and the end, the pictures, `src/crisis.c`, `src/score.c`, `src/picture.c`; 2.2 KB free) region 6 (the menus and what their items do, the treasury, buildings and wonders, `src/menu.c`, `src/command.c`, `src/treasury.c`, `src/culture.c`, `src/cities.c`; 1.1 KB free), whichever was called last. **Slot 1 is also the sheet loader's staging area at boot** (`STAGING` in `src/sheet.c`), before region 1 is first called |
+| `$13000-$14FFF` | 8 KB | code slot 1: region 1, from `SEVENSHIPS.R1` by way of attic: the computer players and their ferrying, the cities' yields and growth, bronze. 0.8 KB free |
+| `$15000-$16FFF` | 8 KB | code slot 2, shared: region 2 (Top Five Cities, the fights' popups, the builders' improvements, what the computer players' cities build and where their builders work, `src/aibuild.c`, and where their settlers found cities, `src/aisite.c`; 3.1 KB free) region 7 (the city screen and buying, `src/cityscreen.c`; 2.2 KB free) region 3 (diplomacy; 2.1 KB free) region 4 (trade, the ships' routes, exploring and fishing, merchant ships and emporia; 1.5 KB free) region 5 (the Crisis and the collapse, the score and the end, the pictures, `src/crisis.c`, `src/score.c`, `src/picture.c`; 2.2 KB free) region 6 (the menus and what their items do, the treasury, buildings and wonders, `src/menu.c`, `src/command.c`, `src/treasury.c`, `src/culture.c`, `src/cities.c`; 0.3 KB free), whichever was called last. **Slot 1 is also the sheet loader's staging area at boot** (`STAGING` in `src/sheet.c`), before region 1 is first called |
 | `$17000-$1EFFF` | 32 KB | the packed tile sheet's second area, where regions 3 to 6 would have been: whatever rows did not fit bank 5's; with bank 5's, 7.6 KB free (`tools/mktiles.py` says) |
 | `$A000-$BFFF` | 8 KB | `highram`, under the BASIC ROM, banked out by `src/bank.s`: `map_tile`, the unit and city arrays, the sprite blocks, the AI's headings, the staging buffers of the texts and the regions, the texts' line buffers, the sheet loader's buffers, the saved VIC registers, the AI's exploration memory, the resource list, the sheet's row tables, the peoples' relations and attitudes and the letters' names, the trade deals, the emporia, the pictures' staging buffer, the treasuries; about 1.4 KB free — `HIGH_BSS` in `src/mega65.h` moves a variable there, and **the startup does not clear it** |
 | `$1600-$1EFF` | 2304 | `zpsave` (56 bytes, BASIC's zero page during the run), then `lowfree`: the popup's 400-byte text and the scratch buffers of the view and the minimap, and the sea routes' search (`src/path.c`), 990 bytes free — `LOW_FREE` in `src/mega65.h` moves a variable there |
@@ -558,9 +558,14 @@ needs (`ai_guards_wanted()`, `ai_find_far_site()`, `ai_work_site()`,
 a call there copies nothing; `guards()` and `spearman_in()` are small
 enough to copy. Checked as byte-identical through 300 turns of autoplay.
 `src/menu.c` moved from region 0 to region 4 the same day, when region 0
-was down to 188 bytes, and on to region 6 the next. **Region 1 is nearly full too**: its next room
-is more of `ai.c` moving out (as `ai_place()` went to `src/aiplace.c`
-in region 0, called directly from `game_init()` there, no stub), and new
+was down to 188 bytes, and on to region 6 the next. **Region 1 fills up too**: its room
+comes from more of `ai.c` moving out (as `ai_place()` went to `src/aiplace.c`
+in region 0, called directly from `game_init()` there, no stub, and
+**the city-site search went to `src/aisite.c` in region 2** on 24 Oct
+2026, `ai_find_site()` and `ai_find_far_site()`, beside `ai_build()`,
+which calls the second directly now, and the builders' `improve_best()`,
+so a settler looking costs no copy the builders do not: 30 bytes free
+became 841, for one more stub; 136 turns of autoplay byte-identical), and new
 code goes to regions 2-4 or a new region 5 where it does not run in a
 loop against another slot-2 region. **The way to resident room is `game.c`**, whose static
 functions are most of the resident code (the listing shows them all as
@@ -1851,7 +1856,24 @@ founded, while it holds it). **Each trade deal is worth
 Civilization's trade routes. **Expenses are the temples' upkeep**, 1
 gold a turn each (23 Oct 2026, **Buildings and wonders**), Civilization's,
 whose only expenses are buildings'; with an empty treasury a temple is
-sold, as there. Units cost none. The human starts with 50 at the easiest level, as there, the
+sold, as there. **A large army and a large realm cost gold** (24 Oct
+2026, the user's, against exploits rather than to change the game as it
+is played; `src/treasury.h`): `ARMY_FREE_BASE` (4) units are free and
+`ARMY_FREE_A_CITY` (3) more a city, and every unit beyond costs
+`ARMY_UPKEEP` (1) gold a turn, Civilization's unit upkeep in gold;
+short of it, one unit a turn is disbanded (`disband()`: a land unit on
+land, not a settler, outside a city if there is one; never a ship, which
+may carry somebody). `REALM_FREE` (10) cities are free, and with k more
+the realm costs k² a turn, Civilization's empire-size unhappiness in
+gold. The allowances are above what the computer players reach (six
+cities of their own, about three units a city with what they build over
+their cap): in 136 turns of autoplay on seed 1 every unit and city came
+out as before, and only the Hittites, with twelve cities most of them
+captured, paid anything. The costs are taken once all of a turn's
+income is in, and the computer players' buying comes after, in a loop
+of its own. Advisors → Finance has a row for each, and since then lists
+six cities at most, since its rows ran past the screen with eleven —
+**into code slot 1 at `$13000`**. The human starts with 50 at the easiest level, as there, the
 computer players with none; the ceiling is 30000. `treasury_turn()`
 runs from `game_end_turn()` after `crisis_turn()` and before the cities
 produce. **Gold buys production**: on the city screen, `b` or the BUY

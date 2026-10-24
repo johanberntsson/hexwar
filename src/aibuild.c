@@ -6,6 +6,7 @@
 #define ai_build ai_build_r2
 #define ai_work_site ai_work_site_r2
 #define improve_best improve_best_r2
+#define ai_find_far_site ai_find_far_site_r2   // src/aisite.c, here too
 
 #include "ai.h"
 #include "aiint.h"

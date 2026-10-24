@@ -4,7 +4,6 @@
 #define ai_barbarians ai_barbarians_r1
 // And for src/aibuild.c (aiint.h).
 #define guards_wanted ai_guards_wanted_r1
-#define find_far_site ai_find_far_site_r1
 // And for src/growth.c, in this region too.
 #define distance ai_distance
 
@@ -23,18 +22,6 @@
 #include "unit.h"
 
 #pragma clang section text="r1text" rodata="r1rodata"
-
-// Expansion, after Civilization's production rules: a city builds a
-// settler -- one at a time, and not counted against the unit cap, since it
-// is gone once it has founded -- when it is guarded, has a citizen to spare
-// (size 2; the settler takes one) and food to spare (more than 1 a turn),
-// or the player has no settler at all, and has a site within SETTLE_RANGE
-// hexagons: grassland, plains, floodplain or hills, SITE_LAND land
-// neighbours or more, and at least CITY_SPACING hexagons from every city.
-// No more than AI_CITY_CAP cities (aiint.h).
-#define SETTLE_RANGE 6
-#define CITY_SPACING 4
-#define SITE_LAND 3
 
 // Odds, as combat_worth() takes them: a computer player's warrior attacks
 // when its attack is at least 3/4 of the defence, a barbarian at 1/4 --
@@ -91,17 +78,6 @@ word distance(byte ax, byte ay, byte bx, byte by)
     return (word)(dy + (dx > dy ? (dx - dy) / 2 : 0));
 }
 
-static byte land_neighbours(byte ax, byte ay)
-{
-    byte dir, nx, ny, n = 0, t;
-    for (dir = 0; dir < 6; ++dir) {
-        if (!map_neighbour(ax, ay, dir, &nx, &ny)) continue;
-        t = MAP_TERRAIN(nx, ny);
-        if (t != TILE_OCEAN && t != TILE_SHALLOW_OCEAN) ++n;
-    }
-    return n;
-}
-
 // The nearest unit or city to (ax, ay) whose owner `me` is at war with --
 // or of any owner, for me = OWNER_ANY -- and how far it is. 0xffff with
 // none.
@@ -137,74 +113,6 @@ static word nearest(byte me, byte ax, byte ay)
     }
     return best;
 }
-
-// What the resources a city on (ax, ay) would have are worth, on it and
-// its RING: one each, and copper and tin two, for bronze.
-static byte worth(byte ax, byte ay)
-{
-    byte r = map_resource_at(ax, ay);
-    return r == RES_NONE ? 0 : r == RES_COPPER || r == RES_TIN ? 2 : 1;
-}
-
-static byte resources_round(byte ax, byte ay)
-{
-    byte dir, nx, ny, n = worth(ax, ay);
-    for (dir = 0; dir < RING; ++dir)
-        if (map_neighbour(ax, ay, dir, &nx, &ny)) n += worth(nx, ny);
-    return n;
-}
-
-// The best site for a city within SETTLE_RANGE of (fx, fy), in
-// (site_x, site_y); 0 if there is none. (fx, fy) itself may be occupied --
-// by the settler looking -- and anywhere else may not. The nearest, but a
-// resource in reach is worth half a hexagon's walk, and copper or tin a
-// whole one: the score is twice the distance, plus six, less what the
-// resources are worth (resources_round()).
-static byte site_x, site_y;
-
-#define NO_SITE 0x7fff
-// With a galley a player looks FERRY_RANGE far for a site, over the water
-// (find_far_site()); otherwise SETTLE_RANGE.
-#define FERRY_RANGE 16
-static byte site_range = SETTLE_RANGE;
-
-static byte find_site(byte fx, byte fy)
-{
-    int dx, dy, y, rows = site_range / 2 + 1, columns = 2 * site_range;
-    byte x, c, t, ok;
-    word d, best = NO_SITE;
-
-    for (dy = -rows; dy <= rows; ++dy) {
-        y = (int)fy + dy;
-        if (y < 2 || y > MAP_ROWS - 3) continue;    // as ai_place()
-        // A hexagon east is two columns.
-        for (dx = -columns; dx <= columns; ++dx) {
-            x = (byte)((int)fx + dx + MAP_COLUMNS) & (MAP_COLUMNS - 1);
-            t = MAP_TERRAIN(x, y);
-            if (t != TILE_GRASS && t != TILE_PLAINS && t != TILE_FLOODPLAIN
-                && t != TILE_HILLS) continue;
-            d = distance(fx, fy, x, (byte)y);
-            if (d > site_range || 2 * d >= best) continue;
-            if ((map_tile[y][x] & MAP_OCCUPIED) && d) continue;
-            if (land_neighbours(x, (byte)y) < SITE_LAND) continue;
-            ok = 1;
-            for (c = 0; c < city_count; ++c)
-                if (distance(x, (byte)y, city_ax[c], city_ay[c])
-                    < CITY_SPACING) {
-                    ok = 0;
-                    break;
-                }
-            if (!ok) continue;
-            d = 2 * d + 6 - resources_round(x, (byte)y);
-            if (d >= best) continue;
-            best = d;
-            site_x = x;
-            site_y = (byte)y;
-        }
-    }
-    return best != NO_SITE;
-}
-
 
 // One step of unit u in direction dir, if it may go there.
 static byte step(byte u, byte dir)
@@ -496,20 +404,6 @@ static byte to_work(byte u, byte c)
     return 1;
 }
 
-// A site for player p within reach of (fx, fy): SETTLE_RANGE, or with a
-// galley FERRY_RANGE, over the water.
-
-byte find_far_site(byte p, byte fx, byte fy)
-{
-    byte found = find_site(fx, fy);
-    if (!found && first_of(p, KIND_GALLEY, 0) != UNIT_NONE) {
-        site_range = FERRY_RANGE;
-        found = find_site(fx, fy);
-        site_range = SETTLE_RANGE;
-    }
-    return found;
-}
-
 // ------------------------------------------------------------- ferrying
 
 // **Galleys ferry settlers** that cannot walk to their site -- it is over
@@ -518,7 +412,7 @@ byte find_far_site(byte p, byte fx, byte fy)
 // site in FERRY_PATIENCE turns, while its people has a galley, asks for
 // one (unit_work[] = WANTS_FERRY) and waits on the coast; the galley comes
 // alongside and the settler boards it; the galley then sails for the
-// nearest site from the sea (find_site() from where it is), and next to
+// nearest site from the sea (ai_find_site() from where it is), and next to
 // land within reach of it wakes the settler, who steps ashore and walks
 // on. **Armies too** (22 Oct 2026): a warrior or spearman that comes no
 // nearer the enemy it hunts asks in the same way (hunt()), and the galley
@@ -609,13 +503,13 @@ static void go_ashore(byte u)
     byte dir, nx, ny, best = DIR_NONE;
     word d, best_d = 0xffff;
 
-    if (find_site(unit_ax[u], unit_ay[u]))
+    if (ai_find_site(unit_ax[u], unit_ay[u]))
         for (dir = 0; dir < 6; ++dir) {
             if (!map_neighbour(unit_ax[u], unit_ay[u], dir, &nx, &ny)
                 || unit_can_enter(unit_owner[u], KIND_SETTLER, nx, ny)
                        != ENTER_OK)
                 continue;
-            d = distance(nx, ny, site_x, site_y);
+            d = distance(nx, ny, ai_site_x, ai_site_y);
             if (d < best_d) {
                 best_d = d;
                 best = dir;
@@ -634,7 +528,7 @@ static byte sail(byte u, byte tx, byte ty)
 }
 
 // The nearest city to (ax, ay) of a people p is at war with, the rebels'
-// included, into (site_x, site_y). Whether there is one.
+// included, into (ai_site_x, ai_site_y). Whether there is one.
 static byte enemy_city(byte p, byte ax, byte ay)
 {
     byte c;
@@ -644,14 +538,14 @@ static byte enemy_city(byte p, byte ax, byte ay)
         d = distance(ax, ay, city_ax[c], city_ay[c]);
         if (d < best) {
             best = d;
-            site_x = city_ax[c];
-            site_y = city_ay[c];
+            ai_site_x = city_ax[c];
+            ai_site_y = city_ay[c];
         }
     }
     return best != 0xffff;
 }
 
-// Where galley u's cargo is going, into (site_x, site_y): a settler's
+// Where galley u's cargo is going, into (ai_site_x, ai_site_y): a settler's
 // site, or a soldier's enemy. Whether there is anywhere.
 static byte destination(byte u)
 {
@@ -659,7 +553,7 @@ static byte destination(byte u)
     for (v = 0; v < MAX_UNITS; ++v)
         if (unit_kind[v] == KIND_SETTLER && unit_ax[v] == ax
             && unit_ay[v] == ay)
-            return find_far_site(p, ax, ay);
+            return ai_find_far_site(p, ax, ay);
     return enemy_city(p, ax, ay);
 }
 
@@ -684,13 +578,13 @@ static void ferry(byte u)
 
     if (cargo(u)) {
         if (destination(u)) {
-            if (distance(ax, ay, site_x, site_y) <= LANDING_RANGE
+            if (distance(ax, ay, ai_site_x, ai_site_y) <= LANDING_RANGE
                 && next_to_land(ax, ay)) {
                 unit_wake_cargo(u);
                 unit_moves[u] = 0;
                 return;
             }
-            if (sail(u, site_x, site_y)) return;
+            if (sail(u, ai_site_x, ai_site_y)) return;
         }
         boat_explore(u);
         return;
@@ -730,18 +624,19 @@ static void move_unit(byte u)
             return;
         }
         if (home(u) != CITY_NONE) {
-            if (!find_far_site(unit_owner[u], ax, ay)) {
+            if (!ai_find_far_site(unit_owner[u], ax, ay)) {
                 explore(u);
                 return;
             }
-            if (site_x != ax || site_y != ay) {
+            if (ai_site_x != ax || ai_site_y != ay) {
                 if (unit_work[u] == WANTS_FERRY) {
                     ferry_wait(u);
                     return;
                 }
-                d = distance(ax, ay, site_x, site_y);
-                approach(u, site_x, site_y);
-                if (distance(unit_ax[u], unit_ay[u], site_x, site_y) < d)
+                d = distance(ax, ay, ai_site_x, ai_site_y);
+                approach(u, ai_site_x, ai_site_y);
+                if (distance(unit_ax[u], unit_ay[u], ai_site_x, ai_site_y)
+                    < d)
                     unit_work[u] = 0;
                 else if (unit_work[u] < FERRY_PATIENCE)
                     ++unit_work[u];

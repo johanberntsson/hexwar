@@ -194,8 +194,9 @@ stub:       .macro  name, target, region
             stub    hex_yield, hex_yield_r1, 1
             stub    player_has, player_has_r1, 1
             stub    ai_guards_wanted, ai_guards_wanted_r1, 1
-            stub    ai_find_far_site, ai_find_far_site_r1, 1
             stub    ai_work_site, ai_work_site_r2, 2
+            stub    ai_find_site, ai_find_site_r2, 2
+            stub    ai_find_far_site, ai_find_far_site_r2, 2
 
 ; Region 2, slot 2: the city screen, Top Five Cities, the fights' popups,
 ; the builders' improvements and what the computer players' cities build.

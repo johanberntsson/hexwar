@@ -31,9 +31,14 @@
 // Guards city c wants (ai.c's guards_wanted()).
 byte ai_guards_wanted(byte c);
 
-// A site for a city within reach of (fx, fy) for player p, over the water
-// with a galley; whether there is one (ai.c's find_far_site()).
+// The best site for a city within reach of (fx, fy), into (ai_site_x,
+// ai_site_y); whether there is one. ai_find_far_site() for player p looks
+// over the water as well if it has a galley. In src/aisite.c, region 2,
+// out of ai.c to make room in region 1; ai.c calls them through stubs.
+// ai.c also leaves its galleys' destinations in ai_site_x and ai_site_y.
+byte ai_find_site(byte fx, byte fy);
 byte ai_find_far_site(byte p, byte fx, byte fy);
+extern byte ai_site_x, ai_site_y;
 
 // Whether a hexagon of city c's RING wants improving and has nobody on it,
 // and which, into ai_work_x and ai_work_y: copper or tin to mine first,
